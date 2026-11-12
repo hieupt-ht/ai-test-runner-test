@@ -10,7 +10,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Đọc .env ở thư mục gốc repo (dùng chung với Docker).
+    # Nếu có thêm .env trong backend/ thì file đó được ưu tiên.
+    model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
 
     # Đăng nhập Google
     google_client_id: str = ""

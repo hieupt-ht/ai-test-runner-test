@@ -70,7 +70,7 @@ def test_start_services_skips_when_not_configured() -> None:
     from app.main import start_real_services
     from app.settings import Settings
 
-    assert start_real_services(Settings()) is None
+    assert start_real_services(Settings(_env_file=None)) is None
 
 
 def test_start_services_requires_session_secret_when_configured() -> None:
@@ -78,7 +78,9 @@ def test_start_services_requires_session_secret_when_configured() -> None:
     from app.main import start_real_services
     from app.settings import Settings
 
-    settings = Settings(google_service_account_json="{}", system_spreadsheet_id="abc")
+    settings = Settings(
+        _env_file=None, google_service_account_json="{}", system_spreadsheet_id="abc"
+    )
 
     with pytest.raises(ConfigError, match="SESSION_SECRET"):
         start_real_services(settings)

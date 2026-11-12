@@ -76,7 +76,9 @@ def client(
         sessions=SessionStore(redis, ttl_seconds=3600),
         oauth=oauth,
     )
-    settings = Settings(session_secret="test-secret", app_base_url="http://localhost:3000")
+    settings = Settings(
+        _env_file=None, session_secret="test-secret", app_base_url="http://localhost:3000"
+    )
     return TestClient(create_app(settings, services=services), follow_redirects=False)
 
 
