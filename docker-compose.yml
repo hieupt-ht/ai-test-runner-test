@@ -7,7 +7,9 @@ services:
     volumes:
       - redis-data:/data
     ports:
-      - "6379:6379" # mở ra ngoài để chạy backend trực tiếp khi phát triển
+      # Chỉ mở cho chính máy này (127.0.0.1), để chạy backend trực tiếp khi phát triển.
+      # Không mở ra mạng LAN: Redis không có mật khẩu và đang giữ phiên đăng nhập.
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -21,7 +23,7 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       redis:
         condition: service_healthy

@@ -13,9 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { RoleBadge } from "@/components/users/role-badge"
+import { RoleSelect } from "@/components/users/role-select"
 import { useUpdateUser } from "@/components/users/use-users"
-import type { User } from "@/lib/api/types"
+import type { Role, User } from "@/lib/api/types"
 
 type Props = { users: User[]; currentUserEmail: string }
 
@@ -24,9 +24,9 @@ export function UserTable({ users, currentUserEmail }: Props) {
   const format = useFormatter()
   const updateUser = useUpdateUser()
 
-  async function toggleActive(user: User, active: boolean) {
+  async function saveChange(user: User, changes: { active?: boolean; role?: Role }) {
     try {
-      await updateUser.mutateAsync({ email: user.email, active })
+      await updateUser.mutateAsync({ email: user.email, ...changes })
       toast.success(t("updated", { email: user.email }))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
@@ -67,13 +67,19 @@ export function UserTable({ users, currentUserEmail }: Props) {
                 </TableCell>
                 <TableCell>{user.name}</TableCell>
                 <TableCell>
-                  <RoleBadge role={user.role} />
+                  {/* Admin không tự đổi vai trò của mình, để hệ thống không mất Admin */}
+                  <RoleSelect
+                    value={user.role}
+                    disabled={isSelf || updateUser.isPending}
+                    onChange={(role) => saveChange(user, { role })}
+                    label={t("roleOf", { email: user.email })}
+                  />
                 </TableCell>
                 <TableCell>
                   <Switch
                     checked={user.active}
                     disabled={isSelf || updateUser.isPending}
-                    onCheckedChange={(checked) => toggleActive(user, checked)}
+                    onCheckedChange={(checked) => saveChange(user, { active: checked })}
                     aria-label={t("colActive")}
                   />
                 </TableCell>

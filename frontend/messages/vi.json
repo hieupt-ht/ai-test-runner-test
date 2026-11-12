@@ -13,7 +13,8 @@
     "title": "Đăng nhập",
     "subtitle": "Dùng tài khoản Google đã được Admin cấp quyền.",
     "button": "Đăng nhập bằng Google",
-    "notAllowed": "Tài khoản của bạn chưa được cấp quyền. Hãy liên hệ Admin."
+    "notAllowed": "Tài khoản của bạn chưa được cấp quyền. Hãy liên hệ Admin.",
+    "oauthFailed": "Đăng nhập Google chưa hoàn tất (có thể bạn đã bấm Huỷ). Vui lòng thử lại."
   },
   "topbar": {
     "theme": "Giao diện",
@@ -55,7 +56,8 @@
     "save": "Lưu",
     "created": "Đã thêm {email}",
     "updated": "Đã cập nhật {email}",
-    "you": "Bạn"
+    "you": "Bạn",
+    "roleOf": "Vai trò của {email}"
   },
   "errors": {
     "generic": "Có lỗi xảy ra, vui lòng thử lại."
