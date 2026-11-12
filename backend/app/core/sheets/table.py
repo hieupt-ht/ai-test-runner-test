@@ -48,6 +48,10 @@ class SheetTable:
             self._header = header
         return self._header
 
+    def check_columns(self) -> None:
+        """Báo MissingColumnsError nếu tab thiếu cột cần dùng."""
+        self._get_header()
+
     def _read_raw_row(self, row_number: int) -> list[str]:
         rows = self._gateway.get_values(
             self._spreadsheet_id, f"{self._tab}!{row_number}:{row_number}"
