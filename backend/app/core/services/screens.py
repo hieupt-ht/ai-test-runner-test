@@ -4,13 +4,24 @@ from typing import Any
 
 from app.core.models.screen import Screen
 from app.core.models.user import User
+from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.screens import ScreenNotFoundError, ScreenRepository
 
 
+class ScreenInUseError(Exception):
+    """Màn hình đang được giao cho tester nên chưa xoá được."""
+
+
 class ScreenService:
-    def __init__(self, screens: ScreenRepository, audit_log: AuditLogRepository) -> None:
+    def __init__(
+        self,
+        screens: ScreenRepository,
+        assignments: AssignmentRepository,
+        audit_log: AuditLogRepository,
+    ) -> None:
         self._screens = screens
+        self._assignments = assignments
         self._audit_log = audit_log
 
     def list_screens(self) -> list[Screen]:
@@ -56,6 +67,8 @@ class ScreenService:
         return updated
 
     def delete_screen(self, actor: User, screen_id: str) -> None:
+        if any(a.screen_id == screen_id for a in self._assignments.list_all()):
+            raise ScreenInUseError(screen_id)
         self._screens.delete(screen_id)
         self._record(actor, "DELETE", screen_id, {})
 

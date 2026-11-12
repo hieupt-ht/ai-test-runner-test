@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 
 def utc_now() -> datetime:
@@ -12,3 +13,11 @@ def to_iso(moment: datetime) -> str:
 
 def from_iso(text: str) -> datetime:
     return datetime.fromisoformat(text)
+
+
+VIETNAM = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def today_in_vietnam() -> date:
+    """Ngày hôm nay theo giờ Việt Nam (dùng để so deadline)."""
+    return datetime.now(VIETNAM).date()

@@ -12,7 +12,7 @@ from app.core.models.screen import MAX_CODE_PATHS, CodePath, Screen
 from app.core.models.user import User
 from app.core.permissions import Action
 from app.core.repositories.screens import ScreenNotFoundError
-from app.core.services.screens import ScreenService
+from app.core.services.screens import ScreenInUseError, ScreenService
 
 router = APIRouter(prefix="/api/projects/{project_id}/screens", tags=["screens"])
 
@@ -45,7 +45,7 @@ class UpdateScreenRequest(BaseModel):
 def _service(services: Services, user: User, project_id: str, action: Action) -> ScreenService:
     project = load_project(services, user, project_id, action)
     scope = scope_for(services, project)
-    return ScreenService(scope.screens, scope.audit_log)
+    return ScreenService(scope.screens, scope.assignments, scope.audit_log)
 
 
 def _busy() -> HTTPException:
@@ -105,6 +105,11 @@ def delete_screen(
     service = _service(services, user, project_id, Action.MANAGE_SCREENS)
     try:
         service.delete_screen(user, screen_id)
+    except ScreenInUseError:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Màn hình đang được giao cho tester, hãy bỏ giao việc trước",
+        ) from None
     except ScreenNotFoundError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
     except LockTimeout:
