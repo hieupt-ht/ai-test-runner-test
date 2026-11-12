@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { NAV_ITEMS } from "@/lib/nav"
 import { useMe } from "@/lib/use-me"
 
-function ShellSkeleton() {
+export function ShellSkeleton() {
   return (
     <div className="flex min-h-screen">
       <div className="hidden w-60 border-r p-4 md:block">
@@ -41,7 +41,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const current = NAV_ITEMS.find((item) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
   )
-  const title = current ? t(`nav.${current.labelKey}`) : t("app.name")
+  const isProjectPage = pathname.startsWith("/projects/")
+  const title = current
+    ? t(`nav.${current.labelKey}`)
+    : t(isProjectPage ? "nav.projects" : "app.name")
 
   return (
     <div className="flex min-h-screen">

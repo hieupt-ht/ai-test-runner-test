@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, type LucideIcon } from "lucide-react"
+import { FolderCog, LayoutDashboard, ListChecks, Users, type LucideIcon } from "lucide-react"
 
 import type { Role } from "@/lib/api/types"
 
@@ -18,6 +18,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
     roles: ["ADMIN", "QA_LEAD", "TESTER", "VIEWER"],
   },
+  {
+    href: "/my-work",
+    labelKey: "myWork",
+    icon: ListChecks,
+    roles: ["ADMIN", "QA_LEAD", "TESTER", "VIEWER"],
+  },
+  { href: "/admin/projects", labelKey: "adminProjects", icon: FolderCog, roles: ["ADMIN"] },
   { href: "/admin/users", labelKey: "users", icon: Users, roles: ["ADMIN"] },
 ]
 
