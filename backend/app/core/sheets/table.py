@@ -73,6 +73,16 @@ class SheetTable:
             self._to_record(row, header) for row in data_rows if any(cell != "" for cell in row)
         ]
 
+    def read_rows_numbered(self) -> list[tuple[int, Record]]:
+        """Như read_all, nhưng kèm số dòng thật trên Sheet (dòng 1 là tiêu đề)."""
+        header = self._read_header()
+        rows = self._gateway.get_values(self._spreadsheet_id, self._tab)
+        return [
+            (row_number, self._to_record(row, header))
+            for row_number, row in enumerate(rows[1:], start=2)
+            if any(cell != "" for cell in row)
+        ]
+
     def find_row_number(self, column: str, value: str) -> int | None:
         """Tìm số dòng (bắt đầu từ 1, như trên Sheet) có `column` bằng `value`.
 
@@ -104,3 +114,9 @@ class SheetTable:
             for column, old_value in zip(header, current, strict=True)
         ]
         self._gateway.update_row(self._spreadsheet_id, self._tab, row_number, new_row)
+
+    def delete_row(self, row_number: int) -> None:
+        """Xoá hẳn một dòng; các dòng bên dưới dịch lên. Chỉ gọi khi đang giữ khoá của tab."""
+        if row_number < 2:
+            raise ValueError("Không được xoá hàng tiêu đề")
+        self._gateway.delete_row(self._spreadsheet_id, self._tab, row_number)

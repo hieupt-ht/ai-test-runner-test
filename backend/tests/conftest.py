@@ -11,6 +11,8 @@ from app.api.services import Services
 from app.api.sessions import SessionStore
 from app.core.models.user import Role, User
 from app.core.repositories.audit_log import AuditLogRepository
+from app.core.repositories.members import ProjectMemberRepository
+from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.sheets.schema import SYSTEM_TABS
 from app.main import create_app
@@ -103,3 +105,15 @@ def client_as_admin(client: TestClient, oauth: FakeOAuth, users: UserRepository)
 def client_as_qa_lead(client: TestClient, oauth: FakeOAuth, users: UserRepository) -> TestClient:
     log_in_as(client, oauth, users, "lead@x.com", Role.QA_LEAD)
     return client
+
+
+@pytest.fixture
+def projects(gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis) -> ProjectRepository:
+    return ProjectRepository(gateway, SYSTEM_SHEET_ID, redis, lock_wait_seconds=0.1)
+
+
+@pytest.fixture
+def members(gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis) -> ProjectMemberRepository:
+    return ProjectMemberRepository(
+        gateway, SYSTEM_SHEET_ID, redis, cache_ttl_seconds=300, lock_wait_seconds=0.1
+    )
