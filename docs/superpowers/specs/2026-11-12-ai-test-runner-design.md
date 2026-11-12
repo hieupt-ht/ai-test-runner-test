@@ -295,7 +295,7 @@ So với PRD, `Results` có thêm `id`, `tokens_used` và `review_note`; thêm t
 2. **Thêm mới** dùng `spreadsheets.values.append`.
 3. **Sinh ID:** lấy khoá Redis `lock:id:<project_id>:<entity>` → đọc bộ đếm trong `Meta` → tăng → ghi lại → nhả khoá.
 4. **Sửa bản ghi:**
-   - Lấy khoá Redis `lock:<entity>:<id>` (TTL 10 giây).
+   - Lấy khoá Redis `lock:<project_id>:<entity>:<id>` (TTL 10 giây). Có `project_id` vì ID được đánh số theo từng dự án, nên `TC-000123` có thể trùng giữa hai dự án.
    - **Đọc lại** để tìm dòng theo cột `id`. Không dùng số dòng đã lưu từ trước.
    - So `version` với version client gửi lên. Lệch thì trả **HTTP 409** kèm bản mới nhất và người sửa cuối. Giao diện báo: *"Case này vừa được [tên người sửa] cập nhật. Vui lòng tải lại."* **[Chủ dự án]** Chỉ cần vậy, không so sánh hay gộp.
    - Khớp thì ghi dòng, tăng `version`, ghi `AuditLog`, rồi nhả khoá.
