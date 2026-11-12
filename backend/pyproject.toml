@@ -39,7 +39,10 @@ ignore = ["SIM117"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
+filterwarnings = [
+    "ignore:Using `httpx` with `starlette.testclient`",
+    "ignore:The httpx module is deprecated",
+]
 
 [dependency-groups]
 dev = [

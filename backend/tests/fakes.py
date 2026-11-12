@@ -8,7 +8,11 @@ Bắt chước hai thói quen của Google thật:
 import re
 
 import httplib2
+from fastapi import Request
+from fastapi.responses import RedirectResponse, Response
 from googleapiclient.errors import HttpError
+
+from app.api.oauth import GoogleIdentity
 
 _ROW_RANGE = re.compile(r"^(?P<start>\d+):(?P<end>\d+)$")
 _COLUMN_RANGE = re.compile(r"^(?P<start>[A-Z]+):(?P<end>[A-Z]+)$")
@@ -78,3 +82,16 @@ class FakeSheetsGateway:
     def add_tab(self, spreadsheet_id: str, tab: str, header: list[str]) -> None:
         self.calls.append(f"add_tab:{tab}")
         self.data.setdefault(spreadsheet_id, {})[tab] = [list(header)]
+
+
+class FakeOAuth:
+    """Google giả: không gọi mạng, trả về danh tính đặt sẵn trong `identity`."""
+
+    def __init__(self) -> None:
+        self.identity = GoogleIdentity(email="an@x.com", name="An")
+
+    async def authorize_redirect(self, request: Request, redirect_uri: str) -> Response:
+        return RedirectResponse(f"https://accounts.google.com/fake?redirect_uri={redirect_uri}")
+
+    async def fetch_identity(self, request: Request) -> GoogleIdentity:
+        return self.identity

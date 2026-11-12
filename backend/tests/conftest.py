@@ -4,12 +4,17 @@ from datetime import UTC, datetime
 
 import fakeredis
 import pytest
+from fastapi.testclient import TestClient
 
+from app.api.services import Services
+from app.api.sessions import SessionStore
 from app.core.models.user import Role, User
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.users import UserRepository
 from app.core.sheets.schema import SYSTEM_TABS
-from tests.fakes import FakeSheetsGateway
+from app.main import create_app
+from app.settings import Settings
+from tests.fakes import FakeOAuth, FakeSheetsGateway
 
 SYSTEM_SHEET_ID = "system-sheet"
 
@@ -48,3 +53,27 @@ def users(gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis) -> UserReposit
 @pytest.fixture
 def audit_log(gateway: FakeSheetsGateway) -> AuditLogRepository:
     return AuditLogRepository(gateway, SYSTEM_SHEET_ID)
+
+
+@pytest.fixture
+def oauth() -> FakeOAuth:
+    return FakeOAuth()
+
+
+@pytest.fixture
+def client(
+    users: UserRepository,
+    audit_log: AuditLogRepository,
+    redis: fakeredis.FakeRedis,
+    oauth: FakeOAuth,
+) -> TestClient:
+    """App thật, nhưng Sheets, Redis và Google đều là bản giả."""
+    services = Services(
+        redis=redis,
+        users=users,
+        audit_log=audit_log,
+        sessions=SessionStore(redis, ttl_seconds=3600),
+        oauth=oauth,
+    )
+    settings = Settings(session_secret="test-secret", app_base_url="http://localhost:3000")
+    return TestClient(create_app(settings, services=services), follow_redirects=False)
