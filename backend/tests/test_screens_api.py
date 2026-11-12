@@ -1,0 +1,108 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from app.core.models.project import Project
+from app.core.repositories.members import ProjectMemberRepository
+from app.core.repositories.projects import ProjectRepository
+from tests.conftest import SHEET_A, make_project
+from tests.fakes import FakeSheetsGateway
+
+
+@pytest.fixture
+def project(
+    projects: ProjectRepository, members: ProjectMemberRepository, gateway: FakeSheetsGateway
+) -> Project:
+    return make_project(
+        projects, members, gateway, member_emails=("lead@x.com", "tester@x.com")
+    )
+
+
+def screens_url(project: Project) -> str:
+    return f"/api/projects/{project.id}/screens"
+
+
+def login_screen(**overrides: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "name": "Đăng nhập",
+        "description": "Màn hình đăng nhập",
+        "route": "/login",
+        "code_paths": ["src/pages/login.tsx", "  api/auth/ "],
+    }
+    body.update(overrides)
+    return body
+
+
+def test_create_list_update_delete_screen(
+    client_as_qa_lead: TestClient, project: Project
+) -> None:
+    first = client_as_qa_lead.post(screens_url(project), json=login_screen())
+    second = client_as_qa_lead.post(screens_url(project), json=login_screen(name="Giỏ hàng"))
+
+    assert first.status_code == 201
+    assert first.json()["id"] == "SC-0001"
+    assert first.json()["code_paths"] == ["src/pages/login.tsx", "api/auth/"]
+    assert second.json()["id"] == "SC-0002"
+
+    updated = client_as_qa_lead.patch(
+        f"{screens_url(project)}/SC-0001", json={"name": "Đăng nhập mới", "code_paths": []}
+    )
+    assert updated.json()["name"] == "Đăng nhập mới"
+    assert updated.json()["code_paths"] == []
+    assert updated.json()["route"] == "/login"  # trường không gửi thì giữ nguyên
+
+    assert client_as_qa_lead.delete(f"{screens_url(project)}/SC-0002").status_code == 204
+    listed = client_as_qa_lead.get(screens_url(project)).json()
+    assert [screen["id"] for screen in listed] == ["SC-0001"]
+
+
+@pytest.mark.parametrize("bad", ["/etc/passwd", "../secret", "src/../x", "a\\b", "", "x" * 201])
+def test_rejects_bad_code_paths(client_as_qa_lead: TestClient, project: Project, bad: str) -> None:
+    response = client_as_qa_lead.post(screens_url(project), json=login_screen(code_paths=[bad]))
+
+    assert response.status_code == 422
+
+
+def test_unknown_screen_is_404(client_as_qa_lead: TestClient, project: Project) -> None:
+    response = client_as_qa_lead.patch(f"{screens_url(project)}/SC-0999", json={"name": "X"})
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Không tìm thấy màn hình"}
+
+
+def test_tester_can_view_but_not_create(client_as_tester: TestClient, project: Project) -> None:
+    assert client_as_tester.get(screens_url(project)).status_code == 200
+    assert client_as_tester.post(screens_url(project), json=login_screen()).status_code == 403
+
+
+def test_non_member_gets_404(
+    client_as_tester: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    other = make_project(projects, members, gateway)
+
+    assert client_as_tester.get(screens_url(other)).status_code == 404
+
+
+def test_archived_project_rejects_writes(
+    client_as_admin: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    archived = make_project(projects, members, gateway, archived=True)
+
+    response = client_as_admin.post(screens_url(archived), json=login_screen())
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Dự án đã được lưu trữ"}
+
+
+def test_writes_go_to_project_audit_log(
+    client_as_qa_lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    client_as_qa_lead.post(screens_url(project), json=login_screen())
+
+    audit = gateway.data[SHEET_A]["AuditLog"][-1]
+    assert audit[1:5] == ["lead@x.com", "CREATE", "screen", "SC-0001"]
