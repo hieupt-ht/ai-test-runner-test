@@ -4,11 +4,14 @@ from datetime import UTC, datetime
 
 import fakeredis
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.oauth import GoogleIdentity
 from app.api.services import Services
 from app.api.sessions import SessionStore
+from app.core.bootstrap import bootstrap_project_spreadsheet
+from app.core.models.project import Project
 from app.core.models.user import Role, User
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
@@ -17,9 +20,11 @@ from app.core.repositories.users import UserRepository
 from app.core.sheets.schema import SYSTEM_TABS
 from app.main import create_app
 from app.settings import Settings
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
 
-SYSTEM_SHEET_ID = "system-sheet"
+SYSTEM_SHEET_ID = "1SystemSheetId000000000000000000"
+SHEET_A = "1ProjectSheetA00000000000000000"
+SHEET_B = "1ProjectSheetB00000000000000000"
 
 
 def make_user(
@@ -64,24 +69,77 @@ def oauth() -> FakeOAuth:
 
 
 @pytest.fixture
-def client(
+def github() -> FakeGitHub:
+    return FakeGitHub({"org/web": ["develop", "main"], "org/api": ["main"]})
+
+
+@pytest.fixture
+def app(
     users: UserRepository,
     audit_log: AuditLogRepository,
     redis: fakeredis.FakeRedis,
     oauth: FakeOAuth,
-) -> TestClient:
-    """App thật, nhưng Sheets, Redis và Google đều là bản giả."""
+    gateway: FakeSheetsGateway,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    github: FakeGitHub,
+) -> FastAPI:
+    """App thật, nhưng Sheets, Redis, Google và GitHub đều là bản giả."""
     services = Services(
         redis=redis,
         users=users,
         audit_log=audit_log,
         sessions=SessionStore(redis, ttl_seconds=3600),
         oauth=oauth,
+        gateway=gateway,
+        system_spreadsheet_id=SYSTEM_SHEET_ID,
+        service_account_email=gateway.service_account_email,
+        projects=projects,
+        members=members,
+        github=github,
+        lock_wait_seconds=0.1,
     )
     settings = Settings(
         _env_file=None, session_secret="test-secret", app_base_url="http://localhost:3000"
     )
-    return TestClient(create_app(settings, services=services), follow_redirects=False)
+    return create_app(settings, services=services)
+
+
+@pytest.fixture
+def client(app: FastAPI) -> TestClient:
+    return TestClient(app, follow_redirects=False)
+
+
+def client_for(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, email: str, role: Role
+) -> TestClient:
+    """Một trình duyệt riêng (cookie riêng) đã đăng nhập bằng `email`."""
+    browser = TestClient(app, follow_redirects=False)
+    log_in_as(browser, oauth, users, email, role)
+    return browser
+
+
+def make_project(
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+    *,
+    name: str = "Dự án A",
+    sheet: str = SHEET_A,
+    member_emails: tuple[str, ...] = (),
+    archived: bool = False,
+) -> Project:
+    """Tạo sẵn một dự án (kèm Sheet dự án giả đã có đủ tab) mà không qua API."""
+    gateway.data.setdefault(sheet, {})
+    bootstrap_project_spreadsheet(gateway, sheet)
+    project = projects.create(
+        name=name, repo_full_name="org/web", branch="main", staging_url="", spreadsheet_id=sheet
+    )
+    if archived:
+        project = projects.update(project.model_copy(update={"archived": True}))
+    for email in member_emails:
+        members.add(project.id, email)
+    return project
 
 
 def log_in_as(
@@ -117,3 +175,9 @@ def members(gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis) -> ProjectMe
     return ProjectMemberRepository(
         gateway, SYSTEM_SHEET_ID, redis, cache_ttl_seconds=300, lock_wait_seconds=0.1
     )
+
+
+@pytest.fixture
+def client_as_tester(client: TestClient, oauth: FakeOAuth, users: UserRepository) -> TestClient:
+    log_in_as(client, oauth, users, "tester@x.com", Role.TESTER)
+    return client

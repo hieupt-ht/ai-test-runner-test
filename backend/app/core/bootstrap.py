@@ -9,7 +9,7 @@ Chạy nhiều lần vẫn cho cùng kết quả.
 from app.core.models.user import Role, User, normalize_email
 from app.core.repositories.users import UserRepository
 from app.core.sheets.gateway import SheetsGateway
-from app.core.sheets.schema import SYSTEM_TABS
+from app.core.sheets.schema import PROJECT_TABS, SYSTEM_TABS
 from app.core.sheets.table import SheetTable
 from app.core.time import utc_now
 
@@ -18,18 +18,25 @@ class ConfigError(Exception):
     """Thiếu cấu hình bắt buộc khi chạy thật."""
 
 
-def bootstrap_system_spreadsheet(
-    gateway: SheetsGateway, spreadsheet_id: str, users: UserRepository, bootstrap_admin_email: str
+def _ensure_tabs(
+    gateway: SheetsGateway, spreadsheet_id: str, tabs: dict[str, list[str]]
 ) -> list[str]:
+    """Tạo các tab còn thiếu (kèm tiêu đề); tab đã có thì kiểm tra đủ cột."""
     existing_tabs = set(gateway.list_tabs(spreadsheet_id))
     created_tabs: list[str] = []
-
-    for tab, columns in SYSTEM_TABS.items():
+    for tab, columns in tabs.items():
         if tab in existing_tabs:
             SheetTable(gateway, spreadsheet_id, tab, columns).check_columns()
         else:
             gateway.add_tab(spreadsheet_id, tab, columns)
             created_tabs.append(tab)
+    return created_tabs
+
+
+def bootstrap_system_spreadsheet(
+    gateway: SheetsGateway, spreadsheet_id: str, users: UserRepository, bootstrap_admin_email: str
+) -> list[str]:
+    created_tabs = _ensure_tabs(gateway, spreadsheet_id, SYSTEM_TABS)
 
     admin_email = normalize_email(bootstrap_admin_email)
     if admin_email and users.is_empty():
@@ -44,3 +51,11 @@ def bootstrap_system_spreadsheet(
         )
 
     return created_tabs
+
+
+def bootstrap_project_spreadsheet(gateway: SheetsGateway, spreadsheet_id: str) -> list[str]:
+    """Chuẩn bị Sheet riêng của một dự án. Đây cũng là bước kiểm tra app có quyền ghi.
+
+    App chưa được share quyền thì gateway báo SheetAccessDeniedError.
+    """
+    return _ensure_tabs(gateway, spreadsheet_id, PROJECT_TABS)
