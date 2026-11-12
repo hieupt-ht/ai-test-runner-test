@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "AI Test Runner",
+    "tagline": "Quản lý test case và để AI chạy test giúp bạn"
+  },
+  "nav": {
+    "overview": "Tổng quan",
+    "users": "Người dùng",
+    "projects": "Dự án",
+    "projectsComingSoon": "Sẽ có ở M2"
+  },
+  "login": {
+    "title": "Đăng nhập",
+    "subtitle": "Dùng tài khoản Google đã được Admin cấp quyền.",
+    "button": "Đăng nhập bằng Google",
+    "notAllowed": "Tài khoản của bạn chưa được cấp quyền. Hãy liên hệ Admin."
+  },
+  "topbar": {
+    "theme": "Giao diện",
+    "themeLight": "Sáng",
+    "themeDark": "Tối",
+    "themeSystem": "Theo hệ thống",
+    "logout": "Đăng xuất"
+  },
+  "overview": {
+    "title": "Tổng quan",
+    "greeting": "Xin chào, {name}!",
+    "emptyTitle": "Chưa có dự án nào",
+    "emptyDescription": "Phần dự án sẽ có ở mốc M2. Hiện bạn có thể quản lý người dùng (nếu là Admin)."
+  },
+  "roles": {
+    "ADMIN": "Admin",
+    "QA_LEAD": "QA Lead",
+    "TESTER": "Tester",
+    "VIEWER": "Viewer"
+  },
+  "users": {
+    "title": "Người dùng",
+    "description": "Chỉ những email có trong danh sách và đang hoạt động mới đăng nhập được.",
+    "add": "Thêm người dùng",
+    "search": "Tìm theo email hoặc tên…",
+    "colEmail": "Email",
+    "colName": "Tên",
+    "colRole": "Vai trò",
+    "colActive": "Hoạt động",
+    "colCreatedAt": "Ngày tạo",
+    "empty": "Không có người dùng nào khớp.",
+    "noPermission": "Bạn không có quyền xem trang này.",
+    "formTitle": "Thêm người dùng",
+    "formDescription": "Người này sẽ đăng nhập bằng đúng email Google bạn nhập.",
+    "fieldEmail": "Email",
+    "fieldName": "Tên hiển thị",
+    "fieldRole": "Vai trò",
+    "cancel": "Huỷ",
+    "save": "Lưu",
+    "created": "Đã thêm {email}",
+    "updated": "Đã cập nhật {email}",
+    "you": "Bạn"
+  },
+  "errors": {
+    "generic": "Có lỗi xảy ra, vui lòng thử lại."
+  }
+}
