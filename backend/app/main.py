@@ -7,7 +7,17 @@ from fastapi import FastAPI
 from fastapi.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api.routers import assignments, auth, github, health, me, projects, screens, users
+from app.api.routers import (
+    assignments,
+    auth,
+    github,
+    health,
+    me,
+    members,
+    projects,
+    screens,
+    users,
+)
 from app.api.services import Services, build_gateway, build_services, is_configured
 from app.core.bootstrap import ConfigError, bootstrap_system_spreadsheet
 from app.settings import Settings, get_settings
@@ -64,4 +74,5 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(screens.router)
     app.include_router(assignments.router)
     app.include_router(me.router)
+    app.include_router(members.router)
     return app
