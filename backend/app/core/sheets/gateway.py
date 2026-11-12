@@ -95,7 +95,9 @@ class GoogleSheetsGateway:
                 spreadsheetId=spreadsheet_id,
                 range=f"{tab}!A1",
                 valueInputOption="RAW",
-                insertDataOption="INSERT_ROWS",
+                # OVERWRITE: ghi vào ô trống ngay sau bảng, không chèn dòng mới,
+                # nên các dòng có sẵn không bị đẩy xuống.
+                insertDataOption="OVERWRITE",
                 body={"values": rows},
             )
             .execute()

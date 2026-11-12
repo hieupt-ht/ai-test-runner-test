@@ -89,9 +89,12 @@ class FakeOAuth:
 
     def __init__(self) -> None:
         self.identity = GoogleIdentity(email="an@x.com", name="An")
+        self.fail_with: Exception | None = None
 
     async def authorize_redirect(self, request: Request, redirect_uri: str) -> Response:
         return RedirectResponse(f"https://accounts.google.com/fake?redirect_uri={redirect_uri}")
 
     async def fetch_identity(self, request: Request) -> GoogleIdentity:
+        if self.fail_with is not None:
+            raise self.fail_with
         return self.identity

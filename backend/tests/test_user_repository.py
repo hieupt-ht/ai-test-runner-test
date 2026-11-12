@@ -79,7 +79,7 @@ def test_list_uses_cache_then_invalidates_on_write(
 
 
 def test_create_takes_lock(users: UserRepository, redis: fakeredis.FakeRedis) -> None:
-    with redis_lock(redis, "lock:system:user:an@x.com"):
+    with redis_lock(redis, "lock:system:users"):
         with pytest.raises(LockTimeout):
             users.create(make_user("an@x.com"))
 
@@ -98,3 +98,36 @@ def test_cache_holds_json_list(users: UserRepository, redis: fakeredis.FakeRedis
 
     assert cached is not None
     assert json.loads(cached)[0]["email"] == "an@x.com"
+
+
+def test_stale_read_does_not_refill_cache_after_a_write(
+    users: UserRepository, gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis
+) -> None:
+    users.create(make_user("an@x.com"))
+    original_get_values = gateway.get_values
+
+    def get_values_with_concurrent_write(spreadsheet_id: str, a1_range: str) -> list[list[str]]:
+        rows = original_get_values(spreadsheet_id, a1_range)
+        if a1_range == "Users":
+            # Trong lúc request A đang đọc Sheet, Admin B khoá user này
+            gateway.get_values = original_get_values  # type: ignore[method-assign]
+            users.update(make_user("an@x.com", active=False))
+        return rows
+
+    gateway.get_values = get_values_with_concurrent_write  # type: ignore[method-assign]
+    users.list_all()  # đọc được dữ liệu CŨ (active=True)
+
+    assert redis.get("cache:users") is None  # không được ghi dữ liệu cũ vào cache
+    found = users.get("an@x.com")
+    assert found is not None and not found.active
+
+
+def test_writes_take_one_lock_for_the_whole_users_tab(
+    users: UserRepository, redis: fakeredis.FakeRedis
+) -> None:
+    users.create(make_user("an@x.com"))
+
+    # Đang có người thêm user khác (giữ khoá cả tab) → sửa user "an" phải chờ
+    with redis_lock(redis, "lock:system:users"):
+        with pytest.raises(LockTimeout):
+            users.update(make_user("an@x.com", name="An mới"))

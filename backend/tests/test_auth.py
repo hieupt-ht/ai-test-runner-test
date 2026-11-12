@@ -1,3 +1,4 @@
+from authlib.integrations.base_client.errors import OAuthError
 from fastapi.testclient import TestClient
 
 from app.api.oauth import GoogleIdentity
@@ -99,3 +100,13 @@ def test_logout_deletes_session(
     assert response.status_code == 204
     client.cookies.set("atr_session", session_id)  # thử dùng lại session cũ
     assert client.get("/api/me").status_code == 401
+
+
+def test_callback_oauth_error_redirects_to_login_error(
+    client: TestClient, oauth: FakeOAuth
+) -> None:
+    oauth.fail_with = OAuthError(error="access_denied")  # người dùng bấm Huỷ ở Google
+
+    response = client.get("/api/auth/callback?error=access_denied")
+
+    assert response.headers["location"] == "/login?error=oauth_failed"

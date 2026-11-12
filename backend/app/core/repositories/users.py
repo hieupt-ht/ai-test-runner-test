@@ -21,6 +21,22 @@ from app.core.time import from_iso, to_iso
 logger = logging.getLogger(__name__)
 
 CACHE_KEY = "cache:users"
+# Tăng lên 1 mỗi lần ghi. Dùng để biết "trong lúc mình đọc Sheet, có ai ghi chưa?"
+GENERATION_KEY = "cache:users:generation"
+# Một khoá cho cả tab: thêm dòng mới có thể làm các dòng bên dưới dịch xuống,
+# nên mọi thao tác ghi vào tab Users phải lần lượt.
+TAB_LOCK_KEY = "lock:system:users"
+
+# Chỉ ghi cache khi bộ đếm thế hệ vẫn như lúc bắt đầu đọc Sheet.
+# Làm bằng script Lua để "kiểm tra rồi ghi" không bị ai chen vào giữa.
+_SET_IF_GENERATION_UNCHANGED = """
+local current = redis.call('get', KEYS[2]) or ''
+if current == ARGV[1] then
+    redis.call('set', KEYS[1], ARGV[2], 'EX', ARGV[3])
+    return 1
+end
+return 0
+"""
 TRUE_TEXTS = {"true", "1", "yes"}
 
 
@@ -72,9 +88,20 @@ class UserRepository:
         if cached is not None:
             return [User.model_validate(item) for item in json.loads(cached)]
 
+        generation_before = self._generation()
         users = self._read_from_sheet()
         payload = json.dumps([user.model_dump(mode="json") for user in users])
-        self._redis.set(CACHE_KEY, payload, ex=self._cache_ttl_seconds)
+        # Nếu trong lúc đọc có người ghi (thế hệ đã đổi), dữ liệu vừa đọc có thể đã cũ:
+        # vẫn trả về cho request này, nhưng KHÔNG lưu vào cache.
+        self._redis.eval(
+            _SET_IF_GENERATION_UNCHANGED,
+            2,
+            CACHE_KEY,
+            GENERATION_KEY,
+            generation_before,
+            payload,
+            self._cache_ttl_seconds,
+        )
         return users
 
     def get(self, email: str) -> User | None:
@@ -86,7 +113,7 @@ class UserRepository:
 
     def create(self, user: User) -> User:
         user = user.model_copy(update={"email": normalize_email(user.email)})
-        with self._lock(user.email):
+        with self._lock():
             # Kiểm tra trực tiếp trên Sheet (không qua cache) để chắc chắn không trùng.
             if self._table.find_row_number("email", user.email) is not None:
                 raise UserAlreadyExistsError(user.email)
@@ -96,7 +123,7 @@ class UserRepository:
 
     def update(self, user: User) -> User:
         user = user.model_copy(update={"email": normalize_email(user.email)})
-        with self._lock(user.email):
+        with self._lock():
             # Tìm lại số dòng ngay trong khoá, không dùng số dòng đã biết từ trước.
             row_number = self._table.find_row_number("email", user.email)
             if row_number is None:
@@ -115,10 +142,15 @@ class UserRepository:
                 logger.warning("Bỏ qua dòng user sai định dạng: %s", record.get("email"))
         return users
 
-    def _lock(self, email: str) -> AbstractContextManager[None]:
-        return redis_lock(
-            self._redis, f"lock:system:user:{email}", wait_seconds=self._lock_wait_seconds
-        )
+    def _lock(self) -> AbstractContextManager[None]:
+        return redis_lock(self._redis, TAB_LOCK_KEY, wait_seconds=self._lock_wait_seconds)
+
+    def _generation(self) -> str:
+        value = self._redis.get(GENERATION_KEY)
+        if value is None:
+            return ""
+        return value.decode() if isinstance(value, bytes) else str(value)
 
     def _clear_cache(self) -> None:
+        self._redis.incr(GENERATION_KEY)
         self._redis.delete(CACHE_KEY)

@@ -88,3 +88,25 @@ def test_update_writes_values_in_sheet_column_order_and_keeps_unknown_columns() 
     assert gateway.data["sys"]["Users"][1] == [
         "QA_LEAD", "a@x.com", "giữ nguyên", "An Nguyễn", "FALSE", CREATED
     ]
+
+
+def test_row_longer_than_header_does_not_crash() -> None:
+    # Ai đó gõ nhầm một ô ở bên phải cột cuối cùng
+    table, _ = make_table([COLUMNS, ["a@x.com", "An", "ADMIN", "TRUE", CREATED, "ô lạc"]])
+
+    assert table.read_all()[0]["email"] == "a@x.com"
+    assert table.read_row(2)["name"] == "An"
+    table.update(2, {"name": "An mới"})
+
+
+def test_header_is_reread_when_columns_change_while_running() -> None:
+    table, gateway = make_table([COLUMNS, ["a@x.com", "An", "ADMIN", "TRUE", CREATED]])
+    table.read_all()
+
+    # Có người đổi chỗ hai cột email và name trên Sheet trong lúc app đang chạy
+    gateway.data["sys"]["Users"] = [
+        ["name", "email", "role", "active", "created_at"],
+        ["An", "a@x.com", "ADMIN", "TRUE", CREATED],
+    ]
+
+    assert table.read_all()[0]["email"] == "a@x.com"
