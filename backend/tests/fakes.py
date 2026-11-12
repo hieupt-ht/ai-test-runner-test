@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse, Response
 from googleapiclient.errors import HttpError
 
 from app.api.oauth import GoogleIdentity
+from app.core.github.client import GitHubError, RepoInfo
 from app.core.sheets.gateway import SheetAccessDeniedError
 
 _ROW_RANGE = re.compile(r"^(?P<start>\d+):(?P<end>\d+)$")
@@ -112,3 +113,21 @@ class FakeOAuth:
         if self.fail_with is not None:
             raise self.fail_with
         return self.identity
+
+
+class FakeGitHub:
+    """GitHub giả: `repos` là {"org/repo": ["main", "develop"]}."""
+
+    def __init__(self, repos: dict[str, list[str]] | None = None) -> None:
+        self.repos = repos if repos is not None else {"org/web": ["develop", "main"]}
+
+    def list_repositories(self) -> list[RepoInfo]:
+        return [
+            RepoInfo(full_name=name, default_branch=branches[-1], private=True)
+            for name, branches in sorted(self.repos.items())
+        ]
+
+    def list_branches(self, repo_full_name: str) -> list[str]:
+        if repo_full_name not in self.repos:
+            raise GitHubError(f"GitHub trả lỗi 404 khi gọi {repo_full_name}")
+        return sorted(self.repos[repo_full_name])
