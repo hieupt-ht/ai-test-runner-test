@@ -12,7 +12,9 @@
 
 ## Global Constraints
 
-- Làm trên nhánh `m1-foundation`. Commit sau mỗi task. **Không push** lên GitHub.
+- **Gitflow:** tạo nhánh `develop` từ `main`, rồi làm trên `feature/m1-foundation` tách từ `develop`. Commit theo Conventional Commits (`feat(scope): ...`, `chore:`, `test:`, `docs:`) sau mỗi task. Cuối M1 tạo PR vào `develop` (title cùng format; description gồm Tóm tắt / Thay đổi / Cách kiểm tra / Ghi chú). **Chỉ push và tạo PR khi chủ dự án đồng ý.**
+- **Commit và PR viết tiếng Việt có dấu**, giữ tiền tố loại bằng tiếng Anh để công cụ vẫn hiểu. Ví dụ `feat(core): thêm khoá Redis`. Các message tiếng Anh ở từng task bên dưới chỉ là ý chính, khi commit phải viết lại bằng tiếng Việt. Trên Windows, ghi message ra file UTF-8 rồi dùng `git commit -F <file>` (hoặc heredoc trong Git Bash) để không lỗi dấu.
+- Không commit thẳng lên `main`.
 - Python ≥ 3.12 (image Docker `python:3.13-slim`); Node 24 (image `node:24-alpine`).
 - `mypy --strict` và `ruff check` sạch cho `backend/`; TypeScript `strict: true`.
 - Router và service **không** import `googleapiclient`. Chỉ `backend/app/core/sheets/gateway.py` được import.
@@ -89,7 +91,7 @@
 **Interfaces:**
 - Produces: `Settings` (pydantic-settings) với các trường của mục 14 trong spec, cộng thêm `session_ttl_seconds: int = 604800`, `user_cache_ttl_seconds: int = 300`. Hàm `get_settings() -> Settings` có `lru_cache`. Hàm `create_app(settings: Settings | None = None) -> FastAPI`. Router health ở `GET /api/health` trả về `{"status": "ok"}`.
 
-- [ ] **Step 1:** `git checkout -b m1-foundation`. Tạo `.gitignore`: `.env`, `__pycache__/`, `.venv/`, `node_modules/`, `.next/`, `*.json.key`, `.claude/`.
+- [ ] **Step 1:** `git checkout -b develop main && git checkout -b feature/m1-foundation develop`. Tạo `.gitignore`: `.env`, `__pycache__/`, `.venv/`, `node_modules/`, `.next/`, `*.json.key`, `.claude/`.
 - [ ] **Step 2:** Viết `.env.example`, chép đúng mục 14 của spec. Bỏ các dòng chỉ cần từ M2 trở đi nhưng giữ comment `# dùng từ M2/M4`. Thêm `API_INTERNAL_URL=http://localhost:8000`. Tạo `DECISIONS.md` với tiêu đề `# Các quyết định và giả định` và mục đầu tiên: "Backend viết đồng bộ (sync), endpoint `def`, để code đơn giản và dễ đọc".
 - [ ] **Step 3:** `cd backend && uv init --app --name ai-test-runner-backend`, rồi `uv add fastapi uvicorn[standard] pydantic-settings google-api-python-client google-auth authlib httpx redis itsdangerous` và `uv add --dev pytest mypy ruff fakeredis types-redis`. Trong `pyproject.toml`, cấu hình `[tool.mypy] strict = true`, `[tool.ruff] line-length = 100`, `[tool.pytest.ini_options] pythonpath = ["."]`.
 - [ ] **Step 4: Viết test fail**
