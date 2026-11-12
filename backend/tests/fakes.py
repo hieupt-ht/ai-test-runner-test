@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse, Response
 from googleapiclient.errors import HttpError
 
 from app.api.oauth import GoogleIdentity
+from app.core.sheets.gateway import SheetAccessDeniedError
 
 _ROW_RANGE = re.compile(r"^(?P<start>\d+):(?P<end>\d+)$")
 _COLUMN_RANGE = re.compile(r"^(?P<start>[A-Z]+):(?P<end>[A-Z]+)$")
@@ -47,8 +48,13 @@ class FakeSheetsGateway:
     def __init__(self, data: dict[str, dict[str, list[list[str]]]] | None = None) -> None:
         self.data = data if data is not None else {}
         self.calls: list[str] = []
+        # Spreadsheet nào nằm trong đây thì giả như app chưa được share quyền
+        self.denied: set[str] = set()
+        self.service_account_email = "sa@test.iam.gserviceaccount.com"
 
     def _tab(self, spreadsheet_id: str, tab: str) -> list[list[str]]:
+        if spreadsheet_id in self.denied:
+            raise SheetAccessDeniedError(spreadsheet_id)
         return self.data.setdefault(spreadsheet_id, {}).setdefault(tab, [])
 
     def get_values(self, spreadsheet_id: str, a1_range: str) -> list[list[str]]:
@@ -77,9 +83,17 @@ class FakeSheetsGateway:
         rows[row_number - 1] = list(values)
 
     def list_tabs(self, spreadsheet_id: str) -> list[str]:
+        if spreadsheet_id in self.denied:
+            raise SheetAccessDeniedError(spreadsheet_id)
         return list(self.data.get(spreadsheet_id, {}).keys())
 
+    def delete_row(self, spreadsheet_id: str, tab: str, row_number: int) -> None:
+        self.calls.append(f"delete:{tab}!{row_number}")
+        del self._tab(spreadsheet_id, tab)[row_number - 1]
+
     def add_tab(self, spreadsheet_id: str, tab: str, header: list[str]) -> None:
+        if spreadsheet_id in self.denied:
+            raise SheetAccessDeniedError(spreadsheet_id)
         self.calls.append(f"add_tab:{tab}")
         self.data.setdefault(spreadsheet_id, {})[tab] = [list(header)]
 

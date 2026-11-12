@@ -17,6 +17,10 @@ from googleapiclient.errors import HttpError
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
+class SheetAccessDeniedError(Exception):
+    """Service account không có quyền với Sheet này (chưa share, hoặc sai ID)."""
+
+
 class SheetsGateway(Protocol):
     def get_values(self, spreadsheet_id: str, a1_range: str) -> list[list[str]]: ...
 
@@ -29,6 +33,8 @@ class SheetsGateway(Protocol):
     def list_tabs(self, spreadsheet_id: str) -> list[str]: ...
 
     def add_tab(self, spreadsheet_id: str, tab: str, header: list[str]) -> None: ...
+
+    def delete_row(self, spreadsheet_id: str, tab: str, row_number: int) -> None: ...
 
 
 def _is_retryable(error: HttpError) -> bool:
@@ -59,6 +65,16 @@ def with_retry[T](
     raise AssertionError("unreachable")
 
 
+def _call[T](call: Callable[[], T]) -> T:
+    """Gọi Google (có thử lại); 403/404 đổi thành SheetAccessDeniedError cho dễ hiểu."""
+    try:
+        return with_retry(call)
+    except HttpError as error:
+        if int(error.resp.status) in (403, 404):
+            raise SheetAccessDeniedError(str(error)) from error
+        raise
+
+
 class GoogleSheetsGateway:
     """Cài đặt thật, gọi Google Sheets API bằng service account."""
 
@@ -70,6 +86,11 @@ class GoogleSheetsGateway:
         # nên mỗi thread giữ một client riêng.
         self._local = threading.local()
 
+    @property
+    def service_account_email(self) -> str:
+        """Email cần được share quyền Editor trên mỗi file Sheet."""
+        return str(self._credentials.service_account_email)
+
     def _spreadsheets(self) -> Any:
         if not hasattr(self._local, "service"):
             self._local.service = build(
@@ -78,7 +99,7 @@ class GoogleSheetsGateway:
         return self._local.service.spreadsheets()
 
     def get_values(self, spreadsheet_id: str, a1_range: str) -> list[list[str]]:
-        response = with_retry(
+        response = _call(
             lambda: self._spreadsheets()
             .values()
             .get(spreadsheetId=spreadsheet_id, range=a1_range)
@@ -88,7 +109,7 @@ class GoogleSheetsGateway:
         return values
 
     def append_rows(self, spreadsheet_id: str, tab: str, rows: list[list[str]]) -> None:
-        with_retry(
+        _call(
             lambda: self._spreadsheets()
             .values()
             .append(
@@ -104,7 +125,7 @@ class GoogleSheetsGateway:
         )
 
     def update_row(self, spreadsheet_id: str, tab: str, row_number: int, values: list[str]) -> None:
-        with_retry(
+        _call(
             lambda: self._spreadsheets()
             .values()
             .update(
@@ -117,7 +138,7 @@ class GoogleSheetsGateway:
         )
 
     def list_tabs(self, spreadsheet_id: str) -> list[str]:
-        response = with_retry(
+        response = _call(
             lambda: self._spreadsheets()
             .get(spreadsheetId=spreadsheet_id, fields="sheets.properties.title")
             .execute()
@@ -125,7 +146,7 @@ class GoogleSheetsGateway:
         return [sheet["properties"]["title"] for sheet in response.get("sheets", [])]
 
     def add_tab(self, spreadsheet_id: str, tab: str, header: list[str]) -> None:
-        with_retry(
+        _call(
             lambda: self._spreadsheets()
             .batchUpdate(
                 spreadsheetId=spreadsheet_id,
@@ -134,3 +155,39 @@ class GoogleSheetsGateway:
             .execute()
         )
         self.update_row(spreadsheet_id, tab, 1, header)
+
+    def delete_row(self, spreadsheet_id: str, tab: str, row_number: int) -> None:
+        sheet_id = self._sheet_id(spreadsheet_id, tab)
+        _call(
+            lambda: self._spreadsheets()
+            .batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={
+                    "requests": [
+                        {
+                            "deleteDimension": {
+                                "range": {
+                                    "sheetId": sheet_id,
+                                    "dimension": "ROWS",
+                                    "startIndex": row_number - 1,  # Google đếm từ 0
+                                    "endIndex": row_number,
+                                }
+                            }
+                        }
+                    ]
+                },
+            )
+            .execute()
+        )
+
+    def _sheet_id(self, spreadsheet_id: str, tab: str) -> int:
+        """Số hiệu nội bộ của tab (khác với tên tab), cần cho thao tác xoá dòng."""
+        response = _call(
+            lambda: self._spreadsheets()
+            .get(spreadsheetId=spreadsheet_id, fields="sheets.properties")
+            .execute()
+        )
+        for sheet in response.get("sheets", []):
+            if sheet["properties"]["title"] == tab:
+                return int(sheet["properties"]["sheetId"])
+        raise SheetAccessDeniedError(f"Không tìm thấy tab {tab}")
