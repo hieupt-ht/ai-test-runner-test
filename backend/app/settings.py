@@ -1,0 +1,46 @@
+"""Đọc cấu hình từ biến môi trường (hoặc file .env).
+
+Mọi trường đều có giá trị mặc định để app khởi động được khi chạy test.
+Việc kiểm tra "thiếu cấu hình bắt buộc" nằm ở bước bootstrap, không nằm ở đây.
+"""
+
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    # Đăng nhập Google
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    session_secret: str = ""
+    bootstrap_admin_email: str = ""
+
+    # Google Sheets
+    google_service_account_json: str = ""
+    system_spreadsheet_id: str = ""
+
+    # GitHub App (từ M2)
+    github_app_id: str = ""
+    github_app_private_key: str = ""
+
+    # AI (từ M4)
+    anthropic_api_key: str = ""
+    claude_model: str = "claude-sonnet-5-5"
+    case_timeout_seconds: int = 300
+    max_cases_per_run: int = 200
+
+    # Hạ tầng
+    redis_url: str = "redis://localhost:6379/0"
+    app_base_url: str = "http://localhost:3000"
+
+    # Thời gian sống
+    session_ttl_seconds: int = 7 * 24 * 60 * 60  # 7 ngày
+    user_cache_ttl_seconds: int = 5 * 60  # 5 phút
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
