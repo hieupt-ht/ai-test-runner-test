@@ -110,5 +110,94 @@
     "archiveConfirm": "Dự án sẽ ẩn với mọi người trừ Admin và không sửa được nữa. Bạn có thể bỏ lưu trữ sau.",
     "confirm": "Đồng ý",
     "spreadsheetLink": "Mở Google Sheet"
+  },
+  "common": {
+    "cancel": "Huỷ",
+    "save": "Lưu",
+    "delete": "Xoá",
+    "edit": "Sửa",
+    "confirm": "Đồng ý",
+    "saved": "Đã lưu",
+    "deleted": "Đã xoá"
+  },
+  "screens": {
+    "add": "Thêm màn hình",
+    "empty": "Dự án chưa có màn hình nào.",
+    "colId": "Mã",
+    "colName": "Tên màn hình",
+    "colRoute": "Route",
+    "colCodePaths": "Thư mục code",
+    "formAdd": "Thêm màn hình",
+    "formEdit": "Sửa màn hình {id}",
+    "fieldName": "Tên màn hình",
+    "fieldDescription": "Mô tả",
+    "fieldRoute": "Route trong app",
+    "fieldCodePaths": "Thư mục/file code liên quan",
+    "codePathsHint": "Đường dẫn tương đối trong repo, ví dụ src/pages/login.tsx. AI sẽ đọc ở đây trước.",
+    "addCodePath": "Thêm đường dẫn",
+    "nameRequired": "Vui lòng nhập tên màn hình",
+    "deleteTitle": "Xoá màn hình {id}?",
+    "deleteConfirm": "Màn hình sẽ bị xoá khỏi Sheet của dự án. Không hoàn tác được.",
+    "pathCount": "{count, plural, =0 {Chưa có} other {# đường dẫn}}",
+    "codePathErrors": {
+      "empty": "Đường dẫn không được để trống",
+      "tooLong": "Tối đa 200 ký tự",
+      "absolute": "Không bắt đầu bằng /",
+      "backslash": "Dùng dấu / thay cho dấu \\",
+      "dotdot": "Không được chứa .."
+    },
+    "tooManyPaths": "Tối đa {max} đường dẫn"
+  },
+  "assignments": {
+    "assign": "Giao việc",
+    "empty": "Chưa có màn hình nào để giao việc. Hãy thêm màn hình trước.",
+    "notAssigned": "Chưa giao cho ai",
+    "formTitle": "Giao việc: {screen}",
+    "fieldTesters": "Tester",
+    "fieldDeadline": "Deadline",
+    "noTesters": "Dự án chưa có tester nào đang hoạt động. Hãy thêm tester ở tab Thành viên.",
+    "pickTester": "Chọn ít nhất một tester",
+    "pickDeadline": "Chọn deadline",
+    "assigned": "Đã giao việc",
+    "unassign": "Bỏ giao việc",
+    "unassigned": "Đã bỏ giao việc",
+    "changeDeadline": "Đổi deadline"
+  },
+  "deadline": {
+    "overdue": "Quá hạn",
+    "dueSoon": "Sắp tới hạn",
+    "ok": "Còn thời gian"
+  },
+  "statuses": {
+    "TODO": "Chưa bắt đầu",
+    "WRITING": "Đang viết",
+    "IN_REVIEW": "Chờ duyệt",
+    "APPROVED": "Đã duyệt",
+    "TESTED": "Đã test"
+  },
+  "members": {
+    "add": "Thêm thành viên",
+    "empty": "Dự án chưa có thành viên nào.",
+    "colName": "Tên",
+    "colEmail": "Email",
+    "colRole": "Vai trò",
+    "colAddedAt": "Ngày thêm",
+    "formTitle": "Thêm thành viên",
+    "fieldUser": "Người dùng",
+    "fieldEmail": "Email",
+    "pickUser": "Chọn người dùng",
+    "added": "Đã thêm {email}",
+    "removed": "Đã bỏ {email} khỏi dự án",
+    "remove": "Bỏ khỏi dự án",
+    "removeTitle": "Bỏ {email} khỏi dự án?",
+    "removeConfirm": "Người này sẽ không còn thấy dự án. Nếu đang được giao việc, hãy bỏ giao việc trước.",
+    "inactive": "Đã khoá"
+  },
+  "myWork": {
+    "title": "Việc của tôi",
+    "empty": "Bạn chưa được giao màn hình nào.",
+    "emptyHint": "Khi QA Lead giao việc, các màn hình sẽ hiện ở đây.",
+    "deadline": "Deadline {date}",
+    "openProject": "Mở dự án"
   }
 }
