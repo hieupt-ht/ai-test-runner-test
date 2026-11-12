@@ -2,7 +2,7 @@
 
 Web app nội bộ giúp đội QA **viết test case theo chuẩn chung** và **để AI chạy test giúp**: AI đọc source code của app cần test, đối chiếu với từng test case, ghi kết quả vào Google Sheets. Những case FAIL được QA Lead duyệt trước khi tạo thành GitHub Issue.
 
-> Trạng thái: **M1 — Nền tảng** (đăng nhập Google, phân quyền, quản lý người dùng, khung giao diện).
+> Trạng thái: **M1 — Nền tảng** và **M2 — Quản trị dự án** (dự án gắn repo GitHub và Google Sheet riêng, thành viên, màn hình, chia việc, trang Việc của tôi).
 > Các mốc tiếp theo xem ở [tài liệu thiết kế](docs/superpowers/specs/2026-11-12-ai-test-runner-design.md), mục 15.
 
 ## Ai dùng
@@ -63,8 +63,32 @@ Cần: **Docker Desktop**. Nếu muốn chạy từng phần để phát triển
 3. Lấy **Spreadsheet ID** từ đường link: `https://docs.google.com/spreadsheets/d/<ID>/edit`.
 4. Khi app khởi động lần đầu, nó tự tạo các tab `Users`, `Projects`, `ProjectMembers`, `AuditLog`, và thêm Admin đầu tiên.
 
-### 4. GitHub App và Anthropic key
-Chưa cần ở M1. GitHub App dùng từ M2, Anthropic key dùng từ M4.
+### 4. GitHub App (để chọn repo khi tạo dự án)
+GitHub App là một "tài khoản robot" chỉ được cài vào đúng các repo cần test, với đúng các quyền cần dùng. Nhờ vậy app không phải dùng token cá nhân của ai.
+
+1. Vào **Settings** của organization (ví dụ `Cross-Players`) → **Developer settings → GitHub Apps → New GitHub App**.
+   - GitHub App name: tên bất kỳ, ví dụ `ai-test-runner-cross-players`.
+   - Homepage URL: `http://localhost:3000`.
+   - **Webhook**: bỏ chọn **Active** (app chưa cần nhận sự kiện).
+   - **Repository permissions**: `Contents` → *Read-only*, `Issues` → *Read and write*, `Metadata` → *Read-only* (thường đã tự chọn).
+   - Where can this GitHub App be installed: **Only on this account**.
+2. Bấm **Create GitHub App**. Ghi lại **App ID** ở đầu trang.
+3. Kéo xuống mục **Private keys** → **Generate a private key**. Máy sẽ tải về một file `.pem`. **Không commit file này.**
+4. Ở menu trái, chọn **Install App** → **Install** → **Only select repositories** → chọn các repo cần test.
+5. Điền vào `.env`:
+   - `GITHUB_APP_ID`: App ID ở bước 2.
+   - `GITHUB_APP_PRIVATE_KEY`: nội dung file `.pem`, viết trên **một dòng** (xuống dòng thay bằng `
+`) và đặt trong dấu nháy đơn. Lệnh sau in ra đúng dạng đó, bạn chỉ việc copy dán:
+     ```bash
+     cd backend
+     uv run python -m app.tools.pem_to_env duong-dan/toi/file.pem
+     ```
+
+### 5. File Google Sheet cho mỗi dự án
+Mỗi dự án cần một file Google Sheet **trống** riêng. Tạo file, **share quyền Editor** cho email service account (trang tạo dự án có hiện sẵn email này kèm nút sao chép), rồi dán link vào ô "Link hoặc ID Google Sheet". App tự tạo 7 tab: `Meta`, `Screens`, `Assignments`, `TestCases`, `Runs`, `Results`, `AuditLog`.
+
+### 6. Anthropic key
+Chưa cần. Dùng từ M4 (phần AI chạy test).
 
 ## Điền `.env`
 
@@ -79,6 +103,7 @@ cp .env.example .env
 | `BOOTSTRAP_ADMIN_EMAIL` | Email Google của bạn, sẽ thành Admin đầu tiên |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Nội dung file key JSON (viết trên một dòng), hoặc đường dẫn tới file key |
 | `SYSTEM_SPREADSHEET_ID` | Ở bước 3 |
+| `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` | Ở bước 4 |
 
 > Khi chạy bằng Docker, nên dán **nội dung** JSON (một dòng) vào `GOOGLE_SERVICE_ACCOUNT_JSON`, vì container không thấy file trên máy bạn.
 
@@ -140,6 +165,11 @@ Khi sửa API ở backend, chạy `npm run gen:api` trong `frontend/` để sinh
 | Backend báo lỗi 403 / `PERMISSION_DENIED` khi khởi động | Chưa share file Sheet cho email service account với quyền Editor |
 | Backend báo `Tab 'Users' thiếu cột: ...` | Ai đó đã sửa hàng tiêu đề trong Sheet; thêm lại đúng tên cột bị thiếu |
 | Backend dừng với `Thiếu SESSION_SECRET` | Điền `SESSION_SECRET` trong `.env` |
+| Trang tạo dự án báo "Chưa cấu hình GitHub App" | Thiếu `GITHUB_APP_ID` hoặc `GITHUB_APP_PRIVATE_KEY`; chạy lại `docker compose up -d` sau khi điền |
+| Tạo dự án báo "GitHub trả lỗi 401" | Private key sai định dạng: phải là một dòng, có `
+`, trong dấu nháy đơn |
+| Không thấy repo trong danh sách | GitHub App chưa được cài vào repo đó (Install App → chọn thêm repo) |
+| Tạo dự án báo "App chưa có quyền ghi vào Sheet này" | Share file Sheet của dự án quyền Editor cho email service account |
 
 ## Quy ước làm việc
 
