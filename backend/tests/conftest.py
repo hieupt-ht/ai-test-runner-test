@@ -6,6 +6,7 @@ import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.oauth import GoogleIdentity
 from app.api.services import Services
 from app.api.sessions import SessionStore
 from app.core.models.user import Role, User
@@ -77,3 +78,26 @@ def client(
     )
     settings = Settings(session_secret="test-secret", app_base_url="http://localhost:3000")
     return TestClient(create_app(settings, services=services), follow_redirects=False)
+
+
+def log_in_as(
+    client: TestClient, oauth: FakeOAuth, users: UserRepository, email: str, role: Role
+) -> None:
+    """Tạo user (nếu chưa có) rồi đăng nhập qua luồng OAuth giả."""
+    if users.get(email) is None:
+        users.create(make_user(email, role=role))
+    oauth.identity = GoogleIdentity(email=email, name="Ai đó")
+    response = client.get("/api/auth/callback")
+    assert response.headers["location"] == "/"
+
+
+@pytest.fixture
+def client_as_admin(client: TestClient, oauth: FakeOAuth, users: UserRepository) -> TestClient:
+    log_in_as(client, oauth, users, "admin@x.com", Role.ADMIN)
+    return client
+
+
+@pytest.fixture
+def client_as_qa_lead(client: TestClient, oauth: FakeOAuth, users: UserRepository) -> TestClient:
+    log_in_as(client, oauth, users, "lead@x.com", Role.QA_LEAD)
+    return client

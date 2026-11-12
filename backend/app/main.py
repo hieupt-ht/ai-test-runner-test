@@ -4,7 +4,7 @@ import secrets
 from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api.routers import auth, health
+from app.api.routers import auth, health, users
 from app.api.services import Services
 from app.settings import Settings, get_settings
 
@@ -25,4 +25,5 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(users.router)
     return app
