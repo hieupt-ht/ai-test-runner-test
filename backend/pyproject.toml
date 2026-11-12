@@ -24,7 +24,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["googleapiclient.*", "google.oauth2.*", "authlib.*", "fakeredis.*"]
+module = ["googleapiclient.*", "google.oauth2.*", "authlib.*", "fakeredis.*", "httplib2.*"]
 ignore_missing_imports = true
 
 [tool.ruff]
