@@ -295,3 +295,30 @@ def test_update_still_returns_case_when_status_refresh_times_out(
 
     assert saved.version == 2 and saved.title == "Mới"
     assert _case_rows(env) == 1
+
+
+def test_editing_draft_content_does_not_touch_assignments_tab(
+    env: Env, case_of_a: Callable[[], TestCase]
+) -> None:
+    case = case_of_a()
+    env.gateway.calls.clear()
+
+    env.service.update_content(TESTER_A, case.id, version=1, content=content("Sửa tiêu đề"))
+
+    # Trạng thái case vẫn là Nháp nên trạng thái việc không thể đổi: khỏi đọc/ghi Assignments.
+    assert not [call for call in env.gateway.calls if "Assignments" in call]
+    assert env.assignment_status("a@x.com") == AssignmentStatus.WRITING
+
+
+def test_editing_approved_case_still_refreshes_assignment(
+    env: Env, case_of_a: Callable[[], TestCase]
+) -> None:
+    case = case_of_a()
+    env.service.transition(TESTER_A, case.id, CaseAction.SUBMIT, version=1)
+    env.service.transition(LEAD, case.id, CaseAction.APPROVE, version=2)
+    assert env.assignment_status("a@x.com") == AssignmentStatus.APPROVED
+
+    # Sửa case đã duyệt thì case về Nháp → việc phải quay lại "Đang viết".
+    env.service.update_content(TESTER_A, case.id, version=3, content=content("Sửa"))
+
+    assert env.assignment_status("a@x.com") == AssignmentStatus.WRITING

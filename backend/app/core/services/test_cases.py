@@ -242,7 +242,10 @@ class TestCaseService:
             actor=normalize_email(user.email),
         )
         self._audit(user, audit_action, saved.id, diff)
-        self._refresh_status(saved.screen_id)
+        # Trạng thái việc chỉ phụ thuộc trạng thái của các case. Case không đổi trạng thái
+        # (ví dụ sửa chữ trong case Nháp) thì khỏi tính lại, đỡ vài lượt gọi Google.
+        if "status" in changes:
+            self._refresh_status(saved.screen_id)
         return saved
 
     def _refresh_status(self, screen_id: str) -> None:
