@@ -1,6 +1,7 @@
 """Đọc/ghi tab `Assignments` trong Sheet riêng của một dự án."""
 
-from contextlib import AbstractContextManager
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date
 
 from redis import Redis
@@ -58,6 +59,7 @@ class AssignmentRepository:
         self._redis = redis
         self._lock_key = f"lock:{project_id}:assignments"
         self._lock_wait_seconds = lock_wait_seconds
+        self._holding_lock = False
 
     def list_all(self) -> list[Assignment]:
         assignments = [_from_record(record) for record in self._table.read_all()]
@@ -75,13 +77,13 @@ class AssignmentRepository:
             status=AssignmentStatus.TODO,
             updated_at=utc_now(),
         )
-        with self._lock():
+        with self.lock():
             self._table.append(_to_record(assignment))
         return assignment
 
     def update(self, assignment: Assignment) -> Assignment:
         assignment = assignment.model_copy(update={"updated_at": utc_now()})
-        with self._lock():
+        with self.lock():
             row_number = self._table.find_row_number("id", assignment.id)
             if row_number is None:
                 raise AssignmentNotFoundError(assignment.id)
@@ -89,11 +91,28 @@ class AssignmentRepository:
         return assignment
 
     def delete(self, assignment_id: str) -> None:
-        with self._lock():
+        with self.lock():
             row_number = self._table.find_row_number("id", assignment_id)
             if row_number is None:
                 raise AssignmentNotFoundError(assignment_id)
             self._table.delete_row(row_number)
 
-    def _lock(self) -> AbstractContextManager[None]:
-        return redis_lock(self._redis, self._lock_key, wait_seconds=self._lock_wait_seconds)
+    @contextmanager
+    def lock(self) -> Iterator[None]:
+        """Khoá cả tab Assignments của dự án.
+
+        Service dùng khoá này để bọc trọn "kiểm tra rồi ghi", ví dụ: kiểm tra tester chưa
+        có việc rồi mới bỏ tester khỏi dự án. Trong lúc giữ khoá vẫn gọi được create()/
+        delete(): gọi lồng nhau trên CÙNG repository thì chỉ khoá Redis một lần
+        (khoá Redis không cho chính mình lấy lại lần hai). Mỗi request dựng repository riêng,
+        nên request khác vẫn phải chờ.
+        """
+        if self._holding_lock:
+            yield
+            return
+        with redis_lock(self._redis, self._lock_key, wait_seconds=self._lock_wait_seconds):
+            self._holding_lock = True
+            try:
+                yield
+            finally:
+                self._holding_lock = False

@@ -44,24 +44,29 @@ class AssignmentService:
         self, actor: User, *, screen_id: str, assignee_emails: list[str], deadline: date
     ) -> list[Assignment]:
         """Tạo việc cho các tester chưa được giao màn hình này; cặp đã có thì bỏ qua."""
-        if self._screens.get(screen_id) is None:
-            raise InvalidAssignmentError("Không tìm thấy màn hình")
         _check_deadline(deadline)
-
         emails = list(dict.fromkeys(normalize_email(email) for email in assignee_emails))
-        for email in emails:
-            self._check_assignee(email)
 
-        already = {a.assignee_email for a in self.list_assignments(screen_id)}
+        # Giữ khoá tab Assignments trong suốt "kiểm tra rồi ghi". Xoá màn hình và bỏ thành
+        # viên cũng giữ khoá này khi kiểm tra, nên không request nào chen vào giữa được.
         created: list[Assignment] = []
-        for email in emails:
-            if email in already:
-                continue
-            assignment = self._assignments.create(
-                screen_id=screen_id, assignee_email=email, deadline=deadline
-            )
+        with self._assignments.lock():
+            if self._screens.get(screen_id) is None:
+                raise InvalidAssignmentError("Không tìm thấy màn hình")
+            for email in emails:
+                self._check_assignee(email)
+
+            already = {a.assignee_email for a in self.list_assignments(screen_id)}
+            for email in emails:
+                if email not in already:
+                    created.append(
+                        self._assignments.create(
+                            screen_id=screen_id, assignee_email=email, deadline=deadline
+                        )
+                    )
+
+        for assignment in created:
             self._record(actor, "CREATE", assignment)
-            created.append(assignment)
         return created
 
     def change_deadline(self, actor: User, assignment_id: str, deadline: date) -> Assignment:

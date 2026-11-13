@@ -77,10 +77,13 @@ class MemberService:
 
     def remove_member(self, actor: User, email: str) -> None:
         email = normalize_email(email)
-        assigned = [a for a in self._assignments.list_all() if a.assignee_email == email]
-        if assigned:
-            raise MemberHasAssignmentsError(len({a.screen_id for a in assigned}))
-        self._members.remove(self._project_id, email)
+        # Giữ khoá tab Assignments từ lúc kiểm tra tới lúc xoá xong, để không ai giao việc
+        # cho người này đúng lúc họ đang bị bỏ khỏi dự án.
+        with self._assignments.lock():
+            assigned = [a for a in self._assignments.list_all() if a.assignee_email == email]
+            if assigned:
+                raise MemberHasAssignmentsError(len({a.screen_id for a in assigned}))
+            self._members.remove(self._project_id, email)
         self._record(actor, "DELETE", email)
 
     def _record(self, actor: User, action: str, email: str) -> None:

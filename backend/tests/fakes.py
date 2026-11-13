@@ -6,6 +6,7 @@ Bắt chước hai thói quen của Google thật:
 """
 
 import re
+from collections.abc import Callable
 
 import httplib2
 from fastapi import Request
@@ -52,6 +53,9 @@ class FakeSheetsGateway:
         # Spreadsheet nào nằm trong đây thì giả như app chưa được share quyền
         self.denied: set[str] = set()
         self.service_account_email = "sa@test.iam.gserviceaccount.com"
+        # Móc chạy MỘT LẦN, ngay sau khi đọc xong đúng range này (trước khi trả kết quả).
+        # Dùng để giả lập "request khác chen vào giữa lúc mình vừa đọc xong và sắp ghi".
+        self.after_next_read: dict[str, Callable[[], None]] = {}
 
     def _tab(self, spreadsheet_id: str, tab: str) -> list[list[str]]:
         if spreadsheet_id in self.denied:
@@ -59,6 +63,12 @@ class FakeSheetsGateway:
         return self.data.setdefault(spreadsheet_id, {}).setdefault(tab, [])
 
     def get_values(self, spreadsheet_id: str, a1_range: str) -> list[list[str]]:
+        rows = self._get_values(spreadsheet_id, a1_range)
+        if hook := self.after_next_read.pop(a1_range, None):
+            hook()
+        return rows
+
+    def _get_values(self, spreadsheet_id: str, a1_range: str) -> list[list[str]]:
         self.calls.append(a1_range)
         tab, _, cells = a1_range.partition("!")
         rows = self._tab(spreadsheet_id, tab)

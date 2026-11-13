@@ -67,9 +67,12 @@ class ScreenService:
         return updated
 
     def delete_screen(self, actor: User, screen_id: str) -> None:
-        if any(a.screen_id == screen_id for a in self._assignments.list_all()):
-            raise ScreenInUseError(screen_id)
-        self._screens.delete(screen_id)
+        # Giữ khoá tab Assignments từ lúc kiểm tra tới lúc xoá xong, để không ai giao
+        # màn hình này cho tester đúng lúc nó đang bị xoá.
+        with self._assignments.lock():
+            if any(a.screen_id == screen_id for a in self._assignments.list_all()):
+                raise ScreenInUseError(screen_id)
+            self._screens.delete(screen_id)
         self._record(actor, "DELETE", screen_id, {})
 
     def _record(self, actor: User, action: str, screen_id: str, diff: dict[str, Any]) -> None:
