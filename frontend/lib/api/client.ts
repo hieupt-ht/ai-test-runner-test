@@ -7,6 +7,8 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    /** Nội dung JSON lỗi gốc, ví dụ 409 kèm `latest` khi bị xung đột. */
+    public readonly body?: unknown,
   ) {
     super(message)
   }

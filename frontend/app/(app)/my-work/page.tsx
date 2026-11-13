@@ -5,12 +5,14 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 
 import { DeadlineBadge, StatusBadge } from "@/components/common/badges"
+import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useMyAssignments } from "@/lib/use-project-data"
 
 export default function MyWorkPage() {
   const t = useTranslations("myWork")
+  const tCases = useTranslations("testCases")
   const { data: items = [], isLoading } = useMyAssignments()
 
   if (isLoading) return <Skeleton className="mx-auto h-48 max-w-4xl" />
@@ -32,15 +34,13 @@ export default function MyWorkPage() {
   // Danh sách đã được backend sắp xếp theo deadline (gần nhất lên trước).
   return (
     <div className="mx-auto grid max-w-4xl gap-3">
-      {items.map((item) => (
-        <Link
-          key={`${item.project_id}-${item.assignment_id}`}
-          href={`/projects/${item.project_id}/screens`}
-          className="group"
-        >
-          <Card className="transition-colors group-hover:border-primary/40">
-            <CardContent className="flex flex-col gap-2 pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
+      {items.map((item) => {
+        // case_counts là tuỳ chọn trong kiểu sinh ra; thiếu thì coi như 0 hết.
+        const counts = item.case_counts ?? {}
+        return (
+          <Card key={`${item.project_id}-${item.assignment_id}`}>
+            <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <Link href={`/projects/${item.project_id}/screens`} className="min-w-0">
                 <p className="text-xs text-muted-foreground">{item.project_name}</p>
                 <p className="truncate font-medium">
                   {item.screen_name}
@@ -48,16 +48,28 @@ export default function MyWorkPage() {
                     {item.screen_id}
                   </span>
                 </p>
-              </div>
-              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {tCases("caseCounts", {
+                    draft: counts.DRAFT ?? 0,
+                    inReview: counts.IN_REVIEW ?? 0,
+                    approved: counts.APPROVED ?? 0,
+                  })}
+                </p>
+              </Link>
+              <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={item.status} />
                 <DeadlineBadge deadline={item.deadline} />
-                <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                <Link
+                  href={`/projects/${item.project_id}/test-cases?screen=${item.screen_id}`}
+                  className={buttonVariants({ size: "sm" })}
+                >
+                  {tCases("writeCases")} <ArrowRight />
+                </Link>
               </div>
             </CardContent>
           </Card>
-        </Link>
-      ))}
+        )
+      })}
     </div>
   )
 }

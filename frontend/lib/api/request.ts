@@ -8,7 +8,7 @@ const FALLBACK_ERROR = "Có lỗi xảy ra, vui lòng thử lại."
  */
 export function unwrap<T>(result: { data?: T; error?: unknown; response: Response }): T {
   if (result.data === undefined) {
-    throw new ApiError(result.response.status, errorMessage(result.error, FALLBACK_ERROR))
+    throw new ApiError(result.response.status, errorMessage(result.error, FALLBACK_ERROR), result.error)
   }
   return result.data
 }
@@ -16,6 +16,6 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response: Respons
 /** Cho các API trả 204 (không có nội dung). */
 export function ensureOk(result: { error?: unknown; response: Response }): void {
   if (!result.response.ok) {
-    throw new ApiError(result.response.status, errorMessage(result.error, FALLBACK_ERROR))
+    throw new ApiError(result.response.status, errorMessage(result.error, FALLBACK_ERROR), result.error)
   }
 }

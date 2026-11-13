@@ -119,7 +119,8 @@
     "edit": "Sửa",
     "confirm": "Đồng ý",
     "saved": "Đã lưu",
-    "deleted": "Đã xoá"
+    "deleted": "Đã xoá",
+    "back": "Quay lại"
   },
   "screens": {
     "add": "Thêm màn hình",
@@ -147,7 +148,8 @@
       "backslash": "Dùng dấu / thay cho dấu \\",
       "dotdot": "Không được chứa .."
     },
-    "tooManyPaths": "Tối đa {max} đường dẫn"
+    "tooManyPaths": "Tối đa {max} đường dẫn",
+    "colCases": "Test case"
   },
   "assignments": {
     "assign": "Giao việc",
@@ -201,6 +203,112 @@
       "LOW": "Thấp",
       "MEDIUM": "Trung bình",
       "HIGH": "Cao"
+    },
+    "back": "Quay lại danh sách",
+    "createTitle": "Tạo test case",
+    "editTitle": "Sửa test case",
+    "caseCount": "{count} case",
+    "viewCases": "Xem case",
+    "writeCases": "Viết test case",
+    "caseCounts": "Nháp {draft} · Chờ duyệt {inReview} · Đã duyệt {approved}",
+    "form": {
+      "screen": "Màn hình",
+      "screenPlaceholder": "Chọn màn hình",
+      "title": "Tiêu đề",
+      "precondition": "Điều kiện tiên quyết",
+      "testData": "Dữ liệu kiểm thử",
+      "steps": "Các bước",
+      "expectedResult": "Kết quả mong đợi",
+      "severity": "Mức độ",
+      "priority": "Ưu tiên",
+      "saveDraft": "Lưu nháp",
+      "saveAndSubmit": "Lưu và gửi duyệt",
+      "created": "Đã tạo {id}",
+      "submitted": "Đã lưu và gửi duyệt",
+      "resetWarning": "Sửa nội dung sẽ đưa case về Nháp và phải duyệt lại.",
+      "noScreens": "Bạn chưa được giao màn hình nào để viết test case.",
+      "errors": {
+        "screenRequired": "Hãy chọn màn hình",
+        "titleRequired": "Nhập tiêu đề",
+        "titleTooLong": "Tiêu đề tối đa 200 ký tự",
+        "textTooLong": "Tối đa 2000 ký tự",
+        "stepsRequired": "Cần ít nhất 1 bước",
+        "stepsTooMany": "Tối đa 50 bước",
+        "stepActionRequired": "Nhập nội dung bước",
+        "stepActionTooLong": "Nội dung bước tối đa 500 ký tự",
+        "stepExpectedTooLong": "Kết quả bước tối đa 500 ký tự",
+        "expectedResultRequired": "Nhập kết quả mong đợi"
+      }
+    },
+    "steps": {
+      "action": "Thao tác",
+      "expected": "Kết quả mong đợi của bước (không bắt buộc)",
+      "add": "Thêm bước",
+      "moveUp": "Chuyển lên",
+      "moveDown": "Chuyển xuống",
+      "remove": "Xoá bước",
+      "drag": "Kéo để đổi thứ tự",
+      "hint": "Nhấn Ctrl+Enter trong ô thao tác để thêm bước mới ngay bên dưới."
+    },
+    "detail": {
+      "notFound": "Không tìm thấy test case.",
+      "returnedBanner": "QA Lead trả lại case này",
+      "returnedBy": "{actor} · nhận xét:",
+      "readOnlyHint": "Bạn chỉ có quyền xem case này.",
+      "deprecatedHint": "Case đã ngừng dùng. Khôi phục để sửa lại.",
+      "createdBy": "Tạo bởi {name}",
+      "updatedBy": "Cập nhật bởi {name}",
+      "version": "Phiên bản {version}",
+      "transitioned": "Đã cập nhật trạng thái case"
+    },
+    "actions": {
+      "submit": "Gửi duyệt",
+      "approve": "Duyệt",
+      "return": "Trả lại",
+      "deprecate": "Ngừng dùng",
+      "restore": "Khôi phục"
+    },
+    "returnDialog": {
+      "title": "Trả lại case",
+      "description": "Nhập nhận xét để người viết biết cần sửa gì.",
+      "comment": "Nhận xét",
+      "required": "Nhận xét là bắt buộc",
+      "tooLong": "Nhận xét tối đa 1000 ký tự",
+      "confirm": "Trả lại"
+    },
+    "deprecateDialog": {
+      "title": "Ngừng dùng case này?",
+      "description": "Case sẽ ẩn khỏi danh sách mặc định. QA Lead có thể khôi phục sau."
+    },
+    "history": {
+      "title": "Lịch sử",
+      "empty": "Chưa có lịch sử.",
+      "comment": "Nhận xét: {comment}",
+      "action": {
+        "CREATE": "Tạo",
+        "UPDATE": "Sửa nội dung",
+        "SUBMIT": "Gửi duyệt",
+        "APPROVE": "Duyệt",
+        "RETURN": "Trả lại",
+        "DEPRECATE": "Ngừng dùng",
+        "RESTORE": "Khôi phục"
+      },
+      "fields": "Đã đổi: {fields}",
+      "field": {
+        "title": "tiêu đề",
+        "precondition": "điều kiện",
+        "test_data": "dữ liệu",
+        "steps": "các bước",
+        "expected_result": "kết quả mong đợi",
+        "severity": "mức độ",
+        "priority": "ưu tiên",
+        "status": "trạng thái"
+      }
+    },
+    "conflict": {
+      "title": "Case đã bị thay đổi",
+      "reload": "Tải lại",
+      "hint": "Tải lại sẽ thay nội dung bạn đang sửa bằng bản mới nhất."
     }
   },
   "statuses": {

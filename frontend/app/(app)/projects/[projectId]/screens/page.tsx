@@ -1,6 +1,7 @@
 "use client"
 
 import { Pencil, Plus, Trash2 } from "lucide-react"
+import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
@@ -16,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useTestCases } from "@/lib/use-test-cases"
 import { useDeleteScreen, useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
@@ -26,6 +28,12 @@ export default function ScreensPage() {
   const { data: project } = useProject(projectId)
   const screensQuery = useScreens(projectId)
   const deleteScreen = useDeleteScreen(projectId)
+  const casesQuery = useTestCases(projectId)
+  // Đếm số case theo màn hình để hiện cạnh tên màn hình.
+  const caseCounts = new Map<string, number>()
+  for (const testCase of casesQuery.data ?? []) {
+    caseCounts.set(testCase.screen_id, (caseCounts.get(testCase.screen_id) ?? 0) + 1)
+  }
 
   const canManage = Boolean(project?.permissions.includes("MANAGE_SCREENS")) && !project?.archived
   const screens = screensQuery.data ?? []
@@ -65,13 +73,14 @@ export default function ScreensPage() {
               <TableHead>{t("screens.colName")}</TableHead>
               <TableHead>{t("screens.colRoute")}</TableHead>
               <TableHead>{t("screens.colCodePaths")}</TableHead>
+              <TableHead>{t("screens.colCases")}</TableHead>
               {canManage && <TableHead className="w-24" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {screens.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   {t("screens.empty")}
                 </TableCell>
               </TableRow>
@@ -93,6 +102,14 @@ export default function ScreensPage() {
                   title={screen.code_paths.join("\n")}
                 >
                   {t("screens.pathCount", { count: screen.code_paths.length })}
+                </TableCell>
+                <TableCell className="text-xs">
+                  <Link
+                    href={`/projects/${projectId}/test-cases?screen=${screen.id}`}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {t("testCases.caseCount", { count: caseCounts.get(screen.id) ?? 0 })}
+                  </Link>
                 </TableCell>
                 {canManage && (
                   <TableCell>

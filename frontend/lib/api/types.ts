@@ -18,6 +18,11 @@ export type MemberView = Schemas["MemberView"]
 export type TestCase = Schemas["TestCase"]
 export type TestCaseDetail = Schemas["TestCaseDetail"]
 export type TestStep = Schemas["TestStep"]
+/** Phần nội dung người dùng nhập của một test case (không gồm mã, trạng thái, version...). */
+export type TestCaseContent = Pick<
+  Schemas["TestCase"],
+  "title" | "precondition" | "test_data" | "steps" | "expected_result" | "severity" | "priority"
+>
 export type TestCaseStatus = Schemas["TestCaseStatus"]
 export type Severity = Schemas["Severity"]
 export type Priority = Schemas["Priority"]
