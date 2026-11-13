@@ -15,6 +15,7 @@ from app.core.repositories.projects import (
 )
 from app.core.sheets.gateway import SheetAccessDeniedError, SheetsGateway
 from app.core.sheets.spreadsheet_id import InvalidSpreadsheetError, parse_spreadsheet_id
+from app.core.sheets.table import MissingColumnsError
 
 
 class InvalidProjectInputError(Exception):
@@ -134,6 +135,12 @@ class ProjectService:
             raise InvalidProjectInputError(
                 "App chưa có quyền ghi vào Sheet này. Hãy share quyền Editor cho "
                 f"{self._service_account_email}"
+            ) from None
+        except MissingColumnsError as error:
+            # Sheet có sẵn tab trùng tên nhưng cột khác (ví dụ file cũ của nhóm khác)
+            raise InvalidProjectInputError(
+                f"Sheet này đã có tab nhưng sai cột: {error}. "
+                "Hãy dùng một file Sheet mới, hoặc sửa lại hàng tiêu đề của tab đó."
             ) from None
 
     def _record(self, actor: User, action: str, project_id: str, diff: dict[str, Any]) -> None:
