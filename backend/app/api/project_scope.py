@@ -29,6 +29,7 @@ def scope_for(services: Services, project: Project) -> ProjectScope:
             services.redis,
             project.id,
             lock_wait_seconds=services.lock_wait_seconds,
+            cache_ttl_seconds=services.sheet_cache_ttl_seconds,
         ),
         assignments=AssignmentRepository(
             services.gateway,
@@ -36,6 +37,7 @@ def scope_for(services: Services, project: Project) -> ProjectScope:
             services.redis,
             project.id,
             lock_wait_seconds=services.lock_wait_seconds,
+            cache_ttl_seconds=services.sheet_cache_ttl_seconds,
         ),
         test_cases=TestCaseRepository(
             services.gateway,
@@ -43,6 +45,7 @@ def scope_for(services: Services, project: Project) -> ProjectScope:
             services.redis,
             project.id,
             lock_wait_seconds=services.lock_wait_seconds,
+            cache_ttl_seconds=services.sheet_cache_ttl_seconds,
         ),
         audit_log=AuditLogRepository(services.gateway, sheet),
     )

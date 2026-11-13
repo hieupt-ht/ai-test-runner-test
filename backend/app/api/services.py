@@ -35,6 +35,7 @@ class Services:
     members: ProjectMemberRepository
     github: GitHubClient | None  # None khi chưa cấu hình GitHub App
     lock_wait_seconds: float = 5.0
+    sheet_cache_ttl_seconds: int = 60
 
 
 def is_configured(settings: Settings) -> bool:
@@ -81,4 +82,5 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
             gateway, system_sheet, redis, cache_ttl_seconds=settings.user_cache_ttl_seconds
         ),
         github=build_github(settings),
+        sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,
     )

@@ -6,6 +6,8 @@ trong lúc app đang chạy thì code vẫn đọc/ghi đúng chỗ. Khi đã đ
 đầu làm tiêu đề, khỏi tốn thêm một lượt gọi Google.
 """
 
+from dataclasses import dataclass
+
 from app.core.sheets.gateway import SheetsGateway
 
 Record = dict[str, str]
@@ -32,6 +34,16 @@ def _fit(row: list[str], length: int) -> list[str]:
     - Ô bị gõ lạc ra ngoài cột cuối cùng thì bỏ qua.
     """
     return (row + [""] * length)[:length]
+
+
+@dataclass(frozen=True)
+class FoundRecord:
+    """Một dòng vừa tìm được, kèm tiêu đề và ô thô để ghi lại mà không phải đọc lần nữa."""
+
+    row_number: int
+    record: Record
+    header: list[str]
+    cells: list[str]
 
 
 class SheetTable:
@@ -106,13 +118,17 @@ class SheetTable:
                 return row_number
         return None
 
-    def find_record(self, column: str, value: str) -> tuple[int, Record] | None:
-        """Như find_row_number rồi read_row, nhưng chỉ đọc tiêu đề MỘT lần."""
+    def find_record(self, column: str, value: str) -> FoundRecord | None:
+        """Như find_row_number rồi read_row, nhưng chỉ đọc tiêu đề MỘT lần.
+
+        Kết quả đưa thẳng cho `update_found` để ghi lại mà khỏi đọc thêm.
+        """
         header = self._read_header()
         row_number = self._find_row_number(column, value, header)
         if row_number is None:
             return None
-        return row_number, self._to_record(self._read_raw_row(row_number, header), header)
+        cells = self._read_raw_row(row_number, header)
+        return FoundRecord(row_number, self._to_record(cells, header), header, cells)
 
     def read_row(self, row_number: int) -> Record:
         header = self._read_header()
@@ -127,6 +143,18 @@ class SheetTable:
         """Ghi đè các cột mình quản lý; các cột lạ trong Sheet được giữ nguyên."""
         header = self._read_header()
         current = self._read_raw_row(row_number, header)
+        self._write_row(row_number, header, current, record)
+
+    def update_found(self, found: FoundRecord, record: Record) -> None:
+        """Như update nhưng dùng lại dòng vừa tìm (find_record): chỉ tốn đúng một lượt ghi.
+
+        Chỉ dùng khi đang giữ khoá, để chắc dòng không bị ai đổi từ lúc tìm tới lúc ghi.
+        """
+        self._write_row(found.row_number, found.header, found.cells, record)
+
+    def _write_row(
+        self, row_number: int, header: list[str], current: list[str], record: Record
+    ) -> None:
         new_row = [
             record.get(column, old_value) if column in self._columns else old_value
             for column, old_value in zip(header, current, strict=True)

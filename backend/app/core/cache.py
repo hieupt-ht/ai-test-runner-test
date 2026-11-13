@@ -5,6 +5,10 @@ cache; A đọc xong lại ghi dữ liệu CŨ vào cache. Bộ đếm thế h�
 trước khi đọc, và chỉ được ghi cache nếu thế hệ chưa đổi.
 """
 
+import json
+from collections.abc import Callable
+
+from pydantic import BaseModel
 from redis import Redis
 
 # "Kiểm tra thế hệ rồi ghi" làm trong một script Lua để không ai chen vào giữa.
@@ -53,3 +57,36 @@ def _to_text(value: object) -> str | None:
     if value is None:
         return None
     return value.decode() if isinstance(value, bytes) else str(value)
+
+
+class CachedList[T: BaseModel]:
+    """Cache danh sách bản ghi của một tab (ví dụ mọi test case của một dự án).
+
+    - `ttl_seconds` = 0 là tắt cache (luôn đọc Sheet).
+    - Kho dữ liệu gọi `invalidate()` ngay sau mỗi lần ghi.
+    - `read(..., bypass=True)` bỏ qua cache: dùng khi đang giữ khoá để "kiểm tra rồi ghi".
+    """
+
+    def __init__(self, redis: Redis, key: str, ttl_seconds: int, model: type[T]) -> None:
+        self._cache = GenerationCache(redis, key, ttl_seconds) if ttl_seconds > 0 else None
+        self._model = model
+
+    @property
+    def enabled(self) -> bool:
+        return self._cache is not None
+
+    def read(self, load: Callable[[], list[T]], *, bypass: bool = False) -> list[T]:
+        if self._cache is None or bypass:
+            return load()
+        cached = self._cache.get()
+        if cached is not None:
+            return [self._model.model_validate(item) for item in json.loads(cached)]
+        generation_before = self._cache.generation()
+        items = load()
+        payload = json.dumps([item.model_dump(mode="json") for item in items])
+        self._cache.set_if_unchanged(generation_before, payload)
+        return items
+
+    def invalidate(self) -> None:
+        if self._cache is not None:
+            self._cache.invalidate()

@@ -6,6 +6,7 @@ from datetime import date
 
 from redis import Redis
 
+from app.core.cache import CachedList
 from app.core.ids import IdGenerator
 from app.core.locks.redis_lock import redis_lock
 from app.core.models.assignment import Assignment, AssignmentStatus
@@ -51,8 +52,12 @@ class AssignmentRepository:
         project_id: str,
         *,
         lock_wait_seconds: float = 5.0,
+        cache_ttl_seconds: int = 0,
     ) -> None:
         self._table = SheetTable(gateway, spreadsheet_id, ASSIGNMENTS_TAB, ASSIGNMENT_COLUMNS)
+        self._cache = CachedList(
+            redis, f"cache:{project_id}:assignments", cache_ttl_seconds, Assignment
+        )
         self._ids = IdGenerator(
             gateway, spreadsheet_id, redis, project_id, lock_wait_seconds=lock_wait_seconds
         )
@@ -62,6 +67,10 @@ class AssignmentRepository:
         self._holding_lock = False
 
     def list_all(self) -> list[Assignment]:
+        # Đang giữ khoá (kiểm tra rồi ghi) thì đọc thẳng Sheet, không qua cache.
+        return self._cache.read(self._read_sheet, bypass=self._holding_lock)
+
+    def _read_sheet(self) -> list[Assignment]:
         assignments = [_from_record(record) for record in self._table.read_all()]
         return sorted(assignments, key=lambda assignment: assignment.id)
 
@@ -86,15 +95,17 @@ class AssignmentRepository:
         )
         with self.lock():
             self._table.append(_to_record(assignment))
+            self._cache.invalidate()
         return assignment
 
     def update(self, assignment: Assignment) -> Assignment:
         assignment = assignment.model_copy(update={"updated_at": utc_now()})
         with self.lock():
-            row_number = self._table.find_row_number("id", assignment.id)
-            if row_number is None:
+            found = self._table.find_record("id", assignment.id)
+            if found is None:
                 raise AssignmentNotFoundError(assignment.id)
-            self._table.update(row_number, _to_record(assignment))
+            self._table.update_found(found, _to_record(assignment))
+            self._cache.invalidate()
         return assignment
 
     def delete(self, assignment_id: str) -> None:
@@ -103,6 +114,7 @@ class AssignmentRepository:
             if row_number is None:
                 raise AssignmentNotFoundError(assignment_id)
             self._table.delete_row(row_number)
+            self._cache.invalidate()
 
     @contextmanager
     def lock(self) -> Iterator[None]:

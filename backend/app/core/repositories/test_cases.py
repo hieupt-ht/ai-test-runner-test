@@ -1,6 +1,7 @@
 """Đọc/ghi tab `TestCases` trong Sheet riêng của một dự án.
 
-Không cache test case: nhiều người cùng sửa, đọc thẳng từ Sheet cho chắc (spec 9.7).
+Danh sách case được cache ngắn trong Redis (xoá ngay sau mỗi lần ghi), nhưng việc kiểm tra
+phiên bản khi lưu (`save`) luôn đọc thẳng từ Sheet trong khoá, nên cache cũ không gây mất dữ liệu.
 Chống ghi đè nhau bằng số `version`: người lưu phải nói mình đang dựa trên version nào.
 """
 
@@ -11,6 +12,7 @@ from datetime import datetime
 
 from redis import Redis
 
+from app.core.cache import CachedList
 from app.core.ids import IdGenerator
 from app.core.locks.redis_lock import redis_lock
 from app.core.models.test_case import (
@@ -94,8 +96,12 @@ class TestCaseRepository:
         project_id: str,
         *,
         lock_wait_seconds: float = 5.0,
+        cache_ttl_seconds: int = 0,
     ) -> None:
         self._table = SheetTable(gateway, spreadsheet_id, TEST_CASES_TAB, TEST_CASE_COLUMNS)
+        self._cache = CachedList(
+            redis, f"cache:{project_id}:test-cases", cache_ttl_seconds, TestCase
+        )
         self._ids = IdGenerator(
             gateway, spreadsheet_id, redis, project_id, lock_wait_seconds=lock_wait_seconds
         )
@@ -106,13 +112,19 @@ class TestCaseRepository:
         self._holding_lock = False
 
     def list_all(self) -> list[TestCase]:
+        # Đang giữ khoá tab (để kiểm tra rồi tạo) thì phải đọc thẳng Sheet, không qua cache.
+        return self._cache.read(self._read_sheet, bypass=self._holding_lock)
+
+    def _read_sheet(self) -> list[TestCase]:
         cases = [_from_record(record) for record in self._table.read_all()]
         return sorted(cases, key=lambda case: case.id)
 
     def get(self, case_id: str) -> TestCase | None:
-        """Chỉ đọc cột id rồi đọc đúng dòng cần (spec 9.7), không đọc cả tab."""
+        """Lấy từ danh sách đã cache (nếu bật); không có cache thì chỉ đọc cột id và đúng dòng."""
+        if self._cache.enabled:
+            return next((case for case in self.list_all() if case.id == case_id), None)
         found = self._table.find_record("id", case_id)
-        return None if found is None else _from_record(found[1])
+        return None if found is None else _from_record(found.record)
 
     def create(self, *, screen_id: str, content: TestCaseContent, actor: str) -> TestCase:
         now = _now_like_sheet()
@@ -129,6 +141,7 @@ class TestCaseRepository:
         )
         with self.lock():
             self._table.append(_to_record(case))
+            self._cache.invalidate()
         return case
 
     def save(self, case: TestCase, *, expected_version: int, actor: str) -> TestCase:
@@ -142,8 +155,7 @@ class TestCaseRepository:
             found = self._table.find_record("id", case.id)
             if found is None:
                 raise TestCaseNotFoundError(case.id)
-            row_number, record = found
-            current = _from_record(record)
+            current = _from_record(found.record)
             if current.version != expected_version:
                 raise VersionConflictError(current)
             saved = case.model_copy(
@@ -153,7 +165,8 @@ class TestCaseRepository:
                     "updated_at": _now_like_sheet(),
                 }
             )
-            self._table.update(row_number, _to_record(saved))
+            self._table.update_found(found, _to_record(saved))
+            self._cache.invalidate()
         return saved
 
     @contextmanager

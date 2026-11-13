@@ -171,7 +171,11 @@ def test_my_assignments_across_projects(
     gateway: FakeSheetsGateway,
 ) -> None:
     other = make_project(
-        projects, members, gateway, name="Dự án B", sheet=SHEET_B,
+        projects,
+        members,
+        gateway,
+        name="Dự án B",
+        sheet=SHEET_B,
         member_emails=("lead@x.com", "tester@x.com"),
     )
     lead.post(f"/api/projects/{other.id}/screens", json={"name": "Giỏ hàng"})
@@ -209,7 +213,11 @@ def test_my_assignments_skips_project_with_broken_sheet(
     breakage: str,
 ) -> None:
     make_project(
-        projects, members, gateway, name="Dự án B", sheet=SHEET_B,
+        projects,
+        members,
+        gateway,
+        name="Dự án B",
+        sheet=SHEET_B,
         member_emails=("lead@x.com", "tester@x.com"),
     )
     assign(lead, project, ["tester@x.com"])
@@ -235,7 +243,9 @@ def add_case(
     created_by: str = "tester@x.com",
 ) -> TestCase:
     """Tạo thẳng một test case trên SC-0001 qua repository (bỏ qua API)."""
-    repo = TestCaseRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1)
+    repo = TestCaseRepository(
+        gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1, cache_ttl_seconds=60
+    )
     content = TestCaseContent(
         title="Đăng nhập đúng",
         steps=[TestStep(action="Bấm Đăng nhập", expected="")],
@@ -282,8 +292,12 @@ def test_my_assignments_include_case_counts(
     add_case(gateway, redis, project, created_by="tester2@x.com")  # của người khác, không tính
 
     AssignmentStatusUpdater(
-        AssignmentRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1),
-        TestCaseRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1),
+        AssignmentRepository(
+            gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1, cache_ttl_seconds=60
+        ),
+        TestCaseRepository(
+            gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1, cache_ttl_seconds=60
+        ),
     ).refresh_screen("SC-0001")
 
     tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)

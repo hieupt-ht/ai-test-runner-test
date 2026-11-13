@@ -132,9 +132,8 @@ def test_find_record_returns_row_number_and_record_with_fewer_reads() -> None:
     found = table.find_record("email", "b@x.com")
 
     assert found is not None
-    row_number, record = found
-    assert row_number == 3
-    assert record["name"] == "Bình"
+    assert found.row_number == 3
+    assert found.record["name"] == "Bình"
     # tiêu đề (1 lần) + cột email + đúng dòng cần = 3 lượt đọc
     assert len(gateway.calls) == 3
 
@@ -143,3 +142,21 @@ def test_find_record_returns_none_when_missing() -> None:
     table, _ = make_table([COLUMNS, ["a@x.com", "An", "ADMIN", "TRUE", CREATED]])
 
     assert table.find_record("email", "zzz@x.com") is None
+
+
+def test_update_found_writes_without_rereading_header_or_row() -> None:
+    table, gateway = make_table([
+        ["role", "email", "extra", "name", "active", "created_at"],
+        ["TESTER", "a@x.com", "giữ nguyên", "An", "TRUE", CREATED],
+    ])
+    found = table.find_record("email", "a@x.com")
+    assert found is not None
+    gateway.calls.clear()
+
+    table.update_found(found, {**found.record, "name": "An Nguyễn"})
+
+    # Chỉ ghi, không đọc lại tiêu đề hay dòng; cột lạ "extra" vẫn giữ nguyên.
+    assert gateway.calls == ["update:Users!2"]
+    assert gateway.data["sys"]["Users"][1] == [
+        "TESTER", "a@x.com", "giữ nguyên", "An Nguyễn", "TRUE", CREATED
+    ]
