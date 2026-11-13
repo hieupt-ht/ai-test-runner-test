@@ -1,7 +1,9 @@
 from datetime import date, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.core.models.test_case import TestCaseStatus
 
 
 class AssignmentStatus(StrEnum):
@@ -32,3 +34,7 @@ class MyAssignment(BaseModel):
     screen_name: str
     deadline: date
     status: AssignmentStatus
+    # Số case của chính user trên màn hình này, theo từng trạng thái (đủ 4 khoá).
+    case_counts: dict[TestCaseStatus, int] = Field(
+        default_factory=lambda: {status: 0 for status in TestCaseStatus}
+    )

@@ -1,9 +1,12 @@
+import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.models.project import Project
+from app.core.models.test_case import Priority, Severity, TestCaseContent, TestStep
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
+from app.core.repositories.test_cases import TestCaseRepository
 from tests.conftest import SHEET_A, make_project
 from tests.fakes import FakeSheetsGateway
 
@@ -106,3 +109,30 @@ def test_writes_go_to_project_audit_log(
 
     audit = gateway.data[SHEET_A]["AuditLog"][-1]
     assert audit[1:5] == ["lead@x.com", "CREATE", "screen", "SC-0001"]
+
+
+def test_delete_screen_with_test_case_is_409(
+    client_as_qa_lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen())
+    screen_id = created.json()["id"]
+    TestCaseRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1).create(
+        screen_id=screen_id,
+        content=TestCaseContent(
+            title="Đăng nhập đúng",
+            steps=[TestStep(action="Bấm Đăng nhập", expected="")],
+            expected_result="Vào được trang chủ",
+            severity=Severity.LOW,
+            priority=Priority.P1,
+        ),
+        actor="tester@x.com",
+    )
+
+    response = client_as_qa_lead.delete(f"{screens_url(project)}/{screen_id}")
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Màn hình đang có test case, không xoá được"}
+    assert len(client_as_qa_lead.get(screens_url(project)).json()) == 1

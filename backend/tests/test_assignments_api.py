@@ -1,17 +1,29 @@
 from datetime import timedelta
 
+import fakeredis
 import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.models.project import Project
+from app.core.models.test_case import (
+    Priority,
+    Severity,
+    TestCase,
+    TestCaseContent,
+    TestCaseStatus,
+    TestStep,
+)
 from app.core.models.user import Role
+from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
+from app.core.repositories.test_cases import TestCaseRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import today_in_vietnam
-from tests.conftest import SHEET_B, client_for, make_project, make_user
+from tests.conftest import SHEET_A, SHEET_B, client_for, make_project, make_user
 from tests.fakes import FakeOAuth, FakeSheetsGateway
 
 NEXT_WEEK = (today_in_vietnam() + timedelta(days=7)).isoformat()
@@ -211,3 +223,75 @@ def test_my_assignments_skips_project_with_broken_sheet(
 
     assert response.status_code == 200
     assert [a["project_name"] for a in response.json()] == ["Dự án A"]
+
+
+def add_case(
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+    project: Project,
+    *,
+    status: TestCaseStatus = TestCaseStatus.DRAFT,
+    created_by: str = "tester@x.com",
+) -> TestCase:
+    """Tạo thẳng một test case trên SC-0001 qua repository (bỏ qua API)."""
+    repo = TestCaseRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1)
+    content = TestCaseContent(
+        title="Đăng nhập đúng",
+        steps=[TestStep(action="Bấm Đăng nhập", expected="")],
+        expected_result="Vào được trang chủ",
+        severity=Severity.LOW,
+        priority=Priority.P1,
+    )
+    case = repo.create(screen_id="SC-0001", content=content, actor=created_by)
+    if status == TestCaseStatus.DRAFT:
+        return case
+    return repo.save(
+        case.model_copy(update={"status": status}), expected_version=case.version, actor=created_by
+    )
+
+
+def test_reassign_tester_keeps_derived_status(
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    assign(lead, project, ["tester@x.com"])
+    add_case(gateway, redis, project)  # A có case DRAFT trên SC-0001
+    lead.delete(f"{assignments_url(project)}/AS-0001")
+
+    again = assign(lead, project, ["tester@x.com"])
+
+    assert again.json()[0]["status"] == "WRITING"
+
+
+def test_my_assignments_include_case_counts(
+    app: FastAPI,
+    oauth: FakeOAuth,
+    users: UserRepository,
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    assign(lead, project, ["tester@x.com"])
+    add_case(gateway, redis, project)
+    add_case(gateway, redis, project)
+    add_case(gateway, redis, project, status=TestCaseStatus.IN_REVIEW)
+    add_case(gateway, redis, project, created_by="tester2@x.com")  # của người khác, không tính
+
+    AssignmentStatusUpdater(
+        AssignmentRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1),
+        TestCaseRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1),
+    ).refresh_screen("SC-0001")
+
+    tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)
+    mine = tester.get("/api/me/assignments").json()
+
+    assert mine[0]["status"] == "WRITING"
+    assert mine[0]["case_counts"] == {
+        "DRAFT": 2,
+        "IN_REVIEW": 1,
+        "APPROVED": 0,
+        "DEPRECATED": 0,
+    }

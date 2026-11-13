@@ -680,6 +680,10 @@ export interface components {
              */
             deadline: string;
             status: components["schemas"]["AssignmentStatus"];
+            /** Case Counts */
+            case_counts?: {
+                [key: string]: number;
+            };
         };
         /**
          * Priority

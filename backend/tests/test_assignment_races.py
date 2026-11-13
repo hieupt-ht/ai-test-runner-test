@@ -22,6 +22,7 @@ from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.screens import ScreenRepository
+from app.core.repositories.test_cases import TestCaseRepository
 from app.core.repositories.users import UserRepository
 from app.core.services.assignments import AssignmentService
 from app.core.services.members import MemberService
@@ -51,11 +52,15 @@ class Request:
         self.assignments = AssignmentRepository(
             gateway, sheet, redis, project.id, lock_wait_seconds=0.1
         )
+        self.test_cases = TestCaseRepository(
+            gateway, sheet, redis, project.id, lock_wait_seconds=0.1
+        )
         audit = AuditLogRepository(gateway, sheet)
         self.assignment_service = AssignmentService(
             project_id=project.id,
             assignments=self.assignments,
             screens=self.screens,
+            test_cases=self.test_cases,
             members=members,
             users=users,
             audit_log=audit,
@@ -67,7 +72,7 @@ class Request:
             assignments=self.assignments,
             audit_log=audit,
         )
-        self.screen_service = ScreenService(self.screens, self.assignments, audit)
+        self.screen_service = ScreenService(self.screens, self.assignments, self.test_cases, audit)
 
     def assign_tester(self) -> None:
         self.assignment_service.assign(

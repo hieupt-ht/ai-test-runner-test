@@ -7,6 +7,7 @@ from app.api.project_scope import scope_for
 from app.api.services import Services
 from app.core.models.assignment import MyAssignment
 from app.core.models.project import Project
+from app.core.models.test_case import TestCase, TestCaseStatus
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
 
@@ -41,6 +42,7 @@ def _assignments_in(services: Services, project: Project, email: str) -> list[My
     mine = [a for a in scope.assignments.list_all() if a.assignee_email == email]
     if not mine:
         return []
+    cases = scope.test_cases.list_all()
     screen_names = {screen.id: screen.name for screen in scope.screens.list_all()}
     return [
         MyAssignment(
@@ -51,6 +53,18 @@ def _assignments_in(services: Services, project: Project, email: str) -> list[My
             screen_name=screen_names.get(a.screen_id, a.screen_id),
             deadline=a.deadline,
             status=a.status,
+            case_counts=_count_by_status(cases, a.screen_id, email),
         )
         for a in mine
     ]
+
+
+def _count_by_status(
+    cases: list[TestCase], screen_id: str, email: str
+) -> dict[TestCaseStatus, int]:
+    """Đếm case do `email` tạo trên màn hình, đủ 4 trạng thái (không có thì 0)."""
+    counts = {status: 0 for status in TestCaseStatus}
+    for case in cases:
+        if case.screen_id == screen_id and case.created_by == email:
+            counts[case.status] += 1
+    return counts

@@ -2088,6 +2088,16 @@
           },
           "status": {
             "$ref": "#/components/schemas/AssignmentStatus"
+          },
+          "case_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/TestCaseStatus"
+            },
+            "type": "object",
+            "title": "Case Counts"
           }
         },
         "type": "object",

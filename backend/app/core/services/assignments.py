@@ -2,12 +2,14 @@
 
 from datetime import date
 
+from app.core.assignment_status import derive_assignment_status
 from app.core.models.assignment import Assignment
 from app.core.models.user import Role, User, normalize_email
 from app.core.repositories.assignments import AssignmentNotFoundError, AssignmentRepository
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.screens import ScreenRepository
+from app.core.repositories.test_cases import TestCaseRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import today_in_vietnam
 
@@ -23,6 +25,7 @@ class AssignmentService:
         project_id: str,
         assignments: AssignmentRepository,
         screens: ScreenRepository,
+        test_cases: TestCaseRepository,
         members: ProjectMemberRepository,
         users: UserRepository,
         audit_log: AuditLogRepository,
@@ -30,6 +33,7 @@ class AssignmentService:
         self._project_id = project_id
         self._assignments = assignments
         self._screens = screens
+        self._test_cases = test_cases
         self._members = members
         self._users = users
         self._audit_log = audit_log
@@ -57,13 +61,21 @@ class AssignmentService:
                 self._check_assignee(email)
 
             already = {a.assignee_email for a in self.list_assignments(screen_id)}
-            for email in emails:
-                if email not in already:
-                    created.append(
-                        self._assignments.create(
-                            screen_id=screen_id, assignee_email=email, deadline=deadline
-                        )
+            new_emails = [email for email in emails if email not in already]
+            # Tester có thể đã viết case trên màn hình này từ lần giao trước, nên trạng thái
+            # ban đầu tính từ case hiện có (đọc trong khoá) chứ không mặc định TODO.
+            cases = self._test_cases.list_all() if new_emails else []
+            for email in new_emails:
+                created.append(
+                    self._assignments.create(
+                        screen_id=screen_id,
+                        assignee_email=email,
+                        deadline=deadline,
+                        status=derive_assignment_status(
+                            cases, screen_id=screen_id, tester_email=email
+                        ),
                     )
+                )
 
         for assignment in created:
             self._record(actor, "CREATE", assignment)

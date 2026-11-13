@@ -39,6 +39,7 @@ def _service(
         project_id=project.id,
         assignments=scope.assignments,
         screens=scope.screens,
+        test_cases=scope.test_cases,
         members=services.members,
         users=services.users,
         audit_log=scope.audit_log,
