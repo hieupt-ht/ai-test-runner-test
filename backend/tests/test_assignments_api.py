@@ -181,3 +181,33 @@ def test_non_member_gets_404(client_as_tester: TestClient, project: Project) -> 
     other_project_url = assignments_url(project).replace(project.id, "PRJ-0099")
 
     assert client_as_tester.get(other_project_url).status_code == 404
+
+
+@pytest.mark.parametrize("breakage", ["denied", "missing_columns"])
+def test_my_assignments_skips_project_with_broken_sheet(
+    app: FastAPI,
+    oauth: FakeOAuth,
+    users: UserRepository,
+    lead: TestClient,
+    project: Project,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+    breakage: str,
+) -> None:
+    make_project(
+        projects, members, gateway, name="Dự án B", sheet=SHEET_B,
+        member_emails=("lead@x.com", "tester@x.com"),
+    )
+    assign(lead, project, ["tester@x.com"])
+    # Sheet của dự án B bị hỏng: hết quyền, hoặc ai đó xoá mất cột
+    if breakage == "denied":
+        gateway.denied.add(SHEET_B)
+    else:
+        gateway.data[SHEET_B]["Assignments"][0] = ["id"]
+
+    tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)
+    response = tester.get("/api/me/assignments")
+
+    assert response.status_code == 200
+    assert [a["project_name"] for a in response.json()] == ["Dự án A"]
