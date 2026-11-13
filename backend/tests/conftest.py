@@ -167,7 +167,9 @@ def client_as_qa_lead(client: TestClient, oauth: FakeOAuth, users: UserRepositor
 
 @pytest.fixture
 def projects(gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis) -> ProjectRepository:
-    return ProjectRepository(gateway, SYSTEM_SHEET_ID, redis, lock_wait_seconds=0.1)
+    return ProjectRepository(
+        gateway, SYSTEM_SHEET_ID, redis, cache_ttl_seconds=300, lock_wait_seconds=0.1
+    )
 
 
 @pytest.fixture

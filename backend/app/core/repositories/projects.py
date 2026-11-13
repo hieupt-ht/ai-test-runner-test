@@ -1,13 +1,16 @@
 """Đọc/ghi tab `Projects` của Sheet hệ thống.
 
-Không cache: danh sách dự án chỉ đọc khi mở trang dự án, không phải ở mọi request.
+Danh sách dự án được đọc ở MỌI request vào một dự án (để kiểm tra dự án có tồn tại,
+đã lưu trữ chưa), nên được cache trong Redis giống danh sách user. Ghi xong thì xoá cache.
 """
 
+import json
 import re
 from contextlib import AbstractContextManager
 
 from redis import Redis
 
+from app.core.cache import GenerationCache
 from app.core.locks.redis_lock import redis_lock
 from app.core.models.project import Project
 from app.core.sheets.gateway import SheetsGateway
@@ -15,6 +18,7 @@ from app.core.sheets.schema import PROJECT_COLUMNS, PROJECTS_TAB
 from app.core.sheets.table import Record, SheetTable
 from app.core.time import from_iso, to_iso, utc_now
 
+CACHE_KEY = "cache:projects"
 TAB_LOCK_KEY = "lock:system:projects"
 _ID_NUMBER = re.compile(r"^PRJ-(\d+)$")
 
@@ -62,13 +66,27 @@ class ProjectRepository:
         spreadsheet_id: str,
         redis: Redis,
         *,
+        cache_ttl_seconds: int,
         lock_wait_seconds: float = 5.0,
     ) -> None:
         self._table = SheetTable(gateway, spreadsheet_id, PROJECTS_TAB, PROJECT_COLUMNS)
         self._redis = redis
+        self._cache = GenerationCache(redis, CACHE_KEY, cache_ttl_seconds)
         self._lock_wait_seconds = lock_wait_seconds
 
     def list_all(self) -> list[Project]:
+        cached = self._cache.get()
+        if cached is not None:
+            return [Project.model_validate(item) for item in json.loads(cached)]
+
+        generation_before = self._cache.generation()
+        projects = self._read_from_sheet()
+        payload = json.dumps([project.model_dump(mode="json") for project in projects])
+        self._cache.set_if_unchanged(generation_before, payload)
+        return projects
+
+    def _read_from_sheet(self) -> list[Project]:
+        """Đọc thẳng từ Sheet, bỏ qua cache. Dùng trong khoá, khi cần dữ liệu mới nhất."""
         return [_from_record(record) for record in self._table.read_all()]
 
     def get(self, project_id: str) -> Project | None:
@@ -88,7 +106,7 @@ class ProjectRepository:
     ) -> Project:
         with self._lock():
             project = Project(
-                id=_next_project_id(self.list_all()),
+                id=_next_project_id(self._read_from_sheet()),
                 name=name,
                 repo_full_name=repo_full_name,
                 branch=branch,
@@ -98,6 +116,7 @@ class ProjectRepository:
                 created_at=utc_now(),
             )
             self._table.append(_to_record(project))
+        self._cache.invalidate()
         return project
 
     def update(self, project: Project) -> Project:
@@ -106,6 +125,7 @@ class ProjectRepository:
             if row_number is None:
                 raise ProjectNotFoundError(project.id)
             self._table.update(row_number, _to_record(project))
+        self._cache.invalidate()
         return project
 
     def _lock(self) -> AbstractContextManager[None]:

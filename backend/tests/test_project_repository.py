@@ -45,3 +45,20 @@ def test_update_unknown_project_raises(projects: ProjectRepository) -> None:
 
     with pytest.raises(ProjectNotFoundError):
         projects.update(project.model_copy(update={"id": "PRJ-9999"}))
+
+
+def test_list_all_is_cached_until_next_write(
+    projects: ProjectRepository, gateway: FakeSheetsGateway
+) -> None:
+    # Danh sách dự án được đọc ở mọi request vào dự án, nên phải cache như danh sách user.
+    create(projects, "A", "sheet-a")
+    gateway.calls.clear()
+
+    projects.list_all()
+    projects.get("PRJ-0001")
+    projects.find_by_spreadsheet("sheet-a")
+
+    assert gateway.calls.count("Projects") == 1
+
+    create(projects, "B", "sheet-b")  # ghi xong thì cache bị xoá, đọc lại thấy dự án mới
+    assert [p.name for p in projects.list_all()] == ["A", "B"]

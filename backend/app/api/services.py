@@ -74,7 +74,9 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         gateway=gateway,
         system_spreadsheet_id=system_sheet,
         service_account_email=gateway.service_account_email,
-        projects=ProjectRepository(gateway, system_sheet, redis),
+        projects=ProjectRepository(
+            gateway, system_sheet, redis, cache_ttl_seconds=settings.user_cache_ttl_seconds
+        ),
         members=ProjectMemberRepository(
             gateway, system_sheet, redis, cache_ttl_seconds=settings.user_cache_ttl_seconds
         ),
