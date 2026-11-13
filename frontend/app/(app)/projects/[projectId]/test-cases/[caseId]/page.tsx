@@ -8,10 +8,11 @@ import { Suspense, useState } from "react"
 
 import { CaseForm } from "@/components/test-cases/case-form"
 import { CaseReadOnly } from "@/components/test-cases/case-read-only"
-import { HistoryPanel, commentOf, latestReturn } from "@/components/test-cases/history-panel"
+import { HistoryPanel, commentOf } from "@/components/test-cases/history-panel"
 import { ReviewActions } from "@/components/test-cases/review-actions"
 import { CaseStatusBadge } from "@/components/test-cases/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { latestReturn } from "@/lib/test-cases/returned"
 import { useProjectId } from "@/lib/use-project-id"
 import { useCaseHistory, useTestCase } from "@/lib/use-test-cases"
 

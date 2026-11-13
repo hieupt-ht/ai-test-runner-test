@@ -176,6 +176,8 @@
     "empty": "Dự án chưa có test case nào.",
     "emptyCanCreate": "Dự án chưa có test case nào. Bấm nút Tạo test case, hoặc vào tab Màn hình để chọn màn hình cần viết case.",
     "emptyFiltered": "Không có test case nào khớp bộ lọc.",
+    "loadFailed": "Không tải được danh sách test case: {message}",
+    "retry": "Thử lại",
     "searchPlaceholder": "Tìm theo mã hoặc tiêu đề",
     "filterScreen": "Tất cả màn hình",
     "filterStatus": "Mọi trạng thái (ẩn ngừng dùng)",

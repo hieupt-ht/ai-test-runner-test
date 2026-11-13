@@ -68,6 +68,18 @@ function TestCaseList() {
   const canCreate = Boolean(project?.permissions.includes("EDIT_TEST_CASE")) && !project?.archived
 
   if (casesQuery.isLoading) return <Skeleton className="h-48 w-full" />
+  if (casesQuery.isError) {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <p className="text-sm text-destructive">
+          {t("loadFailed", { message: casesQuery.error.message })}
+        </p>
+        <Button variant="outline" size="sm" onClick={() => void casesQuery.refetch()}>
+          {t("retry")}
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">

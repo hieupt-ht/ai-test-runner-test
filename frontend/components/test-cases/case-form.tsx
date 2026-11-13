@@ -190,6 +190,9 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, o
               ))}
             </SelectContent>
           </Select>
+          {screens.length === 0 && (
+            <p className="text-sm text-muted-foreground">{t("form.noScreens")}</p>
+          )}
           {screenMissing && fieldError("screenRequired")}
         </div>
       )}

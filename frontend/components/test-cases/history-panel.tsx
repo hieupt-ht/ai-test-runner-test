@@ -23,13 +23,6 @@ export function commentOf(entry: AuditEntry): string {
   return typeof comment === "string" ? comment : ""
 }
 
-/** Lần trả lại gần nhất (theo thời gian), hoặc undefined nếu chưa từng bị trả lại. */
-export function latestReturn(history: AuditEntry[]): AuditEntry | undefined {
-  return history
-    .filter((entry) => entry.action === "RETURN")
-    .sort((a, b) => b.at.localeCompare(a.at))[0]
-}
-
 export function HistoryPanel({ history }: { history: AuditEntry[] }) {
   const t = useTranslations("testCases.history")
   const format = useFormatter()

@@ -8,7 +8,9 @@ import { Suspense } from "react"
 
 import { CaseForm } from "@/components/test-cases/case-form"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useScreens } from "@/lib/use-project-data"
+import { selectableScreens } from "@/lib/test-cases/selectable-screens"
+import { useMe } from "@/lib/use-me"
+import { useAssignments, useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 
 // useSearchParams (đọc ?screen=) cần nằm trong <Suspense> vì đang bật cacheComponents.
@@ -25,8 +27,12 @@ function NewTestCase() {
   const projectId = useProjectId()
   const searchParams = useSearchParams()
   const screensQuery = useScreens(projectId)
+  const assignmentsQuery = useAssignments(projectId)
+  const { user: me, isLoading: meLoading } = useMe()
 
-  if (screensQuery.isLoading) return <Skeleton className="h-96 w-full" />
+  if (screensQuery.isLoading || assignmentsQuery.isLoading || meLoading) return <Skeleton className="h-96 w-full" />
+
+  const screens = selectableScreens(screensQuery.data ?? [], assignmentsQuery.data ?? [], me)
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
@@ -39,7 +45,7 @@ function NewTestCase() {
       <h2 className="text-lg font-semibold">{t("createTitle")}</h2>
       <CaseForm
         projectId={projectId}
-        screens={screensQuery.data ?? []}
+        screens={screens}
         defaultScreenId={searchParams.get("screen") ?? undefined}
       />
     </div>

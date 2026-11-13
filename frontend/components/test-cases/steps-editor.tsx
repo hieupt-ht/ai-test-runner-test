@@ -77,7 +77,12 @@ export function StepsEditor({ steps, onChange, errors = [], disabled }: Props) {
             <div className="flex flex-col items-center gap-1 pt-1">
               <span
                 draggable={!disabled}
-                onDragStart={() => setDragIndex(index)}
+                onDragStart={(event) => {
+                  // Firefox không bắt đầu kéo nếu chưa có dữ liệu kéo
+                  event.dataTransfer.setData("text/plain", String(index))
+                  event.dataTransfer.effectAllowed = "move"
+                  setDragIndex(index)
+                }}
                 onDragEnd={endDrag}
                 title={t("steps.drag")}
                 className="cursor-grab text-muted-foreground"
