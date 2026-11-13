@@ -8,17 +8,17 @@ from app.core.models.project import Project
 from app.core.models.user import Role, User
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
-from app.core.repositories.projects import ProjectRepository
+from app.core.repositories.projects import (
+    SPREADSHEET_IN_USE,
+    ProjectRepository,
+    SpreadsheetInUseError,
+)
 from app.core.sheets.gateway import SheetAccessDeniedError, SheetsGateway
 from app.core.sheets.spreadsheet_id import InvalidSpreadsheetError, parse_spreadsheet_id
 
 
 class InvalidProjectInputError(Exception):
     """Dữ liệu nhập sai (trả 422). `str(error)` là câu báo lỗi tiếng Việt."""
-
-
-class SpreadsheetInUseError(Exception):
-    pass
 
 
 class ProjectService:
@@ -114,7 +114,7 @@ class ProjectService:
     def _ensure_spreadsheet_unused(self, spreadsheet_id: str) -> None:
         is_system_sheet = spreadsheet_id == self._system_spreadsheet_id
         if is_system_sheet or self._projects.find_by_spreadsheet(spreadsheet_id):
-            raise SpreadsheetInUseError("Google Sheet này đã được dùng cho dự án khác")
+            raise SpreadsheetInUseError(SPREADSHEET_IN_USE)
 
     def _ensure_repo_and_branch(self, repo_full_name: str, branch: str) -> None:
         if self._github is None:

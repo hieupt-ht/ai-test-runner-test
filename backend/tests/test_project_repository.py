@@ -1,6 +1,10 @@
 import pytest
 
-from app.core.repositories.projects import ProjectNotFoundError, ProjectRepository
+from app.core.repositories.projects import (
+    ProjectNotFoundError,
+    ProjectRepository,
+    SpreadsheetInUseError,
+)
 from tests.conftest import SYSTEM_SHEET_ID
 from tests.fakes import FakeSheetsGateway
 
@@ -62,3 +66,14 @@ def test_list_all_is_cached_until_next_write(
 
     create(projects, "B", "sheet-b")  # ghi xong thì cache bị xoá, đọc lại thấy dự án mới
     assert [p.name for p in projects.list_all()] == ["A", "B"]
+
+
+def test_create_rejects_spreadsheet_already_used(projects: ProjectRepository) -> None:
+    # Hai Admin bấm "Tạo" cùng lúc với cùng một Sheet: cả hai đều qua bước kiểm tra
+    # ở ProjectService (lúc đó chưa ai ghi). Repository phải kiểm tra lại trong khoá.
+    create(projects, "A", "sheet-a")
+
+    with pytest.raises(SpreadsheetInUseError):
+        create(projects, "B", "sheet-a")
+
+    assert [p.name for p in projects.list_all()] == ["A"]

@@ -11,11 +11,8 @@ from app.core.github.client import GitHubError, GitHubNotConfiguredError
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
 from app.core.permissions import Action
-from app.core.services.projects import (
-    InvalidProjectInputError,
-    ProjectService,
-    SpreadsheetInUseError,
-)
+from app.core.repositories.projects import SpreadsheetInUseError
+from app.core.services.projects import InvalidProjectInputError, ProjectService
 
 router = APIRouter(prefix="/api", tags=["projects"])
 

@@ -23,7 +23,14 @@ TAB_LOCK_KEY = "lock:system:projects"
 _ID_NUMBER = re.compile(r"^PRJ-(\d+)$")
 
 
+SPREADSHEET_IN_USE = "Google Sheet này đã được dùng cho dự án khác"
+
+
 class ProjectNotFoundError(Exception):
+    pass
+
+
+class SpreadsheetInUseError(Exception):
     pass
 
 
@@ -105,8 +112,13 @@ class ProjectRepository:
         spreadsheet_id: str,
     ) -> Project:
         with self._lock():
+            # Kiểm tra lại NGAY TRONG KHOÁ: ProjectService đã kiểm tra trước đó, nhưng hai
+            # request cùng lúc có thể cùng qua bước đó rồi cùng ghi một Sheet.
+            existing = self._read_from_sheet()
+            if any(p.spreadsheet_id == spreadsheet_id for p in existing):
+                raise SpreadsheetInUseError(SPREADSHEET_IN_USE)
             project = Project(
-                id=_next_project_id(self._read_from_sheet()),
+                id=_next_project_id(existing),
                 name=name,
                 repo_full_name=repo_full_name,
                 branch=branch,
