@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useFormatter, useTranslations } from "next-intl"
 import { Suspense, useMemo, useState } from "react"
 
@@ -40,6 +40,7 @@ function TestCaseList() {
   const format = useFormatter()
   const projectId = useProjectId()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { data: project } = useProject(projectId)
   const casesQuery = useTestCases(projectId)
   const screensQuery = useScreens(projectId)
@@ -128,7 +129,15 @@ function TestCaseList() {
               </TableRow>
             )}
             {visible.map((testCase) => (
-              <TableRow key={testCase.id}>
+              <TableRow
+                key={testCase.id}
+                className="cursor-pointer"
+                onClick={(event) => {
+                  // Bấm thẳng vào link mã case thì để link tự chuyển trang (giữ Ctrl+click mở tab mới).
+                  if ((event.target as HTMLElement).closest("a")) return
+                  router.push(`/projects/${projectId}/test-cases/${testCase.id}`)
+                }}
+              >
                 <TableCell className="font-mono text-xs">
                   <Link
                     href={`/projects/${projectId}/test-cases/${testCase.id}`}
