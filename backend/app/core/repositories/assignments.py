@@ -68,13 +68,20 @@ class AssignmentRepository:
     def get(self, assignment_id: str) -> Assignment | None:
         return next((a for a in self.list_all() if a.id == assignment_id), None)
 
-    def create(self, *, screen_id: str, assignee_email: str, deadline: date) -> Assignment:
+    def create(
+        self,
+        *,
+        screen_id: str,
+        assignee_email: str,
+        deadline: date,
+        status: AssignmentStatus = AssignmentStatus.TODO,
+    ) -> Assignment:
         assignment = Assignment(
             id=self._ids.next_id("assignment", "AS"),
             screen_id=screen_id,
             assignee_email=normalize_email(assignee_email),
             deadline=deadline,
-            status=AssignmentStatus.TODO,
+            status=status,
             updated_at=utc_now(),
         )
         with self.lock():
