@@ -70,3 +70,14 @@ def test_two_threads_never_inside_together() -> None:
         thread.join()
 
     assert inside["max"] == 1
+
+
+def test_default_ttl_outlasts_sheets_retries() -> None:
+    # Mỗi lượt gọi Google có thể thử lại tới ~8 giây (0.5+1+2+4 + jitter), và trong khoá
+    # thường có 3-4 lượt gọi. Khoá phải sống lâu hơn thế, nếu không người khác sẽ chen vào.
+    redis = fakeredis.FakeRedis()
+
+    with redis_lock(redis, KEY):
+        remaining_ms = redis.pttl(KEY)
+
+    assert remaining_ms > 45_000

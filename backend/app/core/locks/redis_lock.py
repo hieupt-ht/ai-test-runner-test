@@ -22,6 +22,12 @@ return 0
 """
 
 
+# Khoá tự hết hạn sau 60 giây. Phải dài hơn thời gian tệ nhất của việc làm trong khoá:
+# mỗi lượt gọi Google có thể thử lại tới ~8 giây, và một thao tác thường gọi 3-4 lượt.
+# Nếu khoá hết hạn giữa chừng, request khác chen vào và có thể sinh trùng mã hoặc xoá nhầm dòng.
+DEFAULT_TTL_SECONDS = 60
+
+
 class LockTimeout(Exception):
     """Chờ quá lâu mà không lấy được khoá (có người khác đang giữ)."""
 
@@ -31,7 +37,7 @@ def redis_lock(
     redis: Redis,
     key: str,
     *,
-    ttl_seconds: int = 10,
+    ttl_seconds: int = DEFAULT_TTL_SECONDS,
     wait_seconds: float = 5.0,
     poll_seconds: float = 0.05,
 ) -> Iterator[None]:
