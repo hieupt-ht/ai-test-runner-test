@@ -66,6 +66,7 @@
   },
   "projectTabs": {
     "screens": "Màn hình",
+    "testCases": "Test case",
     "assignments": "Chia việc",
     "members": "Thành viên",
     "settings": "Cài đặt"
@@ -167,6 +168,40 @@
     "overdue": "Quá hạn",
     "dueSoon": "Sắp tới hạn",
     "ok": "Còn thời gian"
+  },
+  "testCases": {
+    "add": "Tạo test case",
+    "empty": "Dự án chưa có test case nào.",
+    "emptyCanCreate": "Dự án chưa có test case nào. Bấm nút Tạo test case, hoặc vào tab Màn hình để chọn màn hình cần viết case.",
+    "emptyFiltered": "Không có test case nào khớp bộ lọc.",
+    "searchPlaceholder": "Tìm theo mã hoặc tiêu đề",
+    "filterScreen": "Tất cả màn hình",
+    "filterStatus": "Mọi trạng thái (ẩn ngừng dùng)",
+    "filterSeverity": "Mọi mức độ",
+    "filterPriority": "Mọi ưu tiên",
+    "filterCreator": "Mọi người tạo",
+    "colId": "Mã",
+    "colTitle": "Tiêu đề",
+    "colScreen": "Màn hình",
+    "colSeverity": "Mức độ",
+    "colPriority": "Ưu tiên",
+    "colStatus": "Trạng thái",
+    "colCreator": "Người tạo",
+    "colUpdatedAt": "Cập nhật lúc",
+    "prevPage": "Trang trước",
+    "nextPage": "Trang sau",
+    "pageOf": "Trang {page}/{count}",
+    "status": {
+      "DRAFT": "Nháp",
+      "IN_REVIEW": "Chờ duyệt",
+      "APPROVED": "Đã duyệt",
+      "DEPRECATED": "Ngừng dùng"
+    },
+    "severity": {
+      "LOW": "Thấp",
+      "MEDIUM": "Trung bình",
+      "HIGH": "Cao"
+    }
   },
   "statuses": {
     "TODO": "Chưa bắt đầu",
