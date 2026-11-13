@@ -110,7 +110,11 @@ class TestCaseRepository:
         return sorted(cases, key=lambda case: case.id)
 
     def get(self, case_id: str) -> TestCase | None:
-        return next((case for case in self.list_all() if case.id == case_id), None)
+        """Chỉ đọc cột id rồi đọc đúng dòng cần (spec 9.7), không đọc cả tab."""
+        row_number = self._table.find_row_number("id", case_id)
+        if row_number is None:
+            return None
+        return _from_record(self._table.read_row(row_number))
 
     def create(self, *, screen_id: str, content: TestCaseContent, actor: str) -> TestCase:
         now = _now_like_sheet()

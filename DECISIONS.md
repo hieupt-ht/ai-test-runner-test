@@ -25,3 +25,6 @@ Ghi lại những chỗ tài liệu thiết kế chưa nói rõ và cách đã c
 21. **Mọi thao tác chuyển trạng thái cũng gửi `version` và cũng bị kiểm tra xung đột.** Nhờ vậy QA Lead không duyệt nhầm một nội dung mà mình chưa đọc.
 22. **Lọc, tìm, phân trang làm ở trình duyệt.** Tìm không phân biệt hoa thường và dấu tiếng Việt.
 23. **Quy tắc khoá khi ghi case.** Tạo case khoá cả tab `lock:<project_id>:test-cases`; sửa case khoá theo bản ghi `lock:<project_id>:test-case:<id>` (tab `TestCases` không xoá dòng nên dòng không dịch chỗ). Khi lồng khoá, luôn lấy `assignments` trước rồi mới `test-cases`, không bao giờ ngược lại.
+24. **Cập nhật trạng thái việc sau khi lưu case là "cố gắng hết sức".** Case đã ghi xong thì không được báo lỗi nữa: nếu khoá `assignments` bận hoặc Sheet lỗi, API vẫn trả case đã lưu (tránh người dùng bấm lại và sinh case trùng). Trạng thái việc sẽ được tính lại ở lần ghi sau của màn hình đó.
+25. **Cột `status` của Assignments là giá trị suy ra** từ các thao tác case đã ghi vào AuditLog, nên việc cập nhật nó không ghi AuditLog riêng.
+26. **Dòng AuditLog của case được ghi ngay sau khi nhả khoá bản ghi.** Khi nhiều người sửa cùng lúc, thứ tự các dòng AuditLog có thể lệch nhẹ so với thứ tự `version`.

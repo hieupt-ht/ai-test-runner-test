@@ -5,10 +5,12 @@ Việc tính lại lấy khoá `assignments`, nên luôn chạy SAU KHI đã nh�
 (thứ tự khoá: assignments trước, test-cases sau, không bao giờ ngược lại).
 """
 
+import logging
 from enum import StrEnum
 from typing import Any
 
 from app.core.assignment_status import AssignmentStatusUpdater
+from app.core.locks.redis_lock import LockTimeout
 from app.core.models.test_case import TestCase, TestCaseContent, TestCaseStatus
 from app.core.models.user import User, normalize_email
 from app.core.permissions import Action, can
@@ -21,6 +23,10 @@ from app.core.repositories.test_cases import (
     TestCaseRepository,
     VersionConflictError,
 )
+from app.core.sheets.gateway import SheetAccessDeniedError
+from app.core.sheets.table import MissingColumnsError
+
+logger = logging.getLogger(__name__)
 
 AUDIT_ENTITY = "test_case"
 MAX_COMMENT_LENGTH = 1000
@@ -153,7 +159,7 @@ class TestCaseService:
             )
 
         self._audit(user, "CREATE", case.id, case.model_dump(mode="json"))
-        self._status_updater.refresh_screen(case.screen_id)
+        self._refresh_status(case.screen_id)
         return case
 
     def update_content(
@@ -236,8 +242,19 @@ class TestCaseService:
             actor=normalize_email(user.email),
         )
         self._audit(user, audit_action, saved.id, diff)
-        self._status_updater.refresh_screen(saved.screen_id)
+        self._refresh_status(saved.screen_id)
         return saved
+
+    def _refresh_status(self, screen_id: str) -> None:
+        """Tính lại trạng thái việc, cố gắng hết sức: case đã ghi rồi thì không được báo lỗi.
+
+        Nếu báo lỗi ở đây, người dùng tưởng chưa lưu và bấm lại, thế là sinh ra case trùng.
+        Lần ghi sau của màn hình này sẽ tính lại cho đúng.
+        """
+        try:
+            self._status_updater.refresh_screen(screen_id)
+        except (LockTimeout, SheetAccessDeniedError, MissingColumnsError):
+            logger.warning("Không tính lại được trạng thái việc của %s", screen_id, exc_info=True)
 
     def _audit(self, user: User, action: str, case_id: str, diff: dict[str, Any]) -> None:
         self._audit_log.record(

@@ -152,3 +152,17 @@ def test_parallel_creates_get_distinct_ids(
 
     assert len(set(ids)) == 10
     assert len(repo_factory().list_all()) == 10
+
+
+def test_get_reads_only_id_column_and_one_row(
+    repo: TestCaseRepository, gateway: FakeSheetsGateway
+) -> None:
+    for number in range(3):
+        repo.create(screen_id="SC-0001", content=make_content(f"Case {number}"), actor=AN)
+    gateway.calls.clear()
+
+    found = repo.get("TC-000002")
+
+    assert found is not None and found.title == "Case 1"
+    assert "TestCases" not in gateway.calls  # không đọc cả tab
+    assert repo.get("TC-009999") is None

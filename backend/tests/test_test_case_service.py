@@ -7,6 +7,7 @@ import fakeredis
 import pytest
 
 from app.core.assignment_status import AssignmentStatusUpdater
+from app.core.locks.redis_lock import redis_lock
 from app.core.models.assignment import AssignmentStatus
 from app.core.models.project import Project
 from app.core.models.test_case import (
@@ -267,3 +268,30 @@ def test_deprecate_and_restore(env: Env, case_of_a: Callable[[], TestCase]) -> N
     assert restored.status == TestCaseStatus.DRAFT
     assert env.assignment_status("a@x.com") == AssignmentStatus.WRITING
     assert [e.action for e in env.service.history(case.id)] == ["RESTORE", "DEPRECATE", "CREATE"]
+
+
+def _case_rows(env: Env) -> int:
+    return len(env.test_cases.list_all())
+
+
+def test_create_still_returns_case_when_status_refresh_times_out(
+    env: Env, redis: fakeredis.FakeRedis
+) -> None:
+    # Giữ khoá assignments từ chỗ khác: refresh_screen sẽ hết giờ chờ (0.1 giây)
+    with redis_lock(redis, f"lock:{env.project.id}:assignments", wait_seconds=0.1):
+        case = env.service.create(TESTER_A, screen_id="SC-0001", content=content())
+
+    assert case.id == "TC-000001"
+    assert _case_rows(env) == 1
+
+
+def test_update_still_returns_case_when_status_refresh_times_out(
+    env: Env, redis: fakeredis.FakeRedis, case_of_a: Callable[[], TestCase]
+) -> None:
+    case = case_of_a()
+
+    with redis_lock(redis, f"lock:{env.project.id}:assignments", wait_seconds=0.1):
+        saved = env.service.update_content(TESTER_A, case.id, version=1, content=content("Mới"))
+
+    assert saved.version == 2 and saved.title == "Mới"
+    assert _case_rows(env) == 1

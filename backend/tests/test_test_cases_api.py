@@ -226,3 +226,21 @@ def test_parallel_creates_via_api_get_distinct_ids(
     assert not failures
     assert len(set(ids)) == 6
     assert len(lead.get(url(project)).json()) == 6
+
+
+def test_archived_project_case_cannot_be_edited_or_reviewed(
+    app: FastAPI,
+    oauth: FakeOAuth,
+    users: UserRepository,
+    an: TestClient,
+    project: Project,
+    projects: ProjectRepository,
+) -> None:
+    create(an, project)
+    projects.update(project.model_copy(update={"archived": True}))
+    admin = client_for(app, oauth, users, "admin@x.com", Role.ADMIN)
+
+    detail = admin.get(url(project, "/TC-000001")).json()
+
+    assert detail["can_edit"] is False
+    assert detail["can_review"] is False

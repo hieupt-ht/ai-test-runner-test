@@ -10,6 +10,7 @@ from app.api.project_scope import scope_for
 from app.api.services import Services
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
+from app.core.models.project import Project
 from app.core.models.test_case import TestCase, TestCaseContent
 from app.core.models.user import User
 from app.core.permissions import Action
@@ -60,7 +61,10 @@ class TransitionRequest(BaseModel):
 
 
 def _service(services: Services, user: User, project_id: str, action: Action) -> TestCaseService:
-    project = load_project(services, user, project_id, action)
+    return _service_for(services, load_project(services, user, project_id, action))
+
+
+def _service_for(services: Services, project: Project) -> TestCaseService:
     scope = scope_for(services, project)
     return TestCaseService(
         project_id=project.id,
@@ -128,15 +132,17 @@ def create_test_case(
 def get_test_case(
     project_id: str, case_id: str, user: CurrentUser, services: ServicesDep
 ) -> TestCaseDetail:
-    service = _service(services, user, project_id, Action.VIEW_PROJECT)
+    project = load_project(services, user, project_id, Action.VIEW_PROJECT)
+    service = _service_for(services, project)
     try:
         case = service.get_case(case_id)
     except TestCaseNotFoundError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
     return TestCaseDetail(
         **case.model_dump(),
-        can_edit=service.can_edit(user, case),
-        can_review=service.can_review(user),
+        # Dự án đã lưu trữ chỉ để xem, nên không ai được sửa hay duyệt
+        can_edit=not project.archived and service.can_edit(user, case),
+        can_review=not project.archived and service.can_review(user),
     )
 
 
