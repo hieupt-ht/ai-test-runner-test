@@ -47,3 +47,10 @@ def test_two_threads_never_get_same_id() -> None:
         thread.join()
 
     assert len(set(results)) == 20
+
+
+def test_digits_controls_padding() -> None:
+    ids, gateway = make_generator()
+
+    assert ids.next_id("tc", "TC", digits=6) == "TC-000001"
+    assert ["next_tc_id", "2"] in gateway.data[SHEET][META_TAB]

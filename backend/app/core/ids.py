@@ -1,4 +1,4 @@
-"""Sinh mã theo từng dự án: SC-0001, AS-0001...
+"""Sinh mã theo từng dự án: SC-0001, AS-0001, TC-000001...
 
 Bộ đếm lưu ở tab `Meta` của Sheet dự án (cột key, value), ví dụ `next_screen_id = 3`.
 Lưu trên Sheet (không lưu trong Redis) để mất Redis cũng không bị trùng mã.
@@ -27,7 +27,7 @@ class IdGenerator:
         self._project_id = project_id
         self._lock_wait_seconds = lock_wait_seconds
 
-    def next_id(self, entity: str, prefix: str) -> str:
+    def next_id(self, entity: str, prefix: str, *, digits: int = 4) -> str:
         key = f"next_{entity}_id"
         lock_key = f"lock:id:{self._project_id}:{entity}"
         with redis_lock(self._redis, lock_key, wait_seconds=self._lock_wait_seconds):
@@ -38,4 +38,4 @@ class IdGenerator:
             else:
                 number = int(self._meta.read_row(row_number)["value"] or "1")
                 self._meta.update(row_number, {"key": key, "value": str(number + 1)})
-        return f"{prefix}-{number:04d}"
+        return f"{prefix}-{number:0{digits}d}"
