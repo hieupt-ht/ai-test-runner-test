@@ -1,0 +1,228 @@
+import threading
+from datetime import timedelta
+from typing import Any
+
+import httpx
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from app.core.models.project import Project
+from app.core.models.user import Role
+from app.core.repositories.members import ProjectMemberRepository
+from app.core.repositories.projects import ProjectRepository
+from app.core.repositories.users import UserRepository
+from app.core.time import today_in_vietnam
+from tests.conftest import client_for, make_project, make_user
+from tests.fakes import FakeOAuth, FakeSheetsGateway
+
+NEXT_WEEK = (today_in_vietnam() + timedelta(days=7)).isoformat()
+
+BODY: dict[str, Any] = {
+    "screen_id": "SC-0001",
+    "title": "Đăng nhập thành công",
+    "steps": [{"action": "Nhập email và mật khẩu", "expected": "Vào trang chủ"}],
+    "expected_result": "Đăng nhập được",
+    "severity": "HIGH",
+    "priority": "P1",
+}
+
+
+@pytest.fixture
+def project(
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+    users: UserRepository,
+) -> Project:
+    for user in (
+        make_user("an@x.com", role=Role.TESTER, name="An"),
+        make_user("binh@x.com", role=Role.TESTER, name="Bình"),
+        make_user("viewer@x.com", role=Role.VIEWER),
+    ):
+        if users.get(user.email) is None:
+            users.create(user)
+    return make_project(
+        projects,
+        members,
+        gateway,
+        member_emails=("lead@x.com", "an@x.com", "binh@x.com", "viewer@x.com"),
+    )
+
+
+@pytest.fixture
+def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project) -> TestClient:
+    """QA Lead; đã tạo màn hình SC-0001 và giao cho An và Bình."""
+    browser = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+    browser.post(f"/api/projects/{project.id}/screens", json={"name": "Đăng nhập"})
+    browser.post(
+        f"/api/projects/{project.id}/assignments",
+        json={
+            "screen_id": "SC-0001",
+            "assignee_emails": ["an@x.com", "binh@x.com"],
+            "deadline": NEXT_WEEK,
+        },
+    )
+    return browser
+
+
+@pytest.fixture
+def an(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient) -> TestClient:
+    return client_for(app, oauth, users, "an@x.com", Role.TESTER)
+
+
+@pytest.fixture
+def binh(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient) -> TestClient:
+    return client_for(app, oauth, users, "binh@x.com", Role.TESTER)
+
+
+def url(project: Project, suffix: str = "") -> str:
+    return f"/api/projects/{project.id}/test-cases{suffix}"
+
+
+def create(browser: TestClient, project: Project, **changes: Any) -> httpx.Response:
+    response: httpx.Response = browser.post(url(project), json={**BODY, **changes})
+    return response
+
+
+def test_tester_creates_lists_and_reads_case(an: TestClient, project: Project) -> None:
+    created = create(an, project)
+
+    assert created.status_code == 201
+    case = created.json()
+    assert case["id"] == "TC-000001"
+    assert case["status"] == "DRAFT"
+    assert case["version"] == 1
+    assert [c["id"] for c in an.get(url(project)).json()] == ["TC-000001"]
+
+    detail = an.get(url(project, "/TC-000001"))
+    assert detail.status_code == 200
+    assert detail.json()["can_edit"] is True
+    assert detail.json()["can_review"] is False
+    assert an.get(url(project, "/TC-999999")).json() == {"detail": "Không tìm thấy test case"}
+
+
+def test_two_people_save_same_version_second_gets_409(
+    an: TestClient, binh: TestClient, project: Project
+) -> None:
+    create(an, project)
+    edit = {k: v for k, v in BODY.items() if k != "screen_id"}
+
+    first = an.put(url(project, "/TC-000001"), json={**edit, "title": "Bản của An", "version": 1})
+    second = binh.put(
+        url(project, "/TC-000001"), json={**edit, "title": "Bản của Bình", "version": 1}
+    )
+
+    assert first.status_code == 200
+    assert first.json()["version"] == 2
+    assert second.status_code == 409
+    assert second.json()["detail"] == "Case này vừa được An cập nhật. Vui lòng tải lại."
+    assert second.json()["latest"]["version"] == 2
+    assert second.json()["latest"]["title"] == "Bản của An"
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"steps": []},
+        {"steps": [{"action": "", "expected": ""}]},
+        {"severity": "URGENT"},
+        {"title": ""},
+    ],
+)
+def test_validation_errors_are_422(
+    an: TestClient, project: Project, changes: dict[str, Any]
+) -> None:
+    assert create(an, project, **changes).status_code == 422
+
+
+def test_lead_returns_case_with_comment_and_history_shows_it(
+    an: TestClient, lead: TestClient, project: Project
+) -> None:
+    create(an, project)
+    assert an.post(url(project, "/TC-000001/submit"), json={"version": 1}).status_code == 200
+
+    # Tester không có quyền trả lại.
+    assert an.post(url(project, "/TC-000001/return"), json={"version": 2}).status_code == 403
+
+    returned = lead.post(
+        url(project, "/TC-000001/return"), json={"version": 2, "comment": "Thiếu bước kiểm tra"}
+    )
+
+    assert returned.status_code == 200
+    assert returned.json()["status"] == "DRAFT"
+    history = lead.get(url(project, "/TC-000001/history")).json()
+    assert [entry["action"] for entry in history] == ["RETURN", "SUBMIT", "CREATE"]
+    assert history[0]["diff"]["comment"] == "Thiếu bước kiểm tra"
+    assert lead.get(url(project, "/TC-999999/history")).status_code == 404
+
+
+def test_viewer_can_read_but_not_create(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient, project: Project
+) -> None:
+    viewer = client_for(app, oauth, users, "viewer@x.com", Role.VIEWER)
+
+    assert viewer.get(url(project)).status_code == 200
+    forbidden = create(viewer, project)
+    assert forbidden.status_code == 403
+    assert forbidden.json() == {"detail": "Bạn không có quyền thực hiện thao tác này"}
+
+
+def test_non_member_gets_404(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+) -> None:
+    stranger = client_for(app, oauth, users, "la@x.com", Role.TESTER)
+
+    assert stranger.get(url(project)).status_code == 404
+    assert create(stranger, project).status_code == 404
+
+
+def test_archived_project_rejects_writes(
+    app: FastAPI,
+    oauth: FakeOAuth,
+    users: UserRepository,
+    an: TestClient,
+    project: Project,
+    projects: ProjectRepository,
+) -> None:
+    create(an, project)
+    projects.update(project.model_copy(update={"archived": True}))
+    # Thành viên thường không còn thấy dự án đã lưu trữ; Admin thấy nhưng không được ghi.
+    admin = client_for(app, oauth, users, "admin@x.com", Role.ADMIN)
+
+    assert admin.get(url(project)).status_code == 200
+    response = admin.post(url(project, "/TC-000001/deprecate"), json={"version": 1})
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Dự án đã được lưu trữ"}
+
+
+def test_parallel_creates_via_api_get_distinct_ids(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient, project: Project
+) -> None:
+    browsers = [
+        client_for(app, oauth, users, "an@x.com", Role.TESTER),
+        client_for(app, oauth, users, "binh@x.com", Role.TESTER),
+    ]
+    ids: list[str] = []
+    failures: list[str] = []
+
+    def worker(browser: TestClient) -> None:
+        for _ in range(3):
+            for _attempt in range(20):  # đụng khoá thì server báo "đang bận", thử lại
+                response = create(browser, project)
+                if response.status_code == 201:
+                    ids.append(response.json()["id"])
+                    break
+            else:
+                failures.append("hết số lần thử")
+
+    threads = [threading.Thread(target=worker, args=(b,)) for b in browsers]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert not failures
+    assert len(set(ids)) == 6
+    assert len(lead.get(url(project)).json()) == 6

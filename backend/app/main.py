@@ -16,6 +16,7 @@ from app.api.routers import (
     members,
     projects,
     screens,
+    test_cases,
     users,
 )
 from app.api.services import Services, build_gateway, build_services, is_configured
@@ -73,6 +74,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(github.router)
     app.include_router(screens.router)
     app.include_router(assignments.router)
+    app.include_router(test_cases.router)
     app.include_router(me.router)
     app.include_router(members.router)
     return app
