@@ -111,10 +111,8 @@ class TestCaseRepository:
 
     def get(self, case_id: str) -> TestCase | None:
         """Chỉ đọc cột id rồi đọc đúng dòng cần (spec 9.7), không đọc cả tab."""
-        row_number = self._table.find_row_number("id", case_id)
-        if row_number is None:
-            return None
-        return _from_record(self._table.read_row(row_number))
+        found = self._table.find_record("id", case_id)
+        return None if found is None else _from_record(found[1])
 
     def create(self, *, screen_id: str, content: TestCaseContent, actor: str) -> TestCase:
         now = _now_like_sheet()
@@ -141,10 +139,11 @@ class TestCaseRepository:
         """
         record_lock_key = f"lock:{self._project_id}:test-case:{case.id}"
         with redis_lock(self._redis, record_lock_key, wait_seconds=self._lock_wait_seconds):
-            row_number = self._table.find_row_number("id", case.id)
-            if row_number is None:
+            found = self._table.find_record("id", case.id)
+            if found is None:
                 raise TestCaseNotFoundError(case.id)
-            current = _from_record(self._table.read_row(row_number))
+            row_number, record = found
+            current = _from_record(record)
             if current.version != expected_version:
                 raise VersionConflictError(current)
             saved = case.model_copy(

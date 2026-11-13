@@ -110,3 +110,36 @@ def test_header_is_reread_when_columns_change_while_running() -> None:
     ]
 
     assert table.read_all()[0]["email"] == "a@x.com"
+
+
+def test_read_all_takes_header_from_the_same_read_as_the_data() -> None:
+    table, gateway = make_table([COLUMNS, ["a@x.com", "An", "ADMIN", "TRUE", CREATED]])
+
+    table.read_all()
+    table.read_rows_numbered()
+
+    # Hàng tiêu đề đã nằm sẵn trong lần đọc cả tab, khỏi đọc "Users!1:1" riêng.
+    assert gateway.calls == ["Users", "Users"]
+
+
+def test_find_record_returns_row_number_and_record_with_fewer_reads() -> None:
+    table, gateway = make_table([
+        COLUMNS,
+        ["a@x.com", "An", "ADMIN", "TRUE", CREATED],
+        ["b@x.com", "Bình", "TESTER", "TRUE", CREATED],
+    ])
+
+    found = table.find_record("email", "b@x.com")
+
+    assert found is not None
+    row_number, record = found
+    assert row_number == 3
+    assert record["name"] == "Bình"
+    # tiêu đề (1 lần) + cột email + đúng dòng cần = 3 lượt đọc
+    assert len(gateway.calls) == 3
+
+
+def test_find_record_returns_none_when_missing() -> None:
+    table, _ = make_table([COLUMNS, ["a@x.com", "An", "ADMIN", "TRUE", CREATED]])
+
+    assert table.find_record("email", "zzz@x.com") is None
