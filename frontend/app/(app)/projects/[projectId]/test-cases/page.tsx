@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useFormatter, useTranslations } from "next-intl"
 import { Suspense, useMemo, useState } from "react"
 
+import { BulkApproveBar } from "@/components/test-cases/bulk-approve-bar"
 import { FiltersBar } from "@/components/test-cases/filters-bar"
 import { CaseStatusBadge } from "@/components/test-cases/status-badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -19,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { filterTestCases, paginate, type CaseFilters } from "@/lib/test-cases/filter"
+import { approvableIds, batchItems, toggleAll, toggleId } from "@/lib/test-cases/selection"
 import { useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
@@ -51,6 +53,7 @@ function TestCaseList() {
     screenId: searchParams.get("screen") ?? undefined,
   })
   const [page, setPage] = useState(1)
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
 
   const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data])
   const screens = screensQuery.data ?? []
@@ -65,6 +68,13 @@ function TestCaseList() {
   const { pageCount } = paginate(filtered, 1, PAGE_SIZE)
   const currentPage = Math.min(page, pageCount)
   const { items: visible } = paginate(filtered, currentPage, PAGE_SIZE)
+
+  // Chỉ case Chờ duyệt (trong bộ lọc hiện tại, mọi trang) mới chọn để duyệt hàng loạt được.
+  const approvable = useMemo(() => approvableIds(filtered), [filtered])
+  const items = useMemo(() => batchItems(selected, cases), [selected, cases])
+  const allApprovableSelected = approvable.length > 0 && approvable.every((id) => selected.has(id))
+  const canReview = Boolean(project?.permissions.includes("REVIEW_TEST_CASE")) && !project?.archived
+  const columnCount = canReview ? 9 : 8
 
   const canCreate = Boolean(project?.permissions.includes("EDIT_TEST_CASE")) && !project?.archived
 
@@ -106,10 +116,31 @@ function TestCaseList() {
         )}
       </div>
 
+      {canReview && (
+        <BulkApproveBar
+          projectId={projectId}
+          items={items}
+          onDone={() => setSelected(new Set())}
+          onClear={() => setSelected(new Set())}
+        />
+      )}
+
       <div className="overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
+              {canReview && (
+                <TableHead className="w-8">
+                  <input
+                    type="checkbox"
+                    aria-label={t("bulk.selectAll")}
+                    title={t("bulk.selectAll")}
+                    checked={allApprovableSelected}
+                    disabled={approvable.length === 0}
+                    onChange={() => setSelected((current) => toggleAll(current, approvable))}
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-28">{t("colId")}</TableHead>
               <TableHead>{t("colTitle")}</TableHead>
               <TableHead>{t("colScreen")}</TableHead>
@@ -123,7 +154,7 @@ function TestCaseList() {
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={columnCount} className="py-10 text-center text-muted-foreground">
                   {cases.length === 0 ? t(canCreate ? "emptyCanCreate" : "empty") : t("emptyFiltered")}
                 </TableCell>
               </TableRow>
@@ -134,10 +165,22 @@ function TestCaseList() {
                 className="cursor-pointer"
                 onClick={(event) => {
                   // Bấm thẳng vào link mã case thì để link tự chuyển trang (giữ Ctrl+click mở tab mới).
-                  if ((event.target as HTMLElement).closest("a")) return
+                  if ((event.target as HTMLElement).closest("a, input")) return
                   router.push(`/projects/${projectId}/test-cases/${testCase.id}`)
                 }}
               >
+                {canReview && (
+                  <TableCell>
+                    {testCase.status === "IN_REVIEW" && (
+                      <input
+                        type="checkbox"
+                        aria-label={t("bulk.selectCase", { id: testCase.id })}
+                        checked={selected.has(testCase.id)}
+                        onChange={() => setSelected((current) => toggleId(current, testCase.id))}
+                      />
+                    )}
+                  </TableCell>
+                )}
                 <TableCell className="font-mono text-xs">
                   <Link
                     href={`/projects/${projectId}/test-cases/${testCase.id}`}

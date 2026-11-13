@@ -4,7 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
 import { unwrap } from "@/lib/api/request"
-import type { AuditEntry, TestCase, TestCaseContent, TestCaseDetail } from "@/lib/api/types"
+import type {
+  AuditEntry,
+  BatchApproveResponse,
+  TestCase,
+  TestCaseContent,
+  TestCaseDetail,
+} from "@/lib/api/types"
 import type { CaseAction } from "@/lib/test-cases/actions"
 
 // Khoá cache bắt đầu bằng ["projects", projectId] nên được làm mới cùng các dữ liệu khác của dự án.
@@ -124,5 +130,23 @@ export function useTransitionTestCase(projectId: string, { refresh = true }: Wri
         }),
       ),
     onSuccess: () => refresh && doRefresh(),
+  })
+}
+
+export type ApproveItem = { case_id: string; version: number }
+
+/** Duyệt nhiều case một lượt; server bỏ qua case lỗi và báo lại trong `skipped`. */
+export function useApproveTestCases(projectId: string) {
+  const doRefresh = useRefreshCases(projectId)
+  return useMutation({
+    mutationFn: async (items: ApproveItem[]): Promise<BatchApproveResponse> =>
+      unwrap(
+        await api.POST("/api/projects/{project_id}/test-cases/approve-batch", {
+          params: { path: { project_id: projectId } },
+          body: { items },
+        }),
+      ),
+    // Dù có case bị bỏ qua thì danh sách vẫn đã đổi, nên luôn làm mới.
+    onSuccess: doRefresh,
   })
 }

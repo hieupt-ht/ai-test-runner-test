@@ -413,6 +413,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/approve-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Test Cases
+         * @description Duyệt nhiều case một lượt; case lỗi được bỏ qua và báo lại, không làm hỏng cả lượt.
+         */
+        post: operations["approve_test_cases_api_projects__project_id__test_cases_approve_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases/{case_id}/history": {
         parameters: {
             query?: never;
@@ -499,6 +519,13 @@ export interface components {
             /** Email */
             email: string;
         };
+        /** ApproveItem */
+        ApproveItem: {
+            /** Case Id */
+            case_id: string;
+            /** Version */
+            version: number;
+        };
         /** AssignRequest */
         AssignRequest: {
             /** Screen Id */
@@ -554,6 +581,18 @@ export interface components {
             diff: {
                 [key: string]: unknown;
             };
+        };
+        /** BatchApproveRequest */
+        BatchApproveRequest: {
+            /** Items */
+            items: components["schemas"]["ApproveItem"][];
+        };
+        /** BatchApproveResponse */
+        BatchApproveResponse: {
+            /** Approved */
+            approved: components["schemas"]["TestCase"][];
+            /** Skipped */
+            skipped: components["schemas"]["SkippedItem"][];
         };
         /** ChangeDeadlineRequest */
         ChangeDeadlineRequest: {
@@ -794,6 +833,13 @@ export interface components {
          * @enum {string}
          */
         Severity: "LOW" | "MEDIUM" | "HIGH";
+        /** SkippedItem */
+        SkippedItem: {
+            /** Case Id */
+            case_id: string;
+            /** Reason */
+            reason: string;
+        };
         /**
          * TestCase
          * @description Một test case đầy đủ, như lưu ở tab TestCases.
@@ -2006,6 +2052,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConflictResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_test_cases_api_projects__project_id__test_cases_approve_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchApproveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchApproveResponse"];
                 };
             };
             /** @description Validation Error */

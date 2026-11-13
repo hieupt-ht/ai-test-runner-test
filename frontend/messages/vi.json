@@ -178,6 +178,18 @@
     "emptyFiltered": "Không có test case nào khớp bộ lọc.",
     "loadFailed": "Không tải được danh sách test case: {message}",
     "retry": "Thử lại",
+    "bulk": {
+      "selectAll": "Chọn tất cả case Chờ duyệt",
+      "selectCase": "Chọn case {id}",
+      "selected": "Đã chọn {count} case",
+      "approve": "Duyệt {count} case",
+      "clear": "Bỏ chọn",
+      "confirmTitle": "Duyệt {count} case?",
+      "confirmDescription": "Các case đã chọn sẽ chuyển sang Đã duyệt. Case nào vừa bị người khác sửa sẽ được bỏ qua.",
+      "result": "Duyệt được {approved}, bỏ qua {skipped}.",
+      "approvedAll": "Đã duyệt {approved} case.",
+      "skippedItem": "{id}: {reason}"
+    },
     "searchPlaceholder": "Tìm theo mã hoặc tiêu đề",
     "filterScreen": "Tất cả màn hình",
     "filterStatus": "Mọi trạng thái (ẩn ngừng dùng)",
