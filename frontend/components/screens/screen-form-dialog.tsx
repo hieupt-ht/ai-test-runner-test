@@ -1,0 +1,174 @@
+"use client"
+
+import { Plus, X } from "lucide-react"
+import { useTranslations } from "next-intl"
+import { useState, type ReactElement } from "react"
+import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { MAX_CODE_PATHS, codePathError } from "@/components/screens/code-path"
+import type { Screen } from "@/lib/api/types"
+import { useSaveScreen } from "@/lib/use-project-data"
+
+type Props = {
+  projectId: string
+  /** Có thì là sửa, không có thì là thêm mới */
+  screen?: Screen
+  trigger: ReactElement
+  triggerLabel: React.ReactNode
+}
+
+export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: Props) {
+  const t = useTranslations()
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState(screen?.name ?? "")
+  const [description, setDescription] = useState(screen?.description ?? "")
+  const [route, setRoute] = useState(screen?.route ?? "")
+  const [codePaths, setCodePaths] = useState<string[]>(screen?.code_paths ?? [])
+  const [submitted, setSubmitted] = useState(false)
+  const saveScreen = useSaveScreen(projectId)
+
+  const pathErrors = codePaths.map((path) => codePathError(path))
+  const nameError = name.trim() ? null : t("screens.nameRequired")
+  const hasErrors = Boolean(nameError) || pathErrors.some(Boolean)
+
+  function updatePath(index: number, value: string) {
+    setCodePaths((paths) => paths.map((path, i) => (i === index ? value : path)))
+  }
+
+  function removePath(index: number) {
+    setCodePaths((paths) => paths.filter((_, i) => i !== index))
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setSubmitted(true)
+    if (hasErrors) return
+    try {
+      await saveScreen.mutateAsync({
+        id: screen?.id,
+        name: name.trim(),
+        description: description.trim(),
+        route: route.trim(),
+        code_paths: codePaths.map((path) => path.trim()),
+      })
+      toast.success(t("common.saved"))
+      setOpen(false)
+      if (!screen) {
+        setName("")
+        setDescription("")
+        setRoute("")
+        setCodePaths([])
+        setSubmitted(false)
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={trigger}>{triggerLabel}</DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {screen ? t("screens.formEdit", { id: screen.id }) : t("screens.formAdd")}
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="screen-name">{t("screens.fieldName")}</Label>
+            <Input id="screen-name" value={name} onChange={(e) => setName(e.target.value)} />
+            {submitted && nameError && <p className="text-xs text-destructive">{nameError}</p>}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="screen-route">{t("screens.fieldRoute")}</Label>
+            <Input
+              id="screen-route"
+              placeholder="/login"
+              value={route}
+              onChange={(e) => setRoute(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="screen-description">{t("screens.fieldDescription")}</Label>
+            <textarea
+              id="screen-description"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>{t("screens.fieldCodePaths")}</Label>
+            <DialogDescription>{t("screens.codePathsHint")}</DialogDescription>
+            {codePaths.map((path, index) => (
+              <div key={index} className="flex flex-col gap-1">
+                <div className="flex gap-2">
+                  <Input
+                    value={path}
+                    placeholder="src/pages/login.tsx"
+                    className="font-mono text-xs"
+                    aria-invalid={Boolean(pathErrors[index])}
+                    onChange={(e) => updatePath(index, e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("common.delete")}
+                    onClick={() => removePath(index)}
+                  >
+                    <X />
+                  </Button>
+                </div>
+                {pathErrors[index] && (
+                  <p className="text-xs text-destructive">
+                    {t(`screens.codePathErrors.${pathErrors[index]}`)}
+                  </p>
+                )}
+              </div>
+            ))}
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={codePaths.length >= MAX_CODE_PATHS}
+                onClick={() => setCodePaths((paths) => [...paths, ""])}
+              >
+                <Plus /> {t("screens.addCodePath")}
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" type="button" />}>
+              {t("common.cancel")}
+            </DialogClose>
+            <Button type="submit" disabled={saveScreen.isPending}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

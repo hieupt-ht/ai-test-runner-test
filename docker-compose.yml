@@ -1,0 +1,55 @@
+# Chạy toàn bộ: docker compose up --build
+services:
+  redis:
+    image: redis:7-alpine
+    # Bật AOF để không mất phiên đăng nhập và hàng đợi khi khởi động lại
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      # Chỉ mở cho chính máy này (127.0.0.1), để chạy backend trực tiếp khi phát triển.
+      # Không mở ra mạng LAN: Redis không có mật khẩu và đang giữ phiên đăng nhập.
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    # API cần vài giây để kết nối Google Sheets lúc khởi động.
+    # Healthcheck giúp frontend đợi API sẵn sàng rồi mới nhận request.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        API_INTERNAL_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  redis-data:
