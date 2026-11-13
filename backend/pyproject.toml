@@ -44,6 +44,8 @@ testpaths = ["tests"]
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient`",
     "ignore:The httpx module is deprecated",
+    # Tên model như TestCase, TestStep trông giống lớp test nên pytest cố gom rồi cảnh báo.
+    "ignore:cannot collect test class 'Test.*':pytest.PytestCollectionWarning",
 ]
 
 [dependency-groups]
