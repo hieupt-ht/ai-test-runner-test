@@ -2098,6 +2098,13 @@
             },
             "type": "object",
             "title": "Case Counts"
+          },
+          "returned_cases": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnedCase"
+            },
+            "type": "array",
+            "title": "Returned Cases"
           }
         },
         "type": "object",
@@ -2250,6 +2257,35 @@
           "private"
         ],
         "title": "RepoInfo"
+      },
+      "ReturnedCase": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment"
+          },
+          "returned_by": {
+            "type": "string",
+            "title": "Returned By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "title",
+          "comment",
+          "returned_by"
+        ],
+        "title": "ReturnedCase",
+        "description": "Một case bị QA trả lại: tester cần biết case nào, lý do gì để sửa."
       },
       "Role": {
         "type": "string",

@@ -684,6 +684,8 @@ export interface components {
             case_counts?: {
                 [key: string]: number;
             };
+            /** Returned Cases */
+            returned_cases?: components["schemas"]["ReturnedCase"][];
         };
         /**
          * Priority
@@ -744,6 +746,20 @@ export interface components {
             default_branch: string;
             /** Private */
             private: boolean;
+        };
+        /**
+         * ReturnedCase
+         * @description Một case bị QA trả lại: tester cần biết case nào, lý do gì để sửa.
+         */
+        ReturnedCase: {
+            /** Case Id */
+            case_id: string;
+            /** Title */
+            title: string;
+            /** Comment */
+            comment: string;
+            /** Returned By */
+            returned_by: string;
         };
         /**
          * Role

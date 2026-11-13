@@ -213,6 +213,10 @@
     "viewCases": "Xem case",
     "writeCases": "Viết test case",
     "caseCounts": "Nháp {draft} · Chờ duyệt {inReview} · Đã duyệt {approved}",
+    "returnedBadge": "Bị trả lại: {count}",
+    "returnedHeading": "QA đã trả lại {count} case, cần viết lại",
+    "returnedReason": "Lý do ({by}): {comment}",
+    "rewrite": "Viết lại",
     "form": {
       "screen": "Màn hình",
       "screenPlaceholder": "Chọn màn hình",
