@@ -56,3 +56,30 @@ class AuditLogRepository:
         entries.reverse()
         entries.sort(key=lambda entry: entry.at, reverse=True)
         return entries
+
+    def latest_returns(self, entity: str, entity_ids: list[str]) -> dict[str, AuditEntry]:
+        """Với mỗi đối tượng, lần "trả lại" gần nhất NẾU nó vẫn là lần đổi trạng thái mới nhất.
+
+        Đối tượng đã gửi duyệt/duyệt lại sau lần trả lại thì không có mặt trong kết quả.
+        Chỉ đọc tab AuditLog một lần cho cả danh sách.
+        """
+        wanted = set(entity_ids)
+        latest: dict[str, tuple[str, AuditEntry]] = {}  # id -> (thời điểm ISO, dòng)
+        for record in self._table.read_all():
+            if record["entity"] != entity or record["entity_id"] not in wanted:
+                continue
+            diff = json.loads(record["diff_json"] or "{}")
+            if "status" not in diff:
+                continue  # sửa chữ, không đổi trạng thái
+            entry = AuditEntry(
+                at=from_iso(record["at"]),
+                actor=record["actor"],
+                action=record["action"],
+                diff=diff,
+            )
+            # `>=`: cùng một giây thì dòng ghi sau (nằm dưới) thắng
+            if record["entity_id"] not in latest or record["at"] >= latest[record["entity_id"]][0]:
+                latest[record["entity_id"]] = (record["at"], entry)
+        return {
+            entity_id: entry for entity_id, (_, entry) in latest.items() if entry.action == "RETURN"
+        }

@@ -18,6 +18,7 @@ from app.core.models.test_case import (
 )
 from app.core.models.user import Role
 from app.core.repositories.assignments import AssignmentRepository
+from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.test_cases import TestCaseRepository
@@ -295,3 +296,36 @@ def test_my_assignments_include_case_counts(
         "APPROVED": 0,
         "DEPRECATED": 0,
     }
+
+
+def test_my_assignments_list_returned_cases_with_reason(
+    app: FastAPI,
+    oauth: FakeOAuth,
+    users: UserRepository,
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    assign(lead, project, ["tester@x.com"])
+    returned = add_case(gateway, redis, project)  # DRAFT, rồi bị QA trả lại
+    add_case(gateway, redis, project)  # DRAFT mới viết, chưa từng bị trả lại
+    AuditLogRepository(gateway, SHEET_A).record(
+        actor="lead@x.com",
+        action="RETURN",
+        entity="test_case",
+        entity_id=returned.id,
+        diff={"status": ["IN_REVIEW", "DRAFT"], "comment": "Thiếu bước đăng xuất"},
+    )
+
+    tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)
+    mine = tester.get("/api/me/assignments").json()
+
+    assert mine[0]["returned_cases"] == [
+        {
+            "case_id": returned.id,
+            "title": "Đăng nhập đúng",
+            "comment": "Thiếu bước đăng xuất",
+            "returned_by": "lead@x.com",
+        }
+    ]

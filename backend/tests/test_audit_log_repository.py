@@ -43,3 +43,27 @@ def test_list_for_filters_and_sorts_newest_first(audit_log: AuditLogRepository) 
     assert [entry.action for entry in entries] == ["UPDATE", "CREATE"]  # mới nhất trước
     assert entries[0].actor == "b@x.com"
     assert entries[0].diff == {"title": ["Cũ", "Mới"]}
+
+
+def test_latest_returns_only_when_return_is_the_latest_status_change(
+    audit_log: AuditLogRepository,
+) -> None:
+    def record(entity_id: str, action: str, diff: dict[str, object]) -> None:
+        audit_log.record(
+            actor="lead@x.com", action=action, entity="test_case", entity_id=entity_id, diff=diff
+        )
+
+    # TC-1: gửi duyệt -> bị trả lại (còn hiệu lực)
+    record("TC-1", "SUBMIT", {"status": ["DRAFT", "IN_REVIEW"]})
+    record("TC-1", "RETURN", {"status": ["IN_REVIEW", "DRAFT"], "comment": "Thiếu bước 3"})
+    # TC-2: bị trả lại nhưng sau đó đã gửi duyệt lại -> hết hiệu lực
+    record("TC-2", "RETURN", {"status": ["IN_REVIEW", "DRAFT"], "comment": "Cũ"})
+    record("TC-2", "SUBMIT", {"status": ["DRAFT", "IN_REVIEW"]})
+    # TC-3: chưa từng bị trả lại; sửa chữ (không đổi trạng thái) không tính
+    record("TC-3", "UPDATE", {"title": ["a", "b"]})
+
+    found = audit_log.latest_returns("test_case", ["TC-1", "TC-2", "TC-3"])
+
+    assert list(found) == ["TC-1"]
+    assert found["TC-1"].diff["comment"] == "Thiếu bước 3"
+    assert found["TC-1"].actor == "lead@x.com"

@@ -3,9 +3,9 @@ import logging
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUser, ServicesDep
-from app.api.project_scope import scope_for
+from app.api.project_scope import ProjectScope, scope_for
 from app.api.services import Services
-from app.core.models.assignment import MyAssignment
+from app.core.models.assignment import MyAssignment, ReturnedCase
 from app.core.models.project import Project
 from app.core.models.test_case import TestCase, TestCaseStatus
 from app.core.sheets.gateway import SheetAccessDeniedError
@@ -43,6 +43,7 @@ def _assignments_in(services: Services, project: Project, email: str) -> list[My
     if not mine:
         return []
     cases = scope.test_cases.list_all()
+    returned = _returned_cases(scope, cases, email)
     screen_names = {screen.id: screen.name for screen in scope.screens.list_all()}
     return [
         MyAssignment(
@@ -54,6 +55,7 @@ def _assignments_in(services: Services, project: Project, email: str) -> list[My
             deadline=a.deadline,
             status=a.status,
             case_counts=_count_by_status(cases, a.screen_id, email),
+            returned_cases=returned.get(a.screen_id, []),
         )
         for a in mine
     ]
@@ -68,3 +70,26 @@ def _count_by_status(
         if case.screen_id == screen_id and case.created_by == email:
             counts[case.status] += 1
     return counts
+
+
+def _returned_cases(
+    scope: ProjectScope, cases: list[TestCase], email: str
+) -> dict[str, list[ReturnedCase]]:
+    """Case Nháp của `email` đang ở trạng thái "bị trả lại", gom theo màn hình."""
+    drafts = [c for c in cases if c.created_by == email and c.status == TestCaseStatus.DRAFT]
+    if not drafts:
+        return {}  # không có Nháp thì khỏi đọc AuditLog
+    returns = scope.audit_log.latest_returns("test_case", [c.id for c in drafts])
+    result: dict[str, list[ReturnedCase]] = {}
+    for case in drafts:
+        if case.id in returns:
+            entry = returns[case.id]
+            result.setdefault(case.screen_id, []).append(
+                ReturnedCase(
+                    case_id=case.id,
+                    title=case.title,
+                    comment=str(entry.diff.get("comment", "")),
+                    returned_by=entry.actor,
+                )
+            )
+    return result

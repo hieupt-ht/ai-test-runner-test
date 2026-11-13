@@ -24,6 +24,15 @@ class Assignment(BaseModel):
     updated_at: datetime
 
 
+class ReturnedCase(BaseModel):
+    """Một case bị QA trả lại: tester cần biết case nào, lý do gì để sửa."""
+
+    case_id: str
+    title: str
+    comment: str
+    returned_by: str
+
+
 class MyAssignment(BaseModel):
     """Một dòng trong trang "Việc của tôi"."""
 
@@ -38,3 +47,5 @@ class MyAssignment(BaseModel):
     case_counts: dict[TestCaseStatus, int] = Field(
         default_factory=lambda: {status: 0 for status in TestCaseStatus}
     )
+    # Case đang là Nháp vì bị QA trả lại (kèm lý do), chưa được sửa/gửi duyệt lại.
+    returned_cases: list[ReturnedCase] = Field(default_factory=list)
