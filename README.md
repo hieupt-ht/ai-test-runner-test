@@ -2,7 +2,7 @@
 
 Web app nội bộ giúp đội QA **viết test case theo chuẩn chung** và **để AI chạy test giúp**: AI đọc source code của app cần test, đối chiếu với từng test case, ghi kết quả vào Google Sheets. Những case FAIL được QA Lead duyệt trước khi tạo thành GitHub Issue.
 
-> Trạng thái: **M1 — Nền tảng** và **M2 — Quản trị dự án** (dự án gắn repo GitHub và Google Sheet riêng, thành viên, màn hình, chia việc, trang Việc của tôi).
+> Trạng thái: **M1 — Nền tảng**, **M2 — Quản trị dự án** (dự án gắn repo GitHub và Google Sheet riêng, thành viên, màn hình, chia việc, trang Việc của tôi) và **M3 — Test case** (viết, duyệt, báo xung đột khi lưu).
 > Các mốc tiếp theo xem ở [tài liệu thiết kế](docs/superpowers/specs/2026-11-12-ai-test-runner-design.md), mục 15.
 
 ## Ai dùng
@@ -38,6 +38,13 @@ Google Sheets  ── nơi lưu dữ liệu (chỉ backend được ghi)
 ├── .env.example      # mẫu biến môi trường
 └── DECISIONS.md      # các quyết định/giả định trong lúc làm
 ```
+
+## Test case (M3)
+
+- Mã case dạng `TC-000123`, đánh số theo từng dự án. Tester tạo case trên màn hình được giao cho mình.
+- Quy trình: `DRAFT` → `IN_REVIEW` (gửi duyệt) → `APPROVED` (QA Lead duyệt). QA Lead cũng có thể **trả lại kèm nhận xét** (case về `DRAFT`, Tester thấy nhận xét ở đầu trang rồi sửa và gửi lại). Case không dùng nữa chuyển sang `DEPRECATED`; chỉ QA Lead/Admin **khôi phục** (về `DRAFT`).
+- Trạng thái của việc được giao (trang "Việc của tôi") tự suy ra từ các case do Tester đó tạo trên màn hình đó, không phải nhập tay.
+- **Báo xung đột (409)**: nếu thấy "Case này vừa được … cập nhật. Vui lòng tải lại." nghĩa là có người khác đã lưu case trước bạn. Bấm **Tải lại** để xem nội dung mới; phần bạn đang sửa sẽ mất, nên chép lại trước nếu cần. Việc duyệt, trả lại, ngừng dùng cũng bị kiểm tra như vậy.
 
 ## Chuẩn bị (làm một lần)
 

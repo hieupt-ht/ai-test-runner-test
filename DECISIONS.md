@@ -16,3 +16,12 @@ Ghi lại những chỗ tài liệu thiết kế chưa nói rõ và cách đã c
 12. **Trạng thái việc ở M2 luôn là `TODO`.** Từ M3, trạng thái tự suy ra từ các test case.
 13. **Một khoá cho cả tab khi ghi** (`lock:system:projects`, `lock:system:project-members`, `lock:<project_id>:screens`, `lock:<project_id>:assignments`), vì thêm hoặc xoá dòng có thể làm các dòng khác dịch chỗ.
 14. **Giao diện chưa có nút đổi deadline.** API `PATCH /api/projects/{id}/assignments/{id}` đã có và đã có test; tạm thời đổi deadline bằng cách bỏ giao việc rồi giao lại.
+15. **Tester chỉ tạo case trên màn hình được giao cho mình; sửa được case mình tạo hoặc case thuộc màn hình được giao.** Bị bỏ giao việc vẫn sửa được case mình tạo.
+16. **Trạng thái việc tính theo các case do chính tester đó tạo trên màn hình đó.** Mọi case của tester đều `DEPRECATED` thì coi như `TODO`. M3 chưa có run nên chưa bao giờ ra `TESTED`.
+17. **Không đổi `screen_id` của case sau khi tạo.** Mã case `TC-000123` cũng không sửa được.
+18. **Mỗi bước của case: `action` bắt buộc, `expected` được để trống.**
+19. **Ai có quyền sửa case thì được chuyển case sang `DEPRECATED`; chỉ QA Lead/Admin khôi phục.** Khôi phục đưa case về `DRAFT`.
+20. **Không xoá màn hình đang có test case**, kể cả case đã `DEPRECATED`.
+21. **Mọi thao tác chuyển trạng thái cũng gửi `version` và cũng bị kiểm tra xung đột.** Nhờ vậy QA Lead không duyệt nhầm một nội dung mà mình chưa đọc.
+22. **Lọc, tìm, phân trang làm ở trình duyệt.** Tìm không phân biệt hoa thường và dấu tiếng Việt.
+23. **Quy tắc khoá khi ghi case.** Tạo case khoá cả tab `lock:<project_id>:test-cases`; sửa case khoá theo bản ghi `lock:<project_id>:test-case:<id>` (tab `TestCases` không xoá dòng nên dòng không dịch chỗ). Khi lồng khoá, luôn lấy `assignments` trước rồi mới `test-cases`, không bao giờ ngược lại.
