@@ -13,7 +13,7 @@ const caseKey = (projectId: string, caseId: string) => [...casesKey(projectId), 
 const historyKey = (projectId: string, caseId: string) =>
   [...caseKey(projectId, caseId), "history"] as const
 
-const casePath = (projectId: string, caseId: string) => ({
+export const casePath = (projectId: string, caseId: string) => ({
   params: { path: { project_id: projectId, case_id: caseId } },
 })
 
@@ -54,8 +54,11 @@ export function useCaseHistory(projectId: string, caseId: string) {
 
 // ----- Ghi dữ liệu -----
 
+/** `refresh: false` để form tự làm mới sau khi xong cả chuỗi "lưu rồi gửi duyệt". */
+type WriteOptions = { refresh?: boolean }
+
 /** Sau khi ghi thì làm mới dữ liệu của dự án và "Việc của tôi" (trạng thái việc có thể đổi theo case). */
-function useRefresh(projectId: string) {
+export function useRefreshCases(projectId: string) {
   const queryClient = useQueryClient()
   return () => {
     void queryClient.invalidateQueries({ queryKey: ["projects", projectId] })
@@ -63,8 +66,8 @@ function useRefresh(projectId: string) {
   }
 }
 
-export function useCreateTestCase(projectId: string) {
-  const refresh = useRefresh(projectId)
+export function useCreateTestCase(projectId: string, { refresh = true }: WriteOptions = {}) {
+  const doRefresh = useRefreshCases(projectId)
   return useMutation({
     mutationFn: async (input: TestCaseContent & { screen_id: string }): Promise<TestCase> =>
       unwrap(
@@ -73,13 +76,17 @@ export function useCreateTestCase(projectId: string) {
           body: input,
         }),
       ),
-    onSuccess: refresh,
+    onSuccess: () => refresh && doRefresh(),
   })
 }
 
 /** Sửa nội dung; `version` là bản người dùng đang xem (khác bản trên server thì bị 409). */
-export function useUpdateTestCase(projectId: string, caseId: string) {
-  const refresh = useRefresh(projectId)
+export function useUpdateTestCase(
+  projectId: string,
+  caseId: string,
+  { refresh = true }: WriteOptions = {},
+) {
+  const doRefresh = useRefreshCases(projectId)
   return useMutation({
     mutationFn: async (input: TestCaseContent & { version: number }): Promise<TestCase> =>
       unwrap(
@@ -88,23 +95,34 @@ export function useUpdateTestCase(projectId: string, caseId: string) {
           body: input,
         }),
       ),
-    onSuccess: refresh,
+    onSuccess: () => refresh && doRefresh(),
   })
 }
 
-export type TransitionInput = { action: CaseAction; version: number; comment?: string }
+export type TransitionInput = {
+  /** Mã case lấy từ kết quả lưu (case mới tạo chưa có mã khi form mở), nên truyền lúc gọi. */
+  caseId: string
+  action: CaseAction
+  version: number
+  comment?: string
+}
 
 /** Gửi duyệt / duyệt / trả lại / ngừng dùng / khôi phục. */
-export function useTransitionTestCase(projectId: string, caseId: string) {
-  const refresh = useRefresh(projectId)
+export function useTransitionTestCase(projectId: string, { refresh = true }: WriteOptions = {}) {
+  const doRefresh = useRefreshCases(projectId)
   return useMutation({
-    mutationFn: async ({ action, version, comment = "" }: TransitionInput): Promise<TestCase> =>
+    mutationFn: async ({
+      caseId,
+      action,
+      version,
+      comment = "",
+    }: TransitionInput): Promise<TestCase> =>
       unwrap(
         await api.POST(`/api/projects/{project_id}/test-cases/{case_id}/${action}`, {
           ...casePath(projectId, caseId),
           body: { version, comment },
         }),
       ),
-    onSuccess: refresh,
+    onSuccess: () => refresh && doRefresh(),
   })
 }

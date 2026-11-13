@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -27,6 +27,7 @@ import { conflictFrom } from "@/lib/test-cases/conflict"
 import { testCaseFormSchema } from "@/lib/test-cases/form-schema"
 import {
   useCreateTestCase,
+  useRefreshCases,
   useTransitionTestCase,
   useUpdateTestCase,
 } from "@/lib/use-test-cases"
@@ -56,9 +57,11 @@ type Props = {
   /** Chỉ dùng khi tạo mới */
   screens?: Screen[]
   defaultScreenId?: string
+  /** Báo cho trang cha biết form có thay đổi chưa lưu */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
-export function CaseForm({ projectId, testCase, screens = [], defaultScreenId }: Props) {
+export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, onDirtyChange }: Props) {
   const t = useTranslations("testCases")
   const tc = useTranslations("common")
   const router = useRouter()
@@ -79,9 +82,16 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId }:
   const [conflict, setConflict] = useState<{ message: string; latest: TestCase } | null>(null)
 
   const caseId = testCase?.id ?? ""
-  const create = useCreateTestCase(projectId)
-  const update = useUpdateTestCase(projectId, caseId)
-  const transition = useTransitionTestCase(projectId, caseId)
+  // Không tự làm mới sau từng bước: làm mới giữa chừng sẽ nạp lại form khi còn đang "lưu rồi gửi duyệt".
+  const create = useCreateTestCase(projectId, { refresh: false })
+  const update = useUpdateTestCase(projectId, caseId, { refresh: false })
+  const transition = useTransitionTestCase(projectId, { refresh: false })
+  const refreshCases = useRefreshCases(projectId)
+  const isDirty = formState.isDirty
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+    return () => onDirtyChange?.(false)
+  }, [isDirty, onDirtyChange])
   const busy = create.isPending || update.isPending || transition.isPending
 
   function fail(error: unknown) {
@@ -118,18 +128,30 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId }:
 
     if (thenSubmit) {
       try {
-        saved = await transition.mutateAsync({ action: "submit", version: saved.version })
+        // Mã lấy từ kết quả lưu (case mới tạo chưa có mã trước đó).
+        saved = await transition.mutateAsync({
+          caseId: saved.id,
+          action: "submit",
+          version: saved.version,
+        })
         setVersion(saved.version)
       } catch (error) {
-        // Đã lưu nhưng chưa gửi duyệt được: báo lỗi; tạo mới thì chuyển sang xem case vừa tạo.
-        fail(error)
-        if (!isEdit) router.push(`/projects/${projectId}/test-cases/${saved.id}`)
+        // Đã lưu nhưng chưa gửi duyệt được. Toast vẫn hiện dù form có bị nạp lại.
+        toast.warning(t("form.savedNotSubmitted"))
+        if (isEdit) {
+          fail(error) // không làm mới ở đây để hộp thoại xung đột (nếu có) không bị mất
+        } else {
+          refreshCases()
+          fail(error)
+          router.push(`/projects/${projectId}/test-cases/${saved.id}`)
+        }
         return
       }
     }
     toast.success(
       thenSubmit ? t("form.submitted") : isEdit ? tc("saved") : t("form.created", { id: saved.id }),
     )
+    refreshCases()
     router.push(`/projects/${projectId}/test-cases/${saved.id}`)
   }
 

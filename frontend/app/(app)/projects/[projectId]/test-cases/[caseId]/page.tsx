@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { Suspense } from "react"
+import { Suspense, useState } from "react"
 
 import { CaseForm } from "@/components/test-cases/case-form"
 import { CaseReadOnly } from "@/components/test-cases/case-read-only"
@@ -29,6 +29,7 @@ function TestCaseDetailView() {
   const { caseId } = useParams<{ caseId: string }>()
   const caseQuery = useTestCase(projectId, caseId)
   const historyQuery = useCaseHistory(projectId, caseId)
+  const [formDirty, setFormDirty] = useState(false)
 
   if (caseQuery.isLoading) return <Skeleton className="h-96 w-full" />
   const testCase = caseQuery.data
@@ -66,7 +67,12 @@ function TestCaseDetailView() {
             {t("detail.version", { version: testCase.version })}
           </span>
         </div>
-        <ReviewActions projectId={projectId} testCase={testCase} />
+        <ReviewActions
+          projectId={projectId}
+          testCase={testCase}
+          hideSubmit={editable}
+          formDirty={editable && formDirty}
+        />
       </div>
 
       {testCase.status === "DEPRECATED" && (
@@ -75,7 +81,12 @@ function TestCaseDetailView() {
 
       {editable ? (
         // key đổi khi case có phiên bản mới (sau khi lưu / duyệt / tải lại) để form nạp lại dữ liệu.
-        <CaseForm key={`${testCase.id}-${testCase.version}`} projectId={projectId} testCase={testCase} />
+        <CaseForm
+          key={`${testCase.id}-${testCase.version}`}
+          projectId={projectId}
+          testCase={testCase}
+          onDirtyChange={setFormDirty}
+        />
       ) : (
         <>
           {!testCase.can_edit && (

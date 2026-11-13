@@ -25,26 +25,35 @@ import { useTransitionTestCase } from "@/lib/use-test-cases"
 
 const MAX_COMMENT = 1000
 
-type Props = { projectId: string; testCase: TestCaseDetail }
+type Props = {
+  projectId: string
+  testCase: TestCaseDetail
+  /** Form sửa đang hiện (đã có nút Gửi duyệt riêng) nên ẩn "Gửi duyệt" ở đây */
+  hideSubmit?: boolean
+  /** Form có thay đổi chưa lưu: khoá các nút để không mất phần đang sửa */
+  formDirty?: boolean
+}
 
 /** Các nút chuyển trạng thái (gửi duyệt, duyệt, trả lại, ngừng dùng, khôi phục) của một case. */
-export function ReviewActions({ projectId, testCase }: Props) {
+export function ReviewActions({ projectId, testCase, hideSubmit, formDirty }: Props) {
   const t = useTranslations("testCases")
   const tCommon = useTranslations("common")
   const queryClient = useQueryClient()
-  const transition = useTransitionTestCase(projectId, testCase.id)
+  const transition = useTransitionTestCase(projectId)
   const [returnOpen, setReturnOpen] = useState(false)
   const [comment, setComment] = useState("")
   const [commentTouched, setCommentTouched] = useState(false)
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
 
-  const actions = availableActions(testCase.status, testCase.can_edit, testCase.can_review)
+  const actions = availableActions(testCase.status, testCase.can_edit, testCase.can_review).filter(
+    (action) => !(hideSubmit && action === "submit"),
+  )
   const trimmed = comment.trim()
   const commentError = !trimmed ? "required" : trimmed.length > MAX_COMMENT ? "tooLong" : null
 
   async function run(action: CaseAction, text = "") {
     try {
-      await transition.mutateAsync({ action, version: testCase.version, comment: text })
+      await transition.mutateAsync({ caseId: testCase.id, action, version: testCase.version, comment: text })
       toast.success(t("detail.transitioned"))
       return true
     } catch (error) {
@@ -74,11 +83,17 @@ export function ReviewActions({ projectId, testCase }: Props) {
   if (actions.length === 0) return null
 
   return (
+    <div className="flex flex-col items-end gap-1">
     <div className="flex flex-wrap gap-2">
       {actions.map((action) => {
         if (action === "return") {
           return (
-            <Button key={action} variant="outline" onClick={() => setReturnOpen(true)}>
+            <Button
+              key={action}
+              variant="outline"
+              disabled={formDirty}
+              onClick={() => setReturnOpen(true)}
+            >
               {t("actions.return")}
             </Button>
           )
@@ -87,7 +102,7 @@ export function ReviewActions({ projectId, testCase }: Props) {
           return (
             <ConfirmDialog
               key={action}
-              trigger={<Button variant="outline" disabled={transition.isPending} />}
+              trigger={<Button variant="outline" disabled={transition.isPending || formDirty} />}
               triggerLabel={t("actions.deprecate")}
               title={t("deprecateDialog.title")}
               description={t("deprecateDialog.description")}
@@ -96,7 +111,10 @@ export function ReviewActions({ projectId, testCase }: Props) {
           )
         }
         return (
-          <Button key={action} disabled={transition.isPending} onClick={() => void run(action)}>
+          <Button
+            key={action}
+            disabled={transition.isPending || formDirty}
+            onClick={() => void run(action)}>
             {t(`actions.${action}`)}
           </Button>
         )
@@ -134,6 +152,8 @@ export function ReviewActions({ projectId, testCase }: Props) {
         onReload={reload}
         onClose={() => setConflictMessage(null)}
       />
+    </div>
+    {formDirty && <p className="text-xs text-muted-foreground">{t("detail.dirtyHint")}</p>}
     </div>
   )
 }

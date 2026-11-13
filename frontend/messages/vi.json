@@ -238,7 +238,8 @@
         "stepActionTooLong": "Nội dung bước tối đa 500 ký tự",
         "stepExpectedTooLong": "Kết quả bước tối đa 500 ký tự",
         "expectedResultRequired": "Nhập kết quả mong đợi"
-      }
+      },
+      "savedNotSubmitted": "Đã lưu case nhưng chưa gửi duyệt được."
     },
     "steps": {
       "action": "Thao tác",
@@ -259,7 +260,8 @@
       "createdBy": "Tạo bởi {name}",
       "updatedBy": "Cập nhật bởi {name}",
       "version": "Phiên bản {version}",
-      "transitioned": "Đã cập nhật trạng thái case"
+      "transitioned": "Đã cập nhật trạng thái case",
+      "dirtyHint": "Hãy lưu hoặc bỏ thay đổi đang sửa trước khi đổi trạng thái."
     },
     "actions": {
       "submit": "Gửi duyệt",
