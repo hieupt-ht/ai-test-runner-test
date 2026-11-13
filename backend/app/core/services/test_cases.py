@@ -6,6 +6,7 @@ Việc tính lại lấy khoá `assignments`, nên luôn chạy SAU KHI đã nh�
 """
 
 import logging
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
@@ -74,6 +75,20 @@ _CONTENT_FIELDS = list(TestCaseContent.model_fields)
 def _content_of(case: TestCase) -> dict[str, Any]:
     """Phần nội dung của case, dạng dict thuần JSON để so sánh và ghi diff."""
     return case.model_dump(mode="json", include=set(_CONTENT_FIELDS))
+
+
+@dataclass(frozen=True)
+class SkippedCase:
+    """Một case bị bỏ qua khi duyệt hàng loạt, kèm lý do để hiện cho người duyệt."""
+
+    case_id: str
+    reason: str
+
+
+@dataclass
+class BatchApproveResult:
+    approved: list[TestCase] = field(default_factory=list)
+    skipped: list[SkippedCase] = field(default_factory=list)
 
 
 class TestCaseService:
@@ -193,6 +208,52 @@ class TestCaseService:
         self, user: User, case_id: str, action: CaseAction, *, version: int, comment: str = ""
     ) -> TestCase:
         case = self.get_case(case_id)
+        return self._transition_case(user, case, action, version, comment, refresh=True)
+
+    def approve_many(self, user: User, items: list[tuple[str, int]]) -> BatchApproveResult:
+        """Duyệt nhiều case một lượt; `items` là danh sách (case_id, version người duyệt đang xem).
+
+        Lấy khoá tab TestCases một lần cho cả lượt và đọc Sheet một lần. Mỗi case vẫn kiểm tra
+        version và trạng thái riêng: case lỗi thì bỏ qua (kèm lý do), các case còn lại vẫn được
+        duyệt. Trạng thái việc chỉ tính lại một lần cho mỗi màn hình, sau khi đã nhả khoá.
+        """
+        if not self.can_review(user):
+            raise TestCasePermissionError("Bạn không có quyền duyệt test case")
+
+        result = BatchApproveResult()
+        with self._test_cases.lock():
+            by_id = {case.id: case for case in self._test_cases.list_all()}
+            for case_id, version in items:
+                case = by_id.get(case_id)
+                try:
+                    if case is None:
+                        raise TestCaseNotFoundError(case_id)
+                    result.approved.append(
+                        self._transition_case(user, case, CaseAction.APPROVE, version, "")
+                    )
+                except TestCaseNotFoundError:
+                    result.skipped.append(SkippedCase(case_id, "Không tìm thấy test case"))
+                except VersionConflictError:
+                    result.skipped.append(SkippedCase(case_id, "Case vừa được người khác cập nhật"))
+                except InvalidTransitionError as error:
+                    result.skipped.append(SkippedCase(case_id, str(error)))
+
+        for screen_id in dict.fromkeys(case.screen_id for case in result.approved):
+            self._refresh_status(screen_id)
+        return result
+
+    # --- Nội bộ ---
+
+    def _transition_case(
+        self,
+        user: User,
+        case: TestCase,
+        action: CaseAction,
+        version: int,
+        comment: str,
+        *,
+        refresh: bool = False,
+    ) -> TestCase:
         if action in _REVIEW_ACTIONS:
             if not self.can_review(user):
                 raise TestCasePermissionError("Bạn không có quyền duyệt test case")
@@ -212,9 +273,9 @@ class TestCaseService:
             if not 1 <= len(comment) <= MAX_COMMENT_LENGTH:
                 raise InvalidTestCaseError("Trả lại phải kèm nhận xét")
             diff["comment"] = comment
-        return self._save(user, case, {"status": target}, version, action.value, diff)
-
-    # --- Nội bộ ---
+        return self._save(
+            user, case, {"status": target}, version, action.value, diff, refresh=refresh
+        )
 
     def _require_edit(self, user: User, case: TestCase) -> None:
         if not self.can_edit(user, case):
@@ -234,6 +295,8 @@ class TestCaseService:
         version: int,
         audit_action: str,
         diff: dict[str, Any],
+        *,
+        refresh: bool = True,
     ) -> TestCase:
         # `case` vừa đọc từ Sheet: chỉ đổi đúng các trường trong `changes`, còn lại giữ nguyên.
         saved = self._test_cases.save(
@@ -244,7 +307,7 @@ class TestCaseService:
         self._audit(user, audit_action, saved.id, diff)
         # Trạng thái việc chỉ phụ thuộc trạng thái của các case. Case không đổi trạng thái
         # (ví dụ sửa chữ trong case Nháp) thì khỏi tính lại, đỡ vài lượt gọi Google.
-        if "status" in changes:
+        if refresh and "status" in changes:
             self._refresh_status(saved.screen_id)
         return saved
 

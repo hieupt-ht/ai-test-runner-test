@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.project_access import load_project
@@ -29,6 +29,7 @@ router = APIRouter(prefix="/api/projects/{project_id}/test-cases", tags=["test-c
 NOT_FOUND = "Không tìm thấy test case"
 NO_PERMISSION = "Bạn không có quyền thực hiện thao tác này"
 BUSY = "Dữ liệu đang được cập nhật, vui lòng thử lại"
+MAX_BATCH_SIZE = 200
 
 
 class TestCaseDetail(TestCase):
@@ -53,6 +54,25 @@ class CreateTestCaseRequest(TestCaseContent):
 
 class UpdateTestCaseRequest(TestCaseContent):
     version: int
+
+
+class ApproveItem(BaseModel):
+    case_id: str
+    version: int
+
+
+class BatchApproveRequest(BaseModel):
+    items: list[ApproveItem] = Field(min_length=1, max_length=MAX_BATCH_SIZE)
+
+
+class SkippedItem(BaseModel):
+    case_id: str
+    reason: str
+
+
+class BatchApproveResponse(BaseModel):
+    approved: list[TestCase]
+    skipped: list[SkippedItem]
 
 
 class TransitionRequest(BaseModel):
@@ -196,6 +216,24 @@ _transition_route("/{case_id}/approve", CaseAction.APPROVE, Action.REVIEW_TEST_C
 _transition_route("/{case_id}/return", CaseAction.RETURN, Action.REVIEW_TEST_CASE)
 _transition_route("/{case_id}/deprecate", CaseAction.DEPRECATE, Action.EDIT_TEST_CASE)
 _transition_route("/{case_id}/restore", CaseAction.RESTORE, Action.REVIEW_TEST_CASE)
+
+
+@router.post("/approve-batch", response_model=BatchApproveResponse)
+def approve_test_cases(
+    project_id: str, body: BatchApproveRequest, user: CurrentUser, services: ServicesDep
+) -> BatchApproveResponse:
+    """Duyệt nhiều case một lượt; case lỗi được bỏ qua và báo lại, không làm hỏng cả lượt."""
+    service = _service(services, user, project_id, Action.REVIEW_TEST_CASE)
+    try:
+        result = service.approve_many(user, [(item.case_id, item.version) for item in body.items])
+    except TestCasePermissionError:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, NO_PERMISSION) from None
+    except LockTimeout:
+        raise HTTPException(status.HTTP_409_CONFLICT, BUSY) from None
+    return BatchApproveResponse(
+        approved=result.approved,
+        skipped=[SkippedItem(case_id=i.case_id, reason=i.reason) for i in result.skipped],
+    )
 
 
 @router.get("/{case_id}/history")

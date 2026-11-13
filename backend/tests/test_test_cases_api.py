@@ -244,3 +244,44 @@ def test_archived_project_case_cannot_be_edited_or_reviewed(
 
     assert detail["can_edit"] is False
     assert detail["can_review"] is False
+
+
+def test_batch_approve_reports_approved_and_skipped(
+    an: TestClient, lead: TestClient, project: Project
+) -> None:
+    create(an, project, title="Case 1")
+    create(an, project, title="Case 2")
+    an.post(url(project, "/TC-000001/submit"), json={"version": 1})
+    an.post(url(project, "/TC-000002/submit"), json={"version": 1})
+
+    response = lead.post(
+        url(project, "/approve-batch"),
+        json={
+            "items": [
+                {"case_id": "TC-000001", "version": 2},
+                {"case_id": "TC-000002", "version": 1},  # version cũ
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [case["id"] for case in body["approved"]] == ["TC-000001"]
+    assert [item["case_id"] for item in body["skipped"]] == ["TC-000002"]
+    assert body["skipped"][0]["reason"]
+    assert lead.get(url(project, "/TC-000001")).json()["status"] == "APPROVED"
+    assert lead.get(url(project, "/TC-000002")).json()["status"] == "IN_REVIEW"
+
+
+def test_batch_approve_forbidden_for_tester(an: TestClient, project: Project) -> None:
+    create(an, project)
+
+    response = an.post(
+        url(project, "/approve-batch"), json={"items": [{"case_id": "TC-000001", "version": 1}]}
+    )
+
+    assert response.status_code == 403
+
+
+def test_batch_approve_rejects_empty_list(lead: TestClient, project: Project) -> None:
+    assert lead.post(url(project, "/approve-batch"), json={"items": []}).status_code == 422

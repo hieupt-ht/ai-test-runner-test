@@ -322,3 +322,81 @@ def test_editing_approved_case_still_refreshes_assignment(
     env.service.update_content(TESTER_A, case.id, version=3, content=content("Sửa"))
 
     assert env.assignment_status("a@x.com") == AssignmentStatus.WRITING
+
+
+# --- Duyệt hàng loạt ---
+
+
+def _in_review_case(env: Env, title: str, screen_id: str = "SC-0001") -> TestCase:
+    case = env.service.create(TESTER_A, screen_id=screen_id, content=content(title))
+    return env.service.transition(TESTER_A, case.id, CaseAction.SUBMIT, version=1)
+
+
+def test_approve_many_approves_each_case_and_audits_each(env: Env) -> None:
+    first = _in_review_case(env, "Case 1")
+    second = _in_review_case(env, "Case 2")
+    audit_before = env.audit_rows()
+
+    result = env.service.approve_many(
+        LEAD, [(first.id, first.version), (second.id, second.version)]
+    )
+
+    assert [case.id for case in result.approved] == [first.id, second.id]
+    assert result.skipped == []
+    assert all(case.status == TestCaseStatus.APPROVED for case in env.test_cases.list_all())
+    assert env.audit_rows() == audit_before + 2
+    assert env.assignment_status("a@x.com") == AssignmentStatus.APPROVED
+
+
+def test_approve_many_skips_bad_cases_and_reports_reason(env: Env) -> None:
+    good = _in_review_case(env, "Tốt")
+    stale = _in_review_case(env, "Bản cũ")
+    draft = env.service.create(TESTER_A, screen_id="SC-0001", content=content("Nháp"))
+
+    result = env.service.approve_many(
+        LEAD,
+        [
+            (good.id, good.version),
+            (stale.id, stale.version - 1),  # version cũ -> xung đột
+            (draft.id, draft.version),  # đang Nháp -> sai trạng thái
+            ("TC-999999", 1),  # không tồn tại
+        ],
+    )
+
+    assert [case.id for case in result.approved] == [good.id]
+    assert [item.case_id for item in result.skipped] == [stale.id, draft.id, "TC-999999"]
+    assert all(item.reason for item in result.skipped)
+    assert env.service.get_case(stale.id).status == TestCaseStatus.IN_REVIEW
+
+
+def test_approve_many_requires_reviewer(env: Env) -> None:
+    case = _in_review_case(env, "Case")
+
+    with pytest.raises(TestCasePermissionError):
+        env.service.approve_many(TESTER_A, [(case.id, case.version)])
+
+    assert env.service.get_case(case.id).status == TestCaseStatus.IN_REVIEW
+
+
+def test_approve_many_holds_tab_lock_once_and_releases_it(
+    env: Env, redis: fakeredis.FakeRedis
+) -> None:
+    first = _in_review_case(env, "Case 1")
+    second = _in_review_case(env, "Case 2")
+
+    env.service.approve_many(LEAD, [(first.id, first.version), (second.id, second.version)])
+
+    # nhả khoá hết: người khác lấy được ngay, và việc tính lại trạng thái đã chạy được sau đó
+    with redis_lock(redis, f"lock:{env.project.id}:test-cases", wait_seconds=0.1):
+        pass
+
+
+def test_approve_many_refreshes_each_screen_once(env: Env, monkeypatch: pytest.MonkeyPatch) -> None:
+    first = _in_review_case(env, "Case 1")
+    second = _in_review_case(env, "Case 2")
+    refreshed: list[str] = []
+    monkeypatch.setattr(env.service._status_updater, "refresh_screen", refreshed.append)
+
+    env.service.approve_many(LEAD, [(first.id, first.version), (second.id, second.version)])
+
+    assert refreshed == ["SC-0001"]
