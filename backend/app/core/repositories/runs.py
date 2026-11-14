@@ -220,6 +220,9 @@ class ResultRepository:
         """Ghi nhiều kết quả bằng đúng một lời gọi Google."""
         self._table.append_many([_result_to_record(result) for result in results])
 
+    def list_all(self) -> list[Result]:
+        """Đọc toàn bộ Results một lượt để tổng hợp nhiều run mà không đọc lặp Sheet."""
+        return [_result_from_record(record) for record in self._table.read_all()]
+
     def list_for_run(self, run_id: str) -> list[Result]:
-        records = [r for r in self._table.read_all() if r["run_id"] == run_id]
-        return [_result_from_record(record) for record in records]
+        return [result for result in self.list_all() if result.run_id == run_id]

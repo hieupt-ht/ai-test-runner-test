@@ -1890,6 +1890,68 @@
           }
         }
       }
+    },
+    "/api/projects/{project_id}/results": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "List Results",
+        "operationId": "list_results_api_projects__project_id__results_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ResultStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResultItem"
+                  },
+                  "title": "Response List Results Api Projects  Project Id  Results Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2695,6 +2757,61 @@
           "private"
         ],
         "title": "RepoInfo"
+      },
+      "ResultItem": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "case_title": {
+            "type": "string",
+            "title": "Case Title"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResultStatus"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "failed_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Step"
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "case_title",
+          "status",
+          "reason",
+          "failed_step",
+          "evidence",
+          "run_id",
+          "finished_at"
+        ],
+        "title": "ResultItem"
       },
       "ResultStatus": {
         "type": "string",
