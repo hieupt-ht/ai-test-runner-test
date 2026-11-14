@@ -6,10 +6,14 @@ import pytest
 
 from app.core.bootstrap import bootstrap_project_spreadsheet
 from app.core.models.test_case import (
+    AutoStep,
+    AutoTarget,
+    AutoType,
     Priority,
     Severity,
     TestCaseContent,
     TestCaseStatus,
+    TargetBy,
     TestStep,
 )
 from app.core.repositories.test_cases import (
@@ -166,3 +170,46 @@ def test_get_reads_only_id_column_and_one_row(
     assert found is not None and found.title == "Case 1"
     assert "TestCases" not in gateway.calls  # không đọc cả tab
     assert repo.get("TC-009999") is None
+
+
+def _steps_cell(gateway: FakeSheetsGateway, row_index: int = 1) -> str:
+    rows = gateway.data[SHEET]["TestCases"]
+    return rows[row_index][rows[0].index("steps")]
+
+
+def test_auto_step_round_trips_through_sheet(
+    repo_factory: Callable[[], TestCaseRepository],
+) -> None:
+    auto = AutoStep(
+        type=AutoType.FILL, target=AutoTarget(by=TargetBy.LABEL, value="Email"), value="qa@x.com"
+    )
+    content = make_content()
+    content.steps[0] = TestStep(action="Nhập email", expected="", auto=auto)
+    created = repo_factory().create(screen_id="SC-0001", content=content, actor=AN)
+
+    loaded = repo_factory().get(created.id)
+
+    assert loaded is not None
+    assert loaded.steps[0].auto == auto
+    assert loaded.steps[1].auto is None
+
+
+def test_record_without_auto_loads(
+    repo: TestCaseRepository, gateway: FakeSheetsGateway
+) -> None:
+    created = repo.create(screen_id="SC-0001", content=make_content(), actor=AN)
+    rows = gateway.data[SHEET]["TestCases"]
+    rows[1][rows[0].index("steps")] = '[{"action": "Mở trang", "expected": "Thấy form"}]'
+
+    loaded = repo.get(created.id)
+
+    assert loaded is not None
+    assert loaded.steps[0].auto is None
+
+
+def test_steps_without_auto_do_not_write_auto_key(
+    repo: TestCaseRepository, gateway: FakeSheetsGateway
+) -> None:
+    repo.create(screen_id="SC-0001", content=make_content(), actor=AN)
+
+    assert "auto" not in _steps_cell(gateway)

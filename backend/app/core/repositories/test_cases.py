@@ -47,7 +47,8 @@ def _now_like_sheet() -> datetime:
 
 
 def _to_record(case: TestCase) -> Record:
-    steps = [{"action": step.action, "expected": step.expected} for step in case.steps]
+    # exclude_none: bước không có phần tự động thì không ghi khoá "auto" (giữ nguyên dữ liệu cũ)
+    steps = [step.model_dump(mode="json", exclude_none=True) for step in case.steps]
     return {
         "id": case.id,
         "screen_id": case.screen_id,
