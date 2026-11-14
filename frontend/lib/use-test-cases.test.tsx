@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { api } from "@/lib/api/client"
-import { useApproveTestCases, useTransitionTestCase } from "@/lib/use-test-cases"
+import { useApproveTestCases, useSyncIssues, useTransitionTestCase } from "@/lib/use-test-cases"
 
 vi.mock("@/lib/api/client", () => ({
   api: { POST: vi.fn() },
@@ -52,5 +52,25 @@ describe("useApproveTestCases", () => {
       "/api/projects/{project_id}/test-cases/approve-batch",
       { params: { path: { project_id: "P1" } }, body: { items } },
     )
+  })
+})
+
+describe("useSyncIssues", () => {
+  it("gọi endpoint đồng bộ và làm mới danh sách case", async () => {
+    const data = { created: 1, updated: 0, closed: 0, reopened: 0, skipped: 2, failed: [] }
+    vi.mocked(api.POST).mockResolvedValue({ data, response: { ok: true, status: 200 } } as never)
+    const client = new QueryClient()
+    const invalidate = vi.spyOn(client, "invalidateQueries")
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useSyncIssues("P1"), { wrapper })
+
+    expect(await act(() => result.current.mutateAsync())).toEqual(data)
+    expect(api.POST).toHaveBeenLastCalledWith(
+      "/api/projects/{project_id}/test-cases/sync-issues",
+      { params: { path: { project_id: "P1" } } },
+    )
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "P1"] })
   })
 })

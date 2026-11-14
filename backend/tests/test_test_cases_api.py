@@ -7,6 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.github.client import GitHubError
 from app.core.models.project import Project
 from app.core.models.test_case import TestCase
 from app.core.models.user import Role
@@ -15,7 +16,7 @@ from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import today_in_vietnam
 from tests.conftest import client_for, make_project, make_user
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
 
 NEXT_WEEK = (today_in_vietnam() + timedelta(days=7)).isoformat()
 
@@ -162,6 +163,62 @@ def test_edit_return_deprecate_and_restore_each_sync(
         "DEPRECATED",
         "DRAFT",
     ]
+
+
+def test_sync_issues_requires_review_permission(an: TestClient, project: Project) -> None:
+    assert an.post(url(project, "/sync-issues")).status_code == 403
+
+
+def test_sync_issues_creates_approved_only_and_second_call_updates(
+    an: TestClient, lead: TestClient, project: Project, github: FakeGitHub
+) -> None:
+    first = create(an, project).json()
+    create(an, project)
+    an.post(url(project, f"/{first['id']}/submit"), json={"version": 1})
+    lead.post(url(project, f"/{first['id']}/approve"), json={"version": 2})
+
+    first_result = lead.post(url(project, "/sync-issues"))
+    second_result = lead.post(url(project, "/sync-issues"))
+
+    assert first_result.status_code == second_result.status_code == 200
+    assert first_result.json()["created"] == 1
+    assert first_result.json()["skipped"] == 1
+    assert second_result.json()["updated"] == 1
+    assert len(github.issues["org/web"]) == 1
+
+
+def test_sync_issues_without_github_is_503(
+    app: FastAPI, lead: TestClient, project: Project
+) -> None:
+    app.state.services.github = None
+    response = lead.post(url(project, "/sync-issues"))
+    assert response.status_code == 503
+    assert "GitHub" in response.json()["detail"]
+
+
+def test_sync_issues_reports_failure_and_continues(
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    github: FakeGitHub,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cases = [create(an, project).json() for _ in range(2)]
+    for case in cases:
+        an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+        lead.post(url(project, f"/{case['id']}/approve"), json={"version": 2})
+    original = github.find_issue_by_label
+
+    def fail_first(repo: str, label: str):
+        if label == f"tc:{cases[0]['id']}":
+            raise GitHubError("GitHub tạm lỗi")
+        return original(repo, label)
+
+    monkeypatch.setattr(github, "find_issue_by_label", fail_first)
+    response = lead.post(url(project, "/sync-issues"))
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+    assert response.json()["failed"] == [{"case_id": cases[0]["id"], "reason": "GitHub tạm lỗi"}]
 
 
 def create(browser: TestClient, project: Project, **changes: Any) -> httpx.Response:

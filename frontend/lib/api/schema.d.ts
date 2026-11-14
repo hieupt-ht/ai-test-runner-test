@@ -433,6 +433,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/sync-issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Test Case Issues */
+        post: operations["sync_test_case_issues_api_projects__project_id__test_cases_sync_issues_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases/{case_id}/history": {
         parameters: {
             query?: never;
@@ -833,12 +850,52 @@ export interface components {
          * @enum {string}
          */
         Severity: "LOW" | "MEDIUM" | "HIGH";
+        /**
+         * SkippedCase
+         * @description Một case bị bỏ qua khi duyệt hàng loạt, kèm lý do để hiện cho người duyệt.
+         */
+        SkippedCase: {
+            /** Case Id */
+            case_id: string;
+            /** Reason */
+            reason: string;
+        };
         /** SkippedItem */
         SkippedItem: {
             /** Case Id */
             case_id: string;
             /** Reason */
             reason: string;
+        };
+        /** SyncIssuesResult */
+        SyncIssuesResult: {
+            /**
+             * Created
+             * @default 0
+             */
+            created: number;
+            /**
+             * Updated
+             * @default 0
+             */
+            updated: number;
+            /**
+             * Closed
+             * @default 0
+             */
+            closed: number;
+            /**
+             * Reopened
+             * @default 0
+             */
+            reopened: number;
+            /**
+             * Skipped
+             * @default 0
+             */
+            skipped: number;
+            /** Failed */
+            failed?: components["schemas"]["SkippedCase"][];
         };
         /**
          * TestCase
@@ -2087,6 +2144,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BatchApproveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_test_case_issues_api_projects__project_id__test_cases_sync_issues_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncIssuesResult"];
                 };
             };
             /** @description Validation Error */

@@ -10,6 +10,7 @@ import type {
   TestCase,
   TestCaseContent,
   TestCaseDetail,
+  SyncIssuesResult,
 } from "@/lib/api/types"
 import type { CaseAction } from "@/lib/test-cases/actions"
 
@@ -147,6 +148,21 @@ export function useApproveTestCases(projectId: string) {
         }),
       ),
     // Dù có case bị bỏ qua thì danh sách vẫn đã đổi, nên luôn làm mới.
+    onSuccess: doRefresh,
+  })
+}
+
+
+/** QA Lead/Admin đồng bộ lại issue sau khi GitHub bị lỗi. */
+export function useSyncIssues(projectId: string) {
+  const doRefresh = useRefreshCases(projectId)
+  return useMutation({
+    mutationFn: async (): Promise<SyncIssuesResult> =>
+      unwrap(
+        await api.POST("/api/projects/{project_id}/test-cases/sync-issues", {
+          params: { path: { project_id: projectId } },
+        }),
+      ),
     onSuccess: doRefresh,
   })
 }

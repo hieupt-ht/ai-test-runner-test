@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
@@ -25,7 +27,7 @@ from app.core.repositories.test_cases import (
     TestCaseRepository,
     VersionConflictError,
 )
-from app.core.services.issue_sync import IssueSink
+from app.core.services.issue_sync import IssueSink, IssueSyncer
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
 
@@ -33,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 AUDIT_ENTITY = "test_case"
 MAX_COMMENT_LENGTH = 1000
+MAX_SYNC_BATCH_SIZE = 200
 
 
 class CaseAction(StrEnum):
@@ -93,6 +96,15 @@ class BatchApproveResult:
     skipped: list[SkippedCase] = field(default_factory=list)
 
 
+class SyncIssuesResult(BaseModel):
+    created: int = 0
+    updated: int = 0
+    closed: int = 0
+    reopened: int = 0
+    skipped: int = 0
+    failed: list[SkippedCase] = Field(default_factory=list)
+
+
 class TestCaseService:
     __test__ = False  # pytest đừng tưởng đây là lớp test
 
@@ -108,6 +120,7 @@ class TestCaseService:
         audit_log: AuditLogRepository,
         issue_sync: IssueSink | None = None,
         project: Project | None = None,
+        issue_syncer: IssueSyncer | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -118,6 +131,7 @@ class TestCaseService:
         self._audit_log = audit_log
         self._issue_sync = issue_sync
         self._project = project
+        self._issue_syncer = issue_syncer
         self._screen_names: dict[str, str] | None = None
 
     # --- Đọc ---
@@ -248,6 +262,26 @@ class TestCaseService:
 
         for screen_id in dict.fromkeys(case.screen_id for case in result.approved):
             self._refresh_status(screen_id)
+        return result
+
+    def sync_issues(self, user: User) -> SyncIssuesResult:
+        if not self.can_review(user):
+            raise TestCasePermissionError("Bạn không có quyền đồng bộ issue")
+        if self._issue_syncer is None or self._project is None:
+            raise RuntimeError("GitHub chưa được cấu hình")
+
+        result = SyncIssuesResult()
+        screen_names = {screen.id: screen.name for screen in self._screens.list_all()}
+        for case in self._test_cases.list_all()[:MAX_SYNC_BATCH_SIZE]:
+            try:
+                outcome = self._issue_syncer.sync_case(
+                    self._project, case, screen_name=screen_names.get(case.screen_id, "")
+                )
+                setattr(result, outcome, getattr(result, outcome) + 1)
+            except Exception as error:
+                result.failed.append(SkippedCase(case.id, str(error)))
+                if "giới hạn" in str(error):
+                    break
         return result
 
     # --- Nội bộ ---

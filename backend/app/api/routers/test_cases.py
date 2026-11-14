@@ -16,10 +16,12 @@ from app.core.models.user import User
 from app.core.permissions import Action
 from app.core.repositories.audit_log import AuditEntry
 from app.core.repositories.test_cases import TestCaseNotFoundError, VersionConflictError
+from app.core.services.issue_sync import IssueSyncer
 from app.core.services.test_cases import (
     CaseAction,
     InvalidTestCaseError,
     InvalidTransitionError,
+    SyncIssuesResult,
     TestCasePermissionError,
     TestCaseService,
 )
@@ -96,6 +98,7 @@ def _service_for(services: Services, project: Project) -> TestCaseService:
         audit_log=scope.audit_log,
         issue_sync=services.issue_sync,
         project=project,
+        issue_syncer=IssueSyncer(services.github) if services.github else None,
     )
 
 
@@ -236,6 +239,19 @@ def approve_test_cases(
         approved=result.approved,
         skipped=[SkippedItem(case_id=i.case_id, reason=i.reason) for i in result.skipped],
     )
+
+
+@router.post("/sync-issues", response_model=SyncIssuesResult)
+def sync_test_case_issues(
+    project_id: str, user: CurrentUser, services: ServicesDep
+) -> SyncIssuesResult:
+    service = _service(services, user, project_id, Action.REVIEW_TEST_CASE)
+    if services.github is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "GitHub chưa được cấu hình")
+    try:
+        return service.sync_issues(user)
+    except TestCasePermissionError:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, NO_PERMISSION) from None
 
 
 @router.get("/{case_id}/history")

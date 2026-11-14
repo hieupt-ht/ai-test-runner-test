@@ -28,6 +28,7 @@ export type Severity = Schemas["Severity"]
 export type Priority = Schemas["Priority"]
 export type AuditEntry = Schemas["AuditEntry"]
 export type BatchApproveResponse = Schemas["BatchApproveResponse"]
+export type SyncIssuesResult = Schemas["SyncIssuesResult"]
 export type ConflictResponse = Schemas["ConflictResponse"]
 
 export const ROLES: Role[] = ["ADMIN", "QA_LEAD", "TESTER", "VIEWER"]

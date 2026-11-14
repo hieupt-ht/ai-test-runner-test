@@ -1506,6 +1506,48 @@
         }
       }
     },
+    "/api/projects/{project_id}/test-cases/sync-issues": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Sync Test Case Issues",
+        "operationId": "sync_test_case_issues_api_projects__project_id__test_cases_sync_issues_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncIssuesResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/test-cases/{case_id}/history": {
       "get": {
         "tags": [
@@ -2474,6 +2516,25 @@
         ],
         "title": "Severity"
       },
+      "SkippedCase": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "reason"
+        ],
+        "title": "SkippedCase",
+        "description": "Một case bị bỏ qua khi duyệt hàng loạt, kèm lý do để hiện cho người duyệt."
+      },
       "SkippedItem": {
         "properties": {
           "case_id": {
@@ -2491,6 +2552,44 @@
           "reason"
         ],
         "title": "SkippedItem"
+      },
+      "SyncIssuesResult": {
+        "properties": {
+          "created": {
+            "type": "integer",
+            "title": "Created",
+            "default": 0
+          },
+          "updated": {
+            "type": "integer",
+            "title": "Updated",
+            "default": 0
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed",
+            "default": 0
+          },
+          "reopened": {
+            "type": "integer",
+            "title": "Reopened",
+            "default": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped",
+            "default": 0
+          },
+          "failed": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedCase"
+            },
+            "type": "array",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "title": "SyncIssuesResult"
       },
       "TestCase": {
         "properties": {
