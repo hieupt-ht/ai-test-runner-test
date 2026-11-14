@@ -169,7 +169,10 @@ def env(app: FastAPI, gateway: FakeSheetsGateway, tmp_path: Path) -> Env:
 def test_execute_marks_completed_and_counts_results(env: Env) -> None:
     cases = env.approved_cases(3)
     env.opener.outcomes[cases[1].id] = CaseOutcome(
-        ResultStatus.FAIL, "Không thấy chữ", 1, env.tmp_path / "art" / "RUN-0001" / "x.png"
+        ResultStatus.FAIL,
+        "Không thấy chữ",
+        1,
+        env.tmp_path / "art" / env.project.id / "RUN-0001" / "x.png",
     )
     job = env.enqueue(cases)
 
@@ -236,7 +239,7 @@ def test_cancel_between_cases_stops_and_keeps_written_results(env: Env) -> None:
 
     def on_case(case: TestCase) -> None:
         if len(env.opener.ran) == 3:
-            env.queue.request_cancel(job.run_id)
+            env.queue.request_cancel(env.project.id, job.run_id)
 
     env.opener.on_case = on_case
 
@@ -276,7 +279,7 @@ def test_app_or_login_error_fails_run_with_note_and_no_results(
     run = env.run_of(job)
     assert run.status == RunStatus.FAILED
     assert run.finished_at is not None
-    assert env.queue.get_note(job.run_id) == str(error)
+    assert env.queue.get_note(env.project.id, job.run_id) == str(error)
     assert env.scope.results.list_for_run(job.run_id) == []
 
 
@@ -287,7 +290,7 @@ def test_missing_project_config_fails_run_with_note(env: Env) -> None:
     env.executor().execute(job)
 
     assert env.run_of(job).status == RunStatus.FAILED
-    assert env.project.id in env.queue.get_note(job.run_id)
+    assert env.project.id in env.queue.get_note(env.project.id, job.run_id)
     assert env.opener.opened == 0
 
 
@@ -341,8 +344,8 @@ def test_unexpected_executor_error_fails_run_and_closes_session(
     env.executor().execute(job)
 
     assert env.run_of(job).status == RunStatus.FAILED
-    assert "RuntimeError" in env.queue.get_note(job.run_id)
-    assert "Google hỏng" not in env.queue.get_note(job.run_id)
+    assert "RuntimeError" in env.queue.get_note(env.project.id, job.run_id)
+    assert "Google hỏng" not in env.queue.get_note(env.project.id, job.run_id)
     assert env.opener.closed == 1
 
 
@@ -356,7 +359,7 @@ def test_recover_marks_running_runs_failed_and_keeps_queued(env: Env) -> None:
     run = env.run_of(running)
     assert run.status == RunStatus.FAILED
     assert run.finished_at is not None
-    assert env.queue.get_note(running.run_id) == "Worker bị dừng giữa chừng"
+    assert env.queue.get_note(env.project.id, running.run_id) == "Worker bị dừng giữa chừng"
     # Run đã xong thì dự án được chạy lại, và run QUEUED không bị đụng tới.
     queued = env.enqueue(env.approved_cases(1))
     assert env.executor().recover_interrupted_runs() == 0
@@ -409,10 +412,10 @@ def test_real_opener_runs_cases_end_to_end(env: Env) -> None:
     assert not worker.is_alive()
 
     run = env.run_of(job)
-    assert run.status == RunStatus.COMPLETED, env.queue.get_note(job.run_id)
+    assert run.status == RunStatus.COMPLETED, env.queue.get_note(env.project.id, job.run_id)
     results = {r.test_case_id: r for r in env.scope.results.list_for_run(job.run_id)}
     assert results[good.id].status == ResultStatus.PASS
     assert results[bad.id].status == ResultStatus.FAIL
     assert results[bad.id].failed_step == 2
     assert results[bad.id].screenshot == f"{job.run_id}/{bad.id}.png"
-    assert (env.tmp_path / "art" / job.run_id / f"{bad.id}.png").is_file()
+    assert (env.tmp_path / "art" / env.project.id / job.run_id / f"{bad.id}.png").is_file()

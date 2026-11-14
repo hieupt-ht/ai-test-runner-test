@@ -47,6 +47,11 @@ describe("testCaseFormSchema", () => {
       expect(testCaseFormSchema.safeParse(valid).success).toBe(true)
     })
 
+    it("chấp nhận auto: null, đúng như API trả về cho bước chưa có phần tự động", () => {
+      const result = testCaseFormSchema.safeParse(withAuto(null))
+      expect(result.success).toBe(true)
+    })
+
     it("chấp nhận auto hợp lệ và giữ nguyên khi parse", () => {
       const auto = { type: "fill", target: { by: "label", value: "Email" }, value: "qa@x.com" }
       const result = testCaseFormSchema.safeParse(withAuto(auto))

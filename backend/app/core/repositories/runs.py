@@ -100,8 +100,9 @@ class RunRepository:
         return sorted(runs, key=lambda run: run.id, reverse=True)
 
     def get(self, run_id: str) -> Run | None:
-        found = self._table.find_record("id", run_id)
-        return None if found is None else _run_from_record(found.record)
+        # Tab Runs nhỏ, nên đọc cả tab một lượt (1 lần gọi Google) rẻ hơn tìm theo cột rồi đọc dòng
+        # (3 lần gọi). Giao diện hỏi chi tiết run mỗi vài giây, mỗi lượt đọc đều tính vào hạn mức.
+        return next((run for run in self.list_all() if run.id == run_id), None)
 
     def active(self) -> Run | None:
         return next((run for run in self.list_all() if run.status in ACTIVE_RUN_STATUSES), None)

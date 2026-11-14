@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from playwright.sync_api import Browser, Page, StorageState
+from playwright.sync_api import Error as PlaywrightError
 
 from app.core.models.run import ResultStatus
 from app.core.models.test_case import AutoStep, TestCase
@@ -62,8 +63,10 @@ def perform_login(
             )
             try:
                 run_step(page, filled, config.app_url, timeout_ms=step_timeout_ms)
-            except StepFailed as failure:
-                message = str(failure).replace(config.test_password, "***")
+            except (StepFailed, PlaywrightError) as failure:
+                message = str(failure)
+                if config.test_password:  # mật khẩu rỗng mà thay thì chèn "***" vào giữa mọi ký tự
+                    message = message.replace(config.test_password, "***")
                 raise LoginError(f"Đăng nhập thất bại ở bước {number}: {message}") from None
         return context.storage_state()
     finally:

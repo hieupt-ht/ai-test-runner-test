@@ -188,7 +188,7 @@ def test_get_run_includes_results_with_titles(
             created_at=datetime(2026, 11, 14, tzinfo=UTC),
         )
     ])
-    RunQueue(services.redis).set_note(run_id, "ghi chú thử")
+    RunQueue(services.redis).set_note(project.id, run_id, "ghi chú thử")
 
     body = lead.get(url(project, f"/{run_id}")).json()
 
@@ -219,8 +219,8 @@ def make_run_with_screenshot(
 ) -> str:
     approve_case(services, project)
     run_id = lead.post(url(project), json={"scope": {}}).json()["id"]
-    folder = tmp_path / run_id
-    folder.mkdir()
+    folder = tmp_path / project.id / run_id
+    folder.mkdir(parents=True)
     (folder / "TC-000001.png").write_bytes(b"\x89PNG fake")
     return run_id
 
@@ -280,3 +280,50 @@ def test_screenshot_of_run_in_other_project_is_404(
     response = lead.get(url(other, f"/{run_id}/screenshots/TC-000001.png"))
 
     assert response.status_code == 404
+
+
+def test_same_run_id_in_two_projects_never_serves_the_other_projects_screenshot(
+    lead: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+    project: Project,
+    services: Services,
+    tmp_path: Path,
+) -> None:
+    """Mã run RUN-0001 có ở MỌI dự án; ảnh của dự án A không được lộ sang dự án B."""
+    run_a = make_run_with_screenshot(lead, project, services, tmp_path)
+    other = make_project(
+        projects, members, gateway, name="B", sheet=SHEET_B, member_emails=("lead@x.com",)
+    )
+    approve_case(services, other)
+    run_b = lead.post(url(other), json={"scope": {}}).json()["id"]
+    assert run_a == run_b == "RUN-0001"
+
+    in_a = lead.get(url(project, f"/{run_a}/screenshots/TC-000001.png"))
+    in_b = lead.get(url(other, f"/{run_b}/screenshots/TC-000001.png"))
+
+    assert in_a.status_code == 200
+    assert in_b.status_code == 404
+
+
+def test_run_note_of_one_project_is_not_shown_on_same_run_id_of_another(
+    lead: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+    project: Project,
+    services: Services,
+) -> None:
+    approve_case(services, project)
+    lead.post(url(project), json={"scope": {}})
+    RunQueue(services.redis).set_note(project.id, "RUN-0001", "Bí mật của dự án A")
+    other = make_project(
+        projects, members, gateway, name="B", sheet=SHEET_B, member_emails=("lead@x.com",)
+    )
+    approve_case(services, other)
+    lead.post(url(other), json={"scope": {}})
+
+    body = lead.get(url(other, "/RUN-0001")).json()
+
+    assert body["note"] == ""

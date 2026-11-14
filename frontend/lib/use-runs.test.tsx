@@ -17,9 +17,9 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe("runPollInterval", () => {
-  it("làm mới mỗi 3 giây khi run còn QUEUED/RUNNING, dừng khi xong hoặc chưa có dữ liệu", () => {
-    expect(runPollInterval({ status: "QUEUED" })).toBe(3000)
-    expect(runPollInterval({ status: "RUNNING" })).toBe(3000)
+  it("làm mới mỗi 5 giây khi run còn QUEUED/RUNNING, dừng khi xong hoặc chưa có dữ liệu", () => {
+    expect(runPollInterval({ status: "QUEUED" })).toBe(5000)
+    expect(runPollInterval({ status: "RUNNING" })).toBe(5000)
     expect(runPollInterval({ status: "COMPLETED" })).toBe(false)
     expect(runPollInterval({ status: "CANCELLED" })).toBe(false)
     expect(runPollInterval(undefined)).toBe(false)

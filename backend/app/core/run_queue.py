@@ -16,12 +16,13 @@ class RunJob(BaseModel):
     case_ids: list[str]
 
 
-def _cancel_key(run_id: str) -> str:
-    return f"run:{run_id}:cancel"
+# Mã run (RUN-0001) được đánh số theo TỪNG dự án nên lặp lại ở mọi dự án: khoá phải kèm mã dự án.
+def _cancel_key(project_id: str, run_id: str) -> str:
+    return f"run:{project_id}:{run_id}:cancel"
 
 
-def _note_key(run_id: str) -> str:
-    return f"run:{run_id}:note"
+def _note_key(project_id: str, run_id: str) -> str:
+    return f"run:{project_id}:{run_id}:note"
 
 
 class RunQueue:
@@ -39,17 +40,17 @@ class RunQueue:
         _key, payload = item
         return RunJob.model_validate_json(payload)
 
-    def request_cancel(self, run_id: str) -> None:
-        self._redis.set(_cancel_key(run_id), "1", ex=EXPIRE_SECONDS)
+    def request_cancel(self, project_id: str, run_id: str) -> None:
+        self._redis.set(_cancel_key(project_id, run_id), "1", ex=EXPIRE_SECONDS)
 
-    def is_cancelled(self, run_id: str) -> bool:
-        return bool(self._redis.exists(_cancel_key(run_id)))
+    def is_cancelled(self, project_id: str, run_id: str) -> bool:
+        return bool(self._redis.exists(_cancel_key(project_id, run_id)))
 
-    def set_note(self, run_id: str, text: str) -> None:
-        self._redis.set(_note_key(run_id), text, ex=EXPIRE_SECONDS)
+    def set_note(self, project_id: str, run_id: str, text: str) -> None:
+        self._redis.set(_note_key(project_id, run_id), text, ex=EXPIRE_SECONDS)
 
-    def get_note(self, run_id: str) -> str:
-        value = self._redis.get(_note_key(run_id))
+    def get_note(self, project_id: str, run_id: str) -> str:
+        value = self._redis.get(_note_key(project_id, run_id))
         if value is None:
             return ""
         return value.decode() if isinstance(value, bytes) else str(value)

@@ -7,13 +7,14 @@ import { unwrap } from "@/lib/api/request"
 import type { PreviewResponse, RunDetail, RunScope, RunStatus, RunView } from "@/lib/api/types"
 import { isRunActive } from "@/lib/runs/summary"
 
-const POLL_MS = 3000
+// Mỗi lượt làm mới là vài lượt đọc Google Sheets (hạn mức ~60 lượt/phút cho cả worker), nên không quá dày.
+const POLL_MS = 5000
 
 // Khoá cache bắt đầu bằng ["projects", projectId] nên được làm mới cùng dữ liệu khác của dự án.
 const runsKey = (projectId: string) => ["projects", projectId, "runs"] as const
 const runKey = (projectId: string, runId: string) => [...runsKey(projectId), runId] as const
 
-/** Run còn QUEUED/RUNNING thì làm mới mỗi 3 giây; xong hoặc chưa có dữ liệu thì dừng. */
+/** Run còn QUEUED/RUNNING thì làm mới mỗi 5 giây; xong hoặc chưa có dữ liệu thì dừng. */
 export function runPollInterval(run: { status: RunStatus } | undefined): number | false {
   return run && isRunActive(run.status) ? POLL_MS : false
 }

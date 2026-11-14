@@ -66,7 +66,7 @@ def real_session_opener(settings: Settings) -> SessionOpener:
                         browser,
                         state,
                         config.app_url,
-                        settings.artifacts_dir,
+                        settings.artifacts_dir / project.id,
                         run_id,
                         step_timeout_ms=settings.step_timeout_ms,
                         case_timeout_seconds=settings.case_timeout_seconds,
@@ -165,17 +165,17 @@ class RunExecutor:
 
         try:
             for case in cases:
-                if self._queue.is_cancelled(run.id):
+                if self._queue.is_cancelled(scope.project.id, run.id):
                     return True
                 outcome = self._run_case(session, case)
-                pending.append(self._to_result(run.id, case, outcome))
+                pending.append(self._to_result(scope.project.id, run.id, case, outcome))
                 run.passed += outcome.status == ResultStatus.PASS
                 run.failed += outcome.status == ResultStatus.FAIL
                 too_many = len(pending) >= self._flush_every_cases
                 too_long = self._clock() - last_flush >= self._flush_every_seconds
                 if too_many or too_long:
                     flush()
-            return self._queue.is_cancelled(run.id)
+            return self._queue.is_cancelled(scope.project.id, run.id)
         finally:
             flush()
 
@@ -186,12 +186,14 @@ class RunExecutor:
             text = f"{type(error).__name__}: {error}"[:MAX_ERROR_TEXT]
             return CaseOutcome(ResultStatus.INCONCLUSIVE, f"Lỗi của worker: {text}", None, None)
 
-    def _to_result(self, run_id: str, case: TestCase, outcome: CaseOutcome) -> Result:
+    def _to_result(
+        self, project_id: str, run_id: str, case: TestCase, outcome: CaseOutcome
+    ) -> Result:
         screenshot: str | None = None
         if outcome.screenshot is not None:
             try:
                 screenshot = outcome.screenshot.relative_to(
-                    self._settings.artifacts_dir
+                    self._settings.artifacts_dir / project_id
                 ).as_posix()
             except ValueError:
                 screenshot = f"{run_id}/{case.id}.png"
@@ -210,7 +212,7 @@ class RunExecutor:
         run.status = RunStatus.FAILED
         run.finished_at = _now()
         scope.runs.save(run)
-        self._queue.set_note(run.id, note)
+        self._queue.set_note(scope.project.id, run.id, note)
 
     # ---------- khởi động lại ----------
 

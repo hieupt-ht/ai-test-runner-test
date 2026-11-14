@@ -175,3 +175,15 @@ def test_results_append_batch_and_list_for_run(gateway: FakeSheetsGateway) -> No
     assert first_run[1].failed_step is None
     assert first_run[1].screenshot is None
     assert [r.status for r in results.list_for_run("RUN-0002")] == [ResultStatus.BLOCKED]
+
+
+def test_get_uses_a_single_sheet_read(repo: RunRepository, gateway: FakeSheetsGateway) -> None:
+    """Giao diện hỏi chi tiết run mỗi vài giây; mỗi lượt đọc Google đều tính vào hạn mức."""
+    run = new_run(repo)
+    gateway.calls.clear()
+
+    assert repo.get(run.id) is not None
+
+    writes = ("append", "update", "delete", "add_tab")
+    reads = [call for call in gateway.calls if not call.startswith(writes)]
+    assert len(reads) == 1

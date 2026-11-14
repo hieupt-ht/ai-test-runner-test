@@ -1,6 +1,8 @@
 import socket
 import sys
+import threading
 import time
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
 import psutil
@@ -130,3 +132,22 @@ time.sleep(600)
             running_app(make_config(tmp_path, f"{command} {port}", port), timeout_seconds=30),
         ):
             pytest.fail("không được vào khối này")
+
+
+def test_refuses_to_run_when_another_app_already_answers_on_the_url(tmp_path: Path) -> None:
+    """App khác (hoặc bản cũ còn sót) đang trả lời ở cổng này thì không chạy test nhầm vào nó."""
+    foreign = HTTPServer(("127.0.0.1", 0), SimpleHTTPRequestHandler)
+    thread = threading.Thread(target=foreign.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = int(foreign.server_address[1])
+        command = write_script(tmp_path, "idle.py", "import time; time.sleep(600)")
+
+        with (
+            pytest.raises(AppStartError, match="Đã có"),
+            running_app(make_config(tmp_path, command, port), timeout_seconds=30),
+        ):
+            pytest.fail("không được vào khối này")
+    finally:
+        foreign.shutdown()
+        foreign.server_close()

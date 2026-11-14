@@ -79,7 +79,7 @@ uv run python -m app.worker
 
 `worker-projects.json` nằm ở thư mục gốc repo, **đã được gitignore** vì chứa mật khẩu tài khoản test. Mỗi dự án (theo mã `PRJ-0001`...) khai báo: `app_path` (thư mục code của app), `start_command` (ví dụ `npm run dev`), `app_url`, tài khoản test và `login_steps` (các bước đăng nhập, dùng `{email}` và `{password}`). Mỗi lần chạy, worker tự bật app, đăng nhập một lần, chạy từng case rồi tắt cả app. Không có API nào sửa được file này, nên người dùng web không đổi được lệnh chạy trên máy bạn.
 
-Ảnh chụp lỗi lưu ở `artifacts/<mã run>/<mã case>.png` (gitignore). Nếu worker bị tắt giữa lúc đang chạy, lần khởi động sau sẽ đánh dấu run đó là **FAILED** ("Worker bị dừng giữa chừng") để dự án chạy lại được.
+Ảnh chụp lỗi lưu ở `artifacts/<mã dự án>/<mã run>/<mã case>.png` (gitignore). Nếu worker bị tắt giữa lúc đang chạy, lần khởi động sau sẽ đánh dấu run đó là **FAILED** ("Worker bị dừng giữa chừng") để dự án chạy lại được.
 
 ## Chuẩn bị (làm một lần)
 

@@ -78,7 +78,7 @@ class RunService:
         # Hoặc đang chạy, hoặc vừa được worker nhận giữa chừng: báo worker dừng.
         current = self._reload(run_id)
         if current.status == RunStatus.RUNNING:
-            self._queue.request_cancel(run_id)
+            self._queue.request_cancel(self._project.id, run_id)
         return current
 
     def _reload(self, run_id: str) -> Run:

@@ -136,7 +136,7 @@ def test_cancel_queued_run_is_cancelled_directly(setup: Setup) -> None:
     cancelled = service.cancel(run.id)
 
     assert cancelled.status == RunStatus.CANCELLED
-    assert setup.queue.is_cancelled(run.id) is False
+    assert setup.queue.is_cancelled(setup.project.id, run.id) is False
 
 
 def test_cancel_running_run_sets_flag(setup: Setup) -> None:
@@ -148,7 +148,7 @@ def test_cancel_running_run_sets_flag(setup: Setup) -> None:
     result = service.cancel(run.id)
 
     assert result.status == RunStatus.RUNNING  # worker mới là bên chuyển sang CANCELLED
-    assert setup.queue.is_cancelled(run.id) is True
+    assert setup.queue.is_cancelled(setup.project.id, run.id) is True
 
 
 def test_cancel_finished_run_is_noop(setup: Setup) -> None:
@@ -161,7 +161,7 @@ def test_cancel_finished_run_is_noop(setup: Setup) -> None:
     result = service.cancel(run.id)
 
     assert result.status == RunStatus.COMPLETED
-    assert setup.queue.is_cancelled(run.id) is False
+    assert setup.queue.is_cancelled(setup.project.id, run.id) is False
 
 
 def test_cancel_unknown_run_raises(setup: Setup) -> None:

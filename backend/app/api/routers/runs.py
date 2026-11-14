@@ -58,11 +58,11 @@ def _context(
     return scope, queue, service
 
 
-def _view(services: Services, queue: RunQueue, run: Run) -> RunView:
+def _view(services: Services, queue: RunQueue, project_id: str, run: Run) -> RunView:
     triggerer = services.users.get(run.triggered_by)
     return RunView(
         **run.model_dump(),
-        note=queue.get_note(run.id),
+        note=queue.get_note(project_id, run.id),
         triggered_by_name=triggerer.name if triggerer is not None else run.triggered_by,
     )
 
@@ -97,14 +97,14 @@ def start_run(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
     except LockTimeout:
         raise HTTPException(status.HTTP_409_CONFLICT, BUSY) from None
-    return _view(services, queue, run)
+    return _view(services, queue, project.id, run)
 
 
 @router.get("")
 def list_runs(project_id: str, user: CurrentUser, services: ServicesDep) -> list[RunView]:
     project = load_project(services, user, project_id, Action.VIEW_PROJECT)
     scope, queue, _ = _context(services, project)
-    return [_view(services, queue, run) for run in scope.runs.list_all()]
+    return [_view(services, queue, project.id, run) for run in scope.runs.list_all()]
 
 
 @router.get("/{run_id}")
@@ -117,7 +117,7 @@ def get_run(project_id: str, run_id: str, user: CurrentUser, services: ServicesD
         ResultView(**result.model_dump(), test_case_title=titles.get(result.test_case_id, ""))
         for result in scope.results.list_for_run(run_id)
     ]
-    return RunDetail(**_view(services, queue, run).model_dump(), results=results)
+    return RunDetail(**_view(services, queue, project.id, run).model_dump(), results=results)
 
 
 @router.post("/{run_id}/cancel")
@@ -130,7 +130,7 @@ def cancel_run(project_id: str, run_id: str, user: CurrentUser, services: Servic
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
     except LockTimeout:
         raise HTTPException(status.HTTP_409_CONFLICT, BUSY) from None
-    return _view(services, queue, run)
+    return _view(services, queue, project.id, run)
 
 
 @router.get("/{run_id}/screenshots/{filename}")
@@ -141,7 +141,7 @@ def get_screenshot(
     scope = scope_for(services, project)
     _get_run(scope, run_id)  # run phải thuộc dự án này, không thì ảnh của dự án khác bị lộ
 
-    folder = (services.artifacts_dir / run_id).resolve()
+    folder = (services.artifacts_dir / project.id / run_id).resolve()
     path = (folder / filename).resolve()
     if not SCREENSHOT_NAME.match(filename) or not _is_inside(path, folder) or not path.is_file():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy ảnh chụp")

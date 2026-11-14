@@ -210,3 +210,29 @@ def test_login_failure_raises_login_error_without_password(browser: Browser, sit
 
     assert "Đăng nhập" in str(error.value)
     assert PASSWORD not in str(error.value)
+
+
+def test_login_playwright_error_that_is_not_a_timeout_still_becomes_login_error(
+    browser: Browser, site: str
+) -> None:
+    config = make_config(site)
+    # Điền chữ vào một cái nút: Playwright báo lỗi ngay (không phải hết giờ chờ).
+    config.login_steps[2] = auto(AutoType.FILL, "x", TargetBy.CSS, "button")
+
+    with pytest.raises(LoginError) as error:
+        perform_login(browser, config, step_timeout_ms=800)
+
+    assert "Đăng nhập thất bại ở bước 3" in str(error.value)
+    assert PASSWORD not in str(error.value)
+
+
+def test_login_error_with_empty_password_does_not_mangle_message(
+    browser: Browser, site: str
+) -> None:
+    config = make_config(site).model_copy(update={"test_password": ""})
+    config.login_steps[2] = auto(AutoType.FILL, "{password}", TargetBy.LABEL, "Ô không có")
+
+    with pytest.raises(LoginError) as error:
+        perform_login(browser, config, step_timeout_ms=500)
+
+    assert "***" not in str(error.value)

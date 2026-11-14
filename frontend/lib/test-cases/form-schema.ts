@@ -41,7 +41,7 @@ const autoSchema = z
 const stepSchema = z.object({
   action: z.string().trim().min(1, "stepActionRequired").max(LIMITS.stepAction, "stepActionTooLong"),
   expected: z.string().max(LIMITS.stepExpected, "stepExpectedTooLong"),
-  auto: autoSchema.optional(),
+  auto: autoSchema.nullish(),
 })
 
 export const testCaseFormSchema: z.ZodType<TestCaseContent, TestCaseContent> = z.object({

@@ -55,6 +55,13 @@ def _is_ready(url: str) -> bool:
 
 @contextmanager
 def running_app(config: ProjectWorkerConfig, *, timeout_seconds: float) -> Iterator[None]:
+    # Đã có app trả lời ở địa chỉ này (bản cũ còn sót, app bạn tự bật, hay app khác) thì lệnh mới
+    # sẽ báo cổng bận mà ta lại tưởng "đã sẵn sàng" và chạy test nhầm vào app đó.
+    if _is_ready(config.app_url):
+        raise AppStartError(
+            f"Đã có một app khác đang trả lời tại {config.app_url}. "
+            "Hãy tắt nó trước khi chạy (hoặc đổi cổng của app cần test)."
+        )
     with tempfile.TemporaryFile() as output:
         process = subprocess.Popen(  # noqa: S602 - lệnh do chủ máy khai báo trong file cấu hình
             config.start_command,
