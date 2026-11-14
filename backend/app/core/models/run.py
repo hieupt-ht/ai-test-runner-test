@@ -54,5 +54,6 @@ class Result(BaseModel):
     status: ResultStatus
     reason: str
     failed_step: int | None  # đánh số từ 1
-    screenshot: str | None  # đường dẫn tương đối trong thư mục artifacts, ví dụ "RUN-0001/TC-000002.png"
+    # Đường dẫn tương đối trong thư mục artifacts, ví dụ "RUN-0001/TC-000002.png"
+    screenshot: str | None
     created_at: datetime
