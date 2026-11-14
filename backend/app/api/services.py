@@ -13,6 +13,7 @@ from redis import Redis
 from app.api.oauth import GoogleOAuth, OAuthClient
 from app.api.sessions import SessionStore
 from app.core.github.client import GitHubAppClient, GitHubClient
+from app.core.notifications import NotificationStore
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
@@ -25,6 +26,7 @@ from app.settings import Settings
 @dataclass
 class Services:
     redis: Redis
+    notifications: NotificationStore
     users: UserRepository
     audit_log: AuditLogRepository
     sessions: SessionStore
@@ -69,6 +71,7 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
     github = build_github(settings)
     return Services(
         redis=redis,
+        notifications=NotificationStore(redis),
         users=UserRepository(
             gateway, system_sheet, redis, cache_ttl_seconds=settings.user_cache_ttl_seconds
         ),

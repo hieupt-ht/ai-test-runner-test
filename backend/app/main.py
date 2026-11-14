@@ -15,6 +15,7 @@ from app.api.routers import (
     health,
     me,
     members,
+    notifications,
     projects,
     screens,
     test_cases,
@@ -79,4 +80,5 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(test_cases.router)
     app.include_router(me.router)
     app.include_router(members.router)
+    app.include_router(notifications.router)
     return app

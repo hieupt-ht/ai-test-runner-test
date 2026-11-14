@@ -13,6 +13,7 @@ from app.api.sessions import SessionStore
 from app.core.bootstrap import bootstrap_project_spreadsheet
 from app.core.models.project import Project
 from app.core.models.user import Role, User
+from app.core.notifications import NotificationStore
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
@@ -87,6 +88,7 @@ def app(
     """App thật, nhưng Sheets, Redis, Google và GitHub đều là bản giả."""
     services = Services(
         redis=redis,
+        notifications=NotificationStore(redis),
         users=users,
         audit_log=audit_log,
         sessions=SessionStore(redis, ttl_seconds=3600),
