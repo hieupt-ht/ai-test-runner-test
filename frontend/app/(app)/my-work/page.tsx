@@ -2,6 +2,7 @@
 
 import { ArrowRight, ListChecks, Undo2 } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
 import { useTranslations } from "next-intl"
 
 import { DeadlineBadge, StatusBadge } from "@/components/common/badges"
@@ -10,32 +11,61 @@ import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useMyAssignments } from "@/lib/use-project-data"
+import type { MyAssignment } from "@/lib/api/types"
+
+type WorkTab = "active" | "done"
+const ACTIVE_STATUSES = new Set<MyAssignment["status"]>(["TODO", "WRITING", "IN_REVIEW"])
+const DONE_STATUSES = new Set<MyAssignment["status"]>(["APPROVED", "TESTED"])
 
 export default function MyWorkPage() {
   const t = useTranslations("myWork")
   const tCases = useTranslations("testCases")
   const { data: items = [], isLoading } = useMyAssignments()
+  const [tab, setTab] = useState<WorkTab>("active")
+  const activeItems = items.filter((item) => ACTIVE_STATUSES.has(item.status))
+  const doneItems = items.filter((item) => DONE_STATUSES.has(item.status))
+  const visibleItems = tab === "active" ? activeItems : doneItems
 
   if (isLoading) return <Skeleton className="mx-auto h-48 max-w-4xl" />
 
-  if (items.length === 0) {
-    return (
-      <Card className="mx-auto max-w-xl">
-        <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-          <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-            <ListChecks className="size-6 text-muted-foreground" />
-          </div>
-          <p className="font-medium">{t("empty")}</p>
-          <p className="text-sm text-muted-foreground">{t("emptyHint")}</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
   // Danh sách đã được backend sắp xếp theo deadline (gần nhất lên trước).
   return (
-    <div className="mx-auto grid max-w-4xl gap-3">
-      {items.map((item) => {
+    <div className="mx-auto max-w-4xl space-y-4">
+      <div role="tablist" aria-label={t("title")} className="flex gap-1 border-b">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "active"}
+          aria-controls="my-work-panel"
+          onClick={() => setTab("active")}
+          className="-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground aria-selected:border-primary aria-selected:font-medium aria-selected:text-foreground"
+        >
+          {t("activeTab")} <span className="ml-1 text-xs">{activeItems.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "done"}
+          aria-controls="my-work-panel"
+          onClick={() => setTab("done")}
+          className="-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground aria-selected:border-primary aria-selected:font-medium aria-selected:text-foreground"
+        >
+          {t("doneTab")} <span className="ml-1 text-xs">{doneItems.length}</span>
+        </button>
+      </div>
+
+      <div id="my-work-panel" role="tabpanel" className="grid gap-3">
+      {visibleItems.length === 0 ? (
+        <Card className="mx-auto w-full max-w-xl">
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+              <ListChecks className="size-6 text-muted-foreground" />
+            </div>
+            <p className="font-medium">{t(tab === "active" ? "emptyActive" : "emptyDone")}</p>
+            {tab === "active" && <p className="text-sm text-muted-foreground">{t("emptyHint")}</p>}
+          </CardContent>
+        </Card>
+      ) : visibleItems.map((item) => {
         // case_counts là tuỳ chọn trong kiểu sinh ra; thiếu thì coi như 0 hết.
         const counts = item.case_counts ?? {}
         const returned = item.returned_cases ?? []
@@ -112,6 +142,7 @@ export default function MyWorkPage() {
           </Card>
         )
       })}
+      </div>
     </div>
   )
 }

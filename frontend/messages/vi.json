@@ -385,6 +385,10 @@
   },
   "myWork": {
     "title": "Việc của tôi",
+    "activeTab": "Đang làm",
+    "doneTab": "Đã xong",
+    "emptyActive": "Không có việc đang làm.",
+    "emptyDone": "Chưa có việc nào đã xong.",
     "empty": "Bạn chưa được giao màn hình nào.",
     "emptyHint": "Khi QA Lead giao việc, các màn hình sẽ hiện ở đây.",
     "deadline": "Deadline {date}",
