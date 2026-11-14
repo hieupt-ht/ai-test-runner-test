@@ -69,7 +69,8 @@
     "testCases": "Test case",
     "assignments": "Chia việc",
     "members": "Thành viên",
-    "settings": "Cài đặt"
+    "settings": "Cài đặt",
+    "runs": "Chạy test"
   },
   "projects": {
     "title": "Quản lý dự án",
@@ -412,5 +413,52 @@
     "emptyHint": "Khi QA Lead giao việc, các màn hình sẽ hiện ở đây.",
     "deadline": "Deadline {date}",
     "openProject": "Mở dự án"
+  },
+  "runs": {
+    "launcher": {
+      "title": "Chạy test mới",
+      "scope": "Phạm vi",
+      "allScreens": "Cả dự án",
+      "screens": "Màn hình",
+      "priority": "Ưu tiên",
+      "severity": "Mức độ",
+      "count": "Sẽ chạy {count} case đã duyệt",
+      "counting": "Đang đếm case...",
+      "none": "Không có case đã duyệt trong phạm vi này",
+      "start": "Chạy",
+      "busy": "Đang có một lần chạy chưa xong. Hãy chờ hoặc huỷ nó trước.",
+      "started": "Đã gửi {id} cho worker",
+      "startFailed": "Không bắt đầu được: {message}"
+    },
+    "list": {
+      "title": "Các lần chạy",
+      "empty": "Chưa có lần chạy nào.",
+      "loadFailed": "Không tải được danh sách: {message}",
+      "retry": "Thử lại",
+      "by": "bởi {name}",
+      "casesDone": "{passed} đạt · {failed} lỗi"
+    },
+    "status": {
+      "QUEUED": "Đang chờ worker",
+      "RUNNING": "Đang chạy",
+      "COMPLETED": "Hoàn tất",
+      "FAILED": "Run bị lỗi",
+      "CANCELLED": "Đã huỷ"
+    },
+    "detail": {
+      "progress": "Tiến độ",
+      "noteTitle": "Lý do",
+      "cancel": "Huỷ lần chạy",
+      "cancelling": "Đang huỷ...",
+      "cancelRequested": "Đã yêu cầu huỷ; run sẽ dừng sau case đang chạy.",
+      "cancelFailed": "Không huỷ được: {message}",
+      "filterAll": "Lọc tất cả",
+      "filter": "Lọc {status}",
+      "noResults": "Chưa có kết quả nào.",
+      "step": "Bước {n}",
+      "screenshot": "Ảnh chụp lỗi của {id}",
+      "openScreenshot": "Mở ảnh lớn",
+      "loadFailed": "Không tải được lần chạy: {message}"
+    }
   }
 }

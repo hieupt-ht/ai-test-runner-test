@@ -8,7 +8,7 @@ describe("visibleProjectTabs", () => {
     const lead = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_SCREENS"]).map((tab) => tab.segment)
     const admin = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_PROJECTS"]).map((tab) => tab.segment)
 
-    expect(lead).toEqual(["screens", "test-cases", "assignments", "members"])
+    expect(lead).toEqual(["screens", "test-cases", "runs", "assignments", "members"])
     expect(admin).toContain("settings")
   })
 
@@ -16,6 +16,12 @@ describe("visibleProjectTabs", () => {
     const segments = PROJECT_TABS.map((tab) => tab.segment)
     expect(segments.indexOf("test-cases")).toBe(segments.indexOf("screens") + 1)
     expect((vi.projectTabs as Record<string, string>)["testCases"]).toBeTruthy()
+  })
+
+  it("tab Chạy test nằm ngay sau Test case, mọi người xem được dự án đều thấy", () => {
+    const segments = PROJECT_TABS.map((tab) => tab.segment)
+    expect(segments.indexOf("runs")).toBe(segments.indexOf("test-cases") + 1)
+    expect(visibleProjectTabs(["VIEW_PROJECT"]).map((tab) => tab.segment)).toContain("runs")
   })
 
   it("mọi labelKey của PROJECT_TABS đều có trong vi.json", () => {
