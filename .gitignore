@@ -16,3 +16,7 @@ node_modules/
 # Dữ liệu cá nhân của công cụ
 .claude/
 .superpowers/
+
+# Worker chạy test (M4): cấu hình app + mật khẩu tài khoản test, và ảnh chụp lỗi
+worker-projects.json
+artifacts/

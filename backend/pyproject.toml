@@ -10,6 +10,7 @@ dependencies = [
     "google-auth>=2.62.2",
     "httpx>=0.28.1",
     "itsdangerous>=2.2.0",
+    "psutil>=7.2.2",
     "pydantic-settings>=2.16.2",
     "pydantic[email]>=2.14.3",
     "pyjwt[crypto]>=2.15.1",
@@ -26,7 +27,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["googleapiclient.*", "google.oauth2.*", "authlib.*", "fakeredis.*", "httplib2.*"]
+module = ["googleapiclient.*", "google.oauth2.*", "authlib.*", "fakeredis.*", "httplib2.*", "psutil.*"]
 ignore_missing_imports = true
 
 [tool.ruff]
