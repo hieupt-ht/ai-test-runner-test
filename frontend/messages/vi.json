@@ -25,6 +25,12 @@
     "themeSystem": "Theo hệ thống",
     "logout": "Đăng xuất"
   },
+  "notifications": {
+    "title": "Thông báo",
+    "empty": "Chưa có thông báo",
+    "readAll": "Đọc hết",
+    "readError": "Không đánh dấu được thông báo. Vui lòng thử lại."
+  },
   "overview": {
     "title": "Tổng quan",
     "greeting": "Xin chào, {name}!",
