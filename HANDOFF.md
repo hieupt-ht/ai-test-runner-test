@@ -1,6 +1,6 @@
 # HANDOFF — đọc file này đầu tiên
 
-> **ĐANG Ở NHÁNH `feature/ai-agent-runner` (tách từ `develop`) — hướng MỚI, chưa code gì.** Nhánh này **chưa có M4** (không có worker Playwright, tab Chạy test, Runs/Results). Mọi thứ về hướng Playwright nằm ở nhánh `feature/m4-playwright-worker` / tag `m4-playwright-v1`; các mục "M4" bên dưới mô tả nhánh đó. Hướng mới: mỗi test case vào cả GitHub issue và Google Sheets, Codex agent đọc issue qua GitHub MCP rồi chạy test. **Việc đầu tiên:** đọc `docs/superpowers/specs/2026-11-14-case-to-issue-and-codex-agent-design.md`, hỏi chủ dự án 5 câu ở mục 6 và xin duyệt thiết kế, rồi mới lập kế hoạch (skill `superpowers:writing-plans`) và code. Không push, không tạo PR khi chưa hỏi.
+> **ĐANG Ở NHÁNH `feature/ai-agent-runner` (tách từ `develop`) — hướng MỚI, chưa code gì.** Nhánh này **chưa có M4** (không có worker Playwright, tab Chạy test, Runs/Results). Mọi thứ về hướng Playwright nằm ở nhánh `feature/m4-playwright-worker` / tag `m4-playwright-v1`; các mục "M4" bên dưới mô tả nhánh đó. Hướng mới: mỗi test case vào cả GitHub issue và Google Sheets, Codex agent đọc issue qua GitHub MCP rồi chạy test. **Việc đầu tiên:** đọc `docs/superpowers/specs/2026-11-14-case-to-issue-and-codex-agent-design.md`, hỏi chủ dự án 4 câu còn lại ở mục 6 (câu 5 đã chốt: issue nằm ở repo của app đang test) và xin duyệt thiết kế, rồi mới lập kế hoạch (skill `superpowers:writing-plans`) và code. Không push, không tạo PR khi chưa hỏi.
 
 Cập nhật: 2026-11-14. Dành cho người (hoặc AI) tiếp tục dự án mà chưa từng thấy nó.
 

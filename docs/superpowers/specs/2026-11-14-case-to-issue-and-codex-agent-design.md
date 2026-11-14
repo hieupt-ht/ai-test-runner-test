@@ -38,7 +38,7 @@ Không làm:
 
 ### 4.1 Đồng bộ case → issue (backend)
 - Khi case được **tạo, sửa nội dung, duyệt, trả lại, ngừng dùng (`DEPRECATED`), khôi phục**, backend cập nhật issue của case đó. Sau khi **đã ghi Sheet thành công**.
-- Một case = một issue. Tìm issue bằng **label `tc:TC-000123`** (đã có trong spec gốc mục 7.9, chống trùng), nên **không thêm cột vào Sheet** và case cũ vẫn dùng được. Tạo label nếu chưa có. Tiêu đề `[TC-000123] <tiêu đề case>`.
+- Một case = một issue, tạo ở **repo của dự án** (`repo_full_name`, repo của app đang test) **[Chủ dự án]**. Tìm issue bằng **label `tc:TC-000123`** (đã có trong spec gốc mục 7.9, chống trùng), nên **không thêm cột vào Sheet** và case cũ vẫn dùng được. Tạo label nếu chưa có. Tiêu đề `[TC-000123] <tiêu đề case>`.
 - Thân issue: màn hình, mức độ, ưu tiên, điều kiện, các bước (có kết quả mong đợi từng bước), kết quả mong đợi, trạng thái case. Thêm label trạng thái (`status:APPROVED`...) để Codex lọc case đã duyệt.
 - `DEPRECATED` → đóng issue; khôi phục → mở lại.
 - **Lỗi GitHub không được làm hỏng việc lưu case** (giống quyết định 24): Sheet đã ghi thì trả thành công, ghi log, và có thao tác **"Đồng bộ lại issue"** (idempotent nhờ label) cho QA Lead/Admin. **[Đề xuất]**
@@ -61,11 +61,14 @@ Dùng lại tab `Runs`/`Results` đã có trong Sheet dự án. Codex ghi qua m�
 - Hạn mức đọc Google Sheets (~60 lượt/phút) vẫn áp dụng.
 
 ## 6. Cần chủ dự án quyết (chặn kế hoạch)
+
+**Đã chốt:** issue nằm ở **chính repo của app đang test** (repo gắn với dự án, lấy từ trường `repo_full_name`). **[Chủ dự án, 2026-11-14]**
+
+Còn 4 câu:
 1. **Khi nào tạo issue?** (a) ngay khi tạo case (có cả case nháp), hoặc (b) chỉ khi case được **duyệt**. Đề xuất (b) để issue không bị ngập case nháp; nhưng chủ dự án từng nói "khi tester nhập".
 2. **Codex được gọi bằng cách nào?** (a) chủ dự án tự mở Codex và gõ lệnh, hoặc (b) nút trên web làm worker gọi `codex exec`. Đề xuất (a) trước.
 3. **Kết quả ghi vào đâu?** Chỉ comment lên issue, hay thêm ghi vào tab `Results` của Sheet. Đề xuất cả hai.
 4. **Repo của app test là công khai hay riêng tư?** Quyết định có đưa `test_data` vào issue hay không.
-5. Repo nào chứa issue: **chính repo của app đang test** (đề xuất, lấy từ dự án) hay một repo riêng cho case?
 
 ## 7. Phạm vi việc cho người làm (để lập kế hoạch sau khi duyệt)
 1. `GitHubClient`: tìm/tạo/sửa/đóng-mở issue, tạo label, comment (kèm test với bản giả, theo mẫu `FakeGitHub`).
