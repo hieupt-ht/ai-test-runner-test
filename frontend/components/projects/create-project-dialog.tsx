@@ -52,7 +52,7 @@ function Field({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       <FieldError message={error} />
@@ -138,7 +138,7 @@ export function CreateProjectDialog() {
       <DialogTrigger render={<Button />}>
         <FolderPlus /> {t("create")}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("formTitle")}</DialogTitle>
           <DialogDescription>{t("formDescription")}</DialogDescription>
