@@ -94,6 +94,8 @@ def _service_for(services: Services, project: Project) -> TestCaseService:
         members=services.members,
         status_updater=AssignmentStatusUpdater(scope.assignments, scope.test_cases),
         audit_log=scope.audit_log,
+        issue_sync=services.issue_sync,
+        project=project,
     )
 
 

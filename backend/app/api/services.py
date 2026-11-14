@@ -17,6 +17,7 @@ from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
+from app.core.services.issue_sync import BackgroundIssueSync, IssueSink, IssueSyncer
 from app.core.sheets.gateway import GoogleSheetsGateway, SheetsGateway
 from app.settings import Settings
 
@@ -34,6 +35,7 @@ class Services:
     projects: ProjectRepository
     members: ProjectMemberRepository
     github: GitHubClient | None  # None khi chưa cấu hình GitHub App
+    issue_sync: IssueSink | None = None
     lock_wait_seconds: float = 5.0
     sheet_cache_ttl_seconds: int = 60
 
@@ -64,6 +66,7 @@ def build_github(settings: Settings) -> GitHubClient | None:
 def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services:
     redis = Redis.from_url(settings.redis_url)
     system_sheet = settings.system_spreadsheet_id
+    github = build_github(settings)
     return Services(
         redis=redis,
         users=UserRepository(
@@ -81,6 +84,7 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         members=ProjectMemberRepository(
             gateway, system_sheet, redis, cache_ttl_seconds=settings.user_cache_ttl_seconds
         ),
-        github=build_github(settings),
+        github=github,
+        issue_sync=BackgroundIssueSync(IssueSyncer(github)) if github else None,
         sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,
     )

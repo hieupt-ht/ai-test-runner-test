@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.models.project import Project
+from app.core.models.test_case import TestCase
 from app.core.models.user import Role
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
@@ -78,6 +79,89 @@ def binh(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient
 
 def url(project: Project, suffix: str = "") -> str:
     return f"/api/projects/{project.id}/test-cases{suffix}"
+
+
+class RecordingIssueSink:
+    def __init__(self, fail: bool = False) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+        self.fail = fail
+
+    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None:
+        self.calls.append((case.id, case.status.value, screen_name))
+        if self.fail:
+            raise RuntimeError("GitHub giả bị lỗi")
+
+
+def test_approve_syncs_issue_for_saved_case(
+    app: FastAPI, an: TestClient, lead: TestClient, project: Project
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    response = lead.post(url(project, f"/{case['id']}/approve"), json={"version": 2})
+    assert response.status_code == 200
+    assert sink.calls[-1] == (case["id"], "APPROVED", "Đăng nhập")
+
+
+def test_batch_approve_syncs_only_approved_cases(
+    app: FastAPI, an: TestClient, lead: TestClient, project: Project
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    first = create(an, project).json()
+    skipped = create(an, project).json()
+    an.post(url(project, f"/{first['id']}/submit"), json={"version": 1})
+    sink.calls.clear()
+    response = lead.post(
+        url(project, "/approve-batch"),
+        json={
+            "items": [
+                {"case_id": first["id"], "version": 2},
+                {"case_id": skipped["id"], "version": 1},
+            ]
+        },
+    )
+    assert response.status_code == 200
+    assert sink.calls == [(first["id"], "APPROVED", "Đăng nhập")]
+
+
+def test_sync_failure_does_not_fail_save_or_duplicate_case(
+    app: FastAPI, an: TestClient, project: Project
+) -> None:
+    sink = RecordingIssueSink(fail=True)
+    app.state.services.issue_sync = sink
+    created = create(an, project)
+    assert created.status_code == 201
+    assert len(an.get(url(project)).json()) == 1
+    assert len(sink.calls) == 1
+
+
+def test_edit_return_deprecate_and_restore_each_sync(
+    app: FastAPI, an: TestClient, lead: TestClient, project: Project
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    case = create(an, project).json()
+    path = url(project, f"/{case['id']}")
+    an.post(f"{path}/submit", json={"version": 1})
+    lead.post(f"{path}/approve", json={"version": 2})
+    sink.calls.clear()
+
+    edit = {key: value for key, value in BODY.items() if key != "screen_id"}
+    assert an.put(path, json={**edit, "title": "Nội dung mới", "version": 3}).status_code == 200
+    an.post(f"{path}/submit", json={"version": 4})
+    lead.post(f"{path}/return", json={"version": 5, "comment": "Sửa lại"})
+    an.post(f"{path}/deprecate", json={"version": 6})
+    lead.post(f"{path}/restore", json={"version": 7})
+
+    assert [status for _, status, _ in sink.calls] == [
+        "DRAFT",
+        "IN_REVIEW",
+        "DRAFT",
+        "DEPRECATED",
+        "DRAFT",
+    ]
 
 
 def create(browser: TestClient, project: Project, **changes: Any) -> httpx.Response:

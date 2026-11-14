@@ -12,6 +12,7 @@ from typing import Any
 
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
+from app.core.models.project import Project
 from app.core.models.test_case import TestCase, TestCaseContent, TestCaseStatus
 from app.core.models.user import User, normalize_email
 from app.core.permissions import Action, can
@@ -24,6 +25,7 @@ from app.core.repositories.test_cases import (
     TestCaseRepository,
     VersionConflictError,
 )
+from app.core.services.issue_sync import IssueSink
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
 
@@ -104,6 +106,8 @@ class TestCaseService:
         members: ProjectMemberRepository,
         status_updater: AssignmentStatusUpdater,
         audit_log: AuditLogRepository,
+        issue_sync: IssueSink | None = None,
+        project: Project | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -112,6 +116,9 @@ class TestCaseService:
         self._members = members
         self._status_updater = status_updater
         self._audit_log = audit_log
+        self._issue_sync = issue_sync
+        self._project = project
+        self._screen_names: dict[str, str] | None = None
 
     # --- Đọc ---
 
@@ -174,6 +181,7 @@ class TestCaseService:
             )
 
         self._audit(user, "CREATE", case.id, case.model_dump(mode="json"))
+        self._sync_issue(case)
         self._refresh_status(case.screen_id)
         return case
 
@@ -305,11 +313,25 @@ class TestCaseService:
             actor=normalize_email(user.email),
         )
         self._audit(user, audit_action, saved.id, diff)
+        self._sync_issue(saved)
         # Trạng thái việc chỉ phụ thuộc trạng thái của các case. Case không đổi trạng thái
         # (ví dụ sửa chữ trong case Nháp) thì khỏi tính lại, đỡ vài lượt gọi Google.
         if refresh and "status" in changes:
             self._refresh_status(saved.screen_id)
         return saved
+
+    def _sync_issue(self, case: TestCase) -> None:
+        if self._issue_sync is None or self._project is None:
+            return
+        try:
+            if self._screen_names is None:
+                self._screen_names = {screen.id: screen.name for screen in self._screens.list_all()}
+            self._issue_sync.sync_case(
+                self._project, case, screen_name=self._screen_names.get(case.screen_id, "")
+            )
+        except Exception:
+            # Case đã được ghi vào Sheet; lỗi GitHub không được khiến người dùng tạo lại.
+            logger.warning("Không gửi được đồng bộ issue cho case %s", case.id, exc_info=True)
 
     def _refresh_status(self, screen_id: str) -> None:
         """Tính lại trạng thái việc, cố gắng hết sức: case đã ghi rồi thì không được báo lỗi.
