@@ -1,8 +1,8 @@
 # AI Test Runner
 
-Web app nội bộ giúp đội QA **viết test case theo chuẩn chung** và **để AI chạy test giúp**: AI đọc source code của app cần test, đối chiếu với từng test case, ghi kết quả vào Google Sheets. Những case FAIL được QA Lead duyệt trước khi tạo thành GitHub Issue.
+Web app nội bộ giúp đội QA **viết test case theo chuẩn chung** và **chạy test tự động**: một worker mở app thật bằng Playwright, làm theo các bước tự động của từng case rồi ghi PASS/FAIL (kèm bước lỗi và ảnh chụp) vào Google Sheets. Sau này AI sẽ điền sẵn các bước tự động. Những case FAIL được QA Lead duyệt trước khi tạo thành GitHub Issue (M5).
 
-> Trạng thái: **M1 — Nền tảng**, **M2 — Quản trị dự án** (dự án gắn repo GitHub và Google Sheet riêng, thành viên, màn hình, chia việc, trang Việc của tôi) và **M3 — Test case** (viết, duyệt, báo xung đột khi lưu).
+> Trạng thái: **M1 — Nền tảng**, **M2 — Quản trị dự án** (dự án gắn repo GitHub và Google Sheet riêng, thành viên, màn hình, chia việc, trang Việc của tôi), **M3 — Test case** (viết, duyệt, báo xung đột khi lưu) và **M4 — Worker chạy test bằng Playwright** (xem mục "Chạy test tự động").
 > Các mốc tiếp theo xem ở [tài liệu thiết kế](docs/superpowers/specs/2026-11-12-ai-test-runner-design.md), mục 15.
 
 ## Ai dùng
@@ -23,7 +23,9 @@ Trình duyệt
     │
 [api: FastAPI]  ── REST API, đăng nhập, phân quyền, nghiệp vụ
     │        │
-    │      Redis  ── phiên đăng nhập, khoá khi ghi, cache (sau này: hàng đợi)
+    │      Redis  ── phiên đăng nhập, khoá khi ghi, cache, hàng đợi run
+    │         │
+    │   [worker: Python + Playwright]  ── chạy THẲNG trên máy có app cần test (không Docker)
     │
 Google Sheets  ── nơi lưu dữ liệu (chỉ backend được ghi)
 ```
@@ -45,6 +47,39 @@ Google Sheets  ── nơi lưu dữ liệu (chỉ backend được ghi)
 - Quy trình: `DRAFT` → `IN_REVIEW` (gửi duyệt) → `APPROVED` (QA Lead duyệt). QA Lead cũng có thể **trả lại kèm nhận xét** (case về `DRAFT`, Tester thấy nhận xét ở đầu trang rồi sửa và gửi lại). Case không dùng nữa chuyển sang `DEPRECATED`; chỉ QA Lead/Admin **khôi phục** (về `DRAFT`).
 - Trạng thái của việc được giao (trang "Việc của tôi") tự suy ra từ các case do Tester đó tạo trên màn hình đó, không phải nhập tay.
 - **Báo xung đột (409)**: nếu thấy "Case này vừa được … cập nhật. Vui lòng tải lại." nghĩa là có người khác đã lưu case trước bạn. Bấm **Tải lại** để xem nội dung mới; phần bạn đang sửa sẽ mất, nên chép lại trước nếu cần. Việc duyệt, trả lại, ngừng dùng cũng bị kiểm tra như vậy.
+
+## Chạy test tự động (M4)
+
+- Mỗi bước của test case có phần **"Tự động"** (thu gọn mặc định): chọn hành động (mở trang, nhập chữ, bấm, chọn, thấy chữ, không thấy chữ, URL là), tìm phần tử bằng **chữ hiển thị** hoặc **nhãn của ô** (CSS selector để ở mục "Nâng cao"), và giá trị. Case không có phần tự động nào thì worker ghi **BLOCKED** ("Chưa có bước tự động"); thiếu một bước giữa chừng cũng BLOCKED, không chạy nửa chừng.
+- Tab **Chạy test** của dự án: QA Lead/Admin chọn phạm vi, thấy số case sẽ chạy rồi bấm **Chạy**; ai xem được dự án đều xem được tiến độ, kết quả, lý do, bước lỗi và ảnh chụp. Mỗi dự án chỉ có một lần chạy một lúc.
+- PASS/FAIL do Playwright quyết định. Lỗi của chính worker (trình duyệt sập, quá giờ) ghi **INCONCLUSIVE**, không tính là FAIL.
+- Chưa có thông báo cho các role: người dùng tự mở tab Chạy test để xem.
+
+### Chạy worker (làm trên máy có app cần test)
+
+Worker **không chạy trong Docker**, vì cần mở `localhost` của chính máy bạn.
+
+```bash
+# 1. Redis phải đang chạy (worker và api dùng chung hàng đợi)
+docker compose up -d redis
+
+# 2. Cài một lần: thư viện và trình duyệt Chromium cho Playwright
+cd backend
+uv sync
+uv run playwright install chromium
+
+# 3. Khai báo app cần test (một lần cho mỗi dự án)
+cd ..
+cp worker-projects.example.json worker-projects.json   # rồi sửa theo app của bạn
+
+# 4. Chạy worker (dừng bằng Ctrl+C)
+cd backend
+uv run python -m app.worker
+```
+
+`worker-projects.json` nằm ở thư mục gốc repo, **đã được gitignore** vì chứa mật khẩu tài khoản test. Mỗi dự án (theo mã `PRJ-0001`...) khai báo: `app_path` (thư mục code của app), `start_command` (ví dụ `npm run dev`), `app_url`, tài khoản test và `login_steps` (các bước đăng nhập, dùng `{email}` và `{password}`). Mỗi lần chạy, worker tự bật app, đăng nhập một lần, chạy từng case rồi tắt cả app. Không có API nào sửa được file này, nên người dùng web không đổi được lệnh chạy trên máy bạn.
+
+Ảnh chụp lỗi lưu ở `artifacts/<mã run>/<mã case>.png` (gitignore). Nếu worker bị tắt giữa lúc đang chạy, lần khởi động sau sẽ đánh dấu run đó là **FAILED** ("Worker bị dừng giữa chừng") để dự án chạy lại được.
 
 ## Chuẩn bị (làm một lần)
 
@@ -95,7 +130,7 @@ GitHub App là một "tài khoản robot" chỉ được cài vào đúng các r
 Mỗi dự án cần một file Google Sheet **trống** riêng. Tạo file, **share quyền Editor** cho email service account (trang tạo dự án có hiện sẵn email này kèm nút sao chép), rồi dán link vào ô "Link hoặc ID Google Sheet". App tự tạo 7 tab: `Meta`, `Screens`, `Assignments`, `TestCases`, `Runs`, `Results`, `AuditLog`.
 
 ### 6. Anthropic key
-Chưa cần. Dùng từ M4 (phần AI chạy test).
+Chưa cần. M4 chạy test bằng Playwright, không dùng AI. Key chỉ cần khi sau này AI điền sẵn các bước tự động.
 
 ## Điền `.env`
 

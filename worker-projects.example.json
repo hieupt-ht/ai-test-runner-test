@@ -1,0 +1,15 @@
+{
+  "PRJ-0001": {
+    "app_path": "D:/code/ten-app-can-test",
+    "start_command": "npm run dev",
+    "app_url": "http://localhost:3000",
+    "test_email": "qa@example.com",
+    "test_password": "doi-thanh-mat-khau-that-cua-tai-khoan-test",
+    "login_steps": [
+      { "type": "goto", "value": "/login" },
+      { "type": "fill", "target": { "by": "label", "value": "Email" }, "value": "{email}" },
+      { "type": "fill", "target": { "by": "label", "value": "Mật khẩu" }, "value": "{password}" },
+      { "type": "click", "target": { "by": "text", "value": "Đăng nhập" } }
+    ]
+  }
+}
