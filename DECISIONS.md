@@ -36,3 +36,8 @@ Ghi lại những chỗ tài liệu thiết kế chưa nói rõ và cách đã c
 32. **Repo app đang test có thể công khai.** Thân issue không có `test_data`, email người tạo/sửa; hành động tự do được thoát ký tự Markdown và nhắc tên `@`.
 33. **Codex do người dùng tự mở; app không tự chạy agent.** Codex đọc issue qua GitHub MCP, lấy PASS/FAIL từ báo cáo JSON Playwright, comment lên issue, rồi gọi API riêng để ghi `Runs`/`Results`.
 34. **API agent có token riêng `AGENT_API_TOKEN`.** Không cấu hình thì trả 404; token sai trả 401 trước khi kiểm tra body. API chỉ ghi kết quả cho case đã duyệt trong đúng dự án, không dùng cookie đăng nhập.
+35. **Thông báo chỉ lưu trong Redis, tối đa 100 thông báo mỗi người và tự hết hạn sau 30 ngày.** Thông báo là dữ liệu hỗ trợ; nếu Redis mất dữ liệu thì dự án, test case và kết quả test trong Google Sheets vẫn còn nguyên.
+36. **Dự án chỉ có thao tác Lưu trữ, không có thao tác xoá.** Dữ liệu cũ được giữ lại để còn tra cứu lịch sử và kết quả test.
+37. **Agent comment hoặc ghi kết quả không làm xoá hay đóng GitHub issue.** Issue chỉ đóng khi case chuyển sang `DEPRECATED` (ngừng dùng), và được mở lại khi case được khôi phục.
+38. **Chỉ Admin được mở Google Sheet từ giao diện.** QA Lead, Tester và Viewer làm việc qua ứng dụng để các kiểm tra quyền và quy tắc nghiệp vụ luôn được áp dụng.
+39. **Việc đã hoàn thành không bị xoá.** Trang "Việc của tôi" chia tab "Đang làm" và "Đã xong" để giữ lịch sử nhưng vẫn giúp danh sách hiện tại gọn.

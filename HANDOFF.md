@@ -4,18 +4,17 @@ Cập nhật: 2026-11-14. Nhánh hiện tại: `feature/ai-agent-runner` (từ `
 
 ## Dự án đang ở đâu
 
-AI Test Runner là web app nội bộ cho QA: Tester viết case, QA Lead duyệt, dữ liệu chính nằm trong Google Sheets. Trên nhánh này, case `APPROVED` được tạo thành GitHub issue trong **repo của dự án**. Case đã có issue sẽ được cập nhật khi sửa, trả lại, ngừng dùng hoặc khôi phục. Codex chạy **ngoài** ứng dụng: đọc issue qua GitHub MCP, chạy Playwright, comment kết quả lên issue và gọi API token riêng để ghi tab `Runs`/`Results`.
+AI Test Runner là web app nội bộ cho QA: Tester viết case, QA Lead duyệt, dữ liệu chính nằm trong Google Sheets. Case `APPROVED` được tạo thành GitHub issue trong **repo của dự án**. Codex chạy **ngoài** ứng dụng: đọc issue qua GitHub MCP, chạy Playwright, comment kết quả lên issue và gọi API token riêng để ghi tab `Runs`/`Results`.
 
 M1–M3 đã nằm ở `develop`. Kế hoạch mới ở `docs/superpowers/plans/2026-11-14-case-to-issue-and-codex-agent.md`, thiết kế ở `docs/superpowers/specs/2026-11-14-case-to-issue-and-codex-agent-design.md`. Hướng worker Playwright cũ được giữ ở nhánh `feature/m4-playwright-worker` và tag `m4-playwright-v1`; **không** có worker hay tab Chạy test trên nhánh hiện tại. Chỉ mô hình và repository `Runs`/`Results` được lấy lại từ tag để phục vụ API agent.
 
-Task 1–7 của kế hoạch đã được triển khai và commit theo từng task. Cách cấu hình và prompt mẫu ở `docs/codex-agent.md`. Kiểm tra cuối: backend **332 test**, frontend **59 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
+Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026-11-14-notifications-results-dashboard.md` đã hoàn thành đủ 10 task. Ứng dụng hiện có chuông thông báo, trang Kết quả, hai tab "Đang làm"/"Đã xong", trang Tổng quan theo vai trò và hộp thoại dùng tốt hơn trên màn hình hẹp. Thông báo lưu trong Redis 30 ngày, tối đa 100 cái mỗi người; mất thông báo không làm mất dữ liệu chính. Cách cấu hình Codex và prompt mẫu ở `docs/codex-agent.md`. Kiểm tra cuối: backend **367 test**, frontend **77 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
 
 ## Việc còn dở
 
 1. **Chạy thử với repo thật** `hieupt-ht/126CQH01-NHOM-14`: đã xác nhận GitHub App đọc được repo và Issues; quyền ghi Issues chưa thử. Cần tạo/duyệt một case trong dự án thật rồi kiểm tra issue. Docker Desktop hiện chưa chạy trên máy này.
-2. Mở Codex theo `docs/codex-agent.md`, dùng tài khoản test riêng của app, chạy kịch bản Playwright thật và đối chiếu comment trên issue với tab `Results`. `AGENT_API_TOKEN` hiện chưa được cấu hình; chưa có bằng chứng chạy end-to-end trên app thật.
-3. Kiểm tra giao diện bằng mắt ở trình duyệt thật, đặc biệt nút đồng bộ lại trên màn hình hẹp. Test tự động frontend đã qua nhưng chưa thay thế kiểm tra này.
-4. Sau khi xem kết quả thực tế, quyết định có cần thông báo khi issue đồng bộ lỗi hoặc khi agent ghi kết quả xong.
+2. Mở Codex theo `docs/codex-agent.md`, dùng tài khoản test riêng của app, chạy kịch bản Playwright thật và đối chiếu comment trên issue với tab `Results` và thông báo hoàn tất. `AGENT_API_TOKEN` hiện chưa được cấu hình; chưa có bằng chứng chạy end-to-end trên app thật.
+3. Kiểm tra giao diện bằng mắt ở trình duyệt thật, đặc biệt hộp thoại, chuông thông báo, các tab "Việc của tôi", trang Kết quả và Tổng quan trên màn hình hẹp. Test tự động frontend đã qua nhưng chưa thay thế kiểm tra này.
 
 ## Công nghệ và lệnh kiểm tra
 

@@ -2,16 +2,16 @@
 
 Web app nội bộ giúp đội QA viết và duyệt test case. Case đã duyệt được đồng bộ sang GitHub issue trong repo của dự án. Codex đọc issue, chạy test ngoài ứng dụng, rồi ghi kết quả lên issue và vào Google Sheets.
 
-> Trạng thái: M1–M3 và luồng case → issue → Codex agent đã có trên nhánh `feature/ai-agent-runner`. Hướng worker Playwright cũ được lưu ở tag `m4-playwright-v1`.
+> Trạng thái: M1–M3, luồng case → issue → Codex agent, thông báo và bảng kết quả đã có trên nhánh `feature/ai-agent-runner`. Hướng worker Playwright cũ được lưu ở tag `m4-playwright-v1`.
 > Các mốc tiếp theo xem ở [tài liệu thiết kế](docs/superpowers/specs/2026-11-12-ai-test-runner-design.md), mục 15.
 
 ## Ai dùng
 
 | Vai trò | Làm gì |
 |---|---|
-| Admin | Quản lý người dùng, tạo dự án, gắn repo GitHub và Google Sheet |
-| QA Lead | Chia việc, duyệt test case, chạy test, duyệt kết quả và tạo issue |
-| Tester | Viết test case cho màn hình được giao |
+| Admin | Quản lý người dùng, dự án, repo GitHub và Google Sheet; xem kết quả |
+| QA Lead | Chia việc, duyệt test case, đồng bộ issue và xem kết quả |
+| Tester | Viết test case cho màn hình được giao và theo dõi việc của mình |
 | Viewer | Chỉ xem |
 
 ## Kiến trúc
@@ -23,7 +23,7 @@ Trình duyệt
     │
 [api: FastAPI]  ── REST API, đăng nhập, phân quyền, nghiệp vụ
     │        │
-    │      Redis  ── phiên đăng nhập, khoá khi ghi, cache (sau này: hàng đợi)
+    │      Redis  ── phiên đăng nhập, khoá khi ghi, cache và thông báo
     │
 Google Sheets  ── nơi lưu dữ liệu (chỉ backend được ghi)
 ```
