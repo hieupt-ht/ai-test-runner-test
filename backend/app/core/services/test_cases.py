@@ -28,6 +28,7 @@ from app.core.repositories.test_cases import (
     VersionConflictError,
 )
 from app.core.services.issue_sync import IssueSink, IssueSyncer
+from app.core.services.notify import Notifier
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
 
@@ -121,6 +122,7 @@ class TestCaseService:
         issue_sync: IssueSink | None = None,
         project: Project | None = None,
         issue_syncer: IssueSyncer | None = None,
+        notifier: Notifier | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -132,6 +134,7 @@ class TestCaseService:
         self._issue_sync = issue_sync
         self._project = project
         self._issue_syncer = issue_syncer
+        self._notifier = notifier
         self._screen_names: dict[str, str] | None = None
 
     # --- Đọc ---
@@ -315,9 +318,20 @@ class TestCaseService:
             if not 1 <= len(comment) <= MAX_COMMENT_LENGTH:
                 raise InvalidTestCaseError("Trả lại phải kèm nhận xét")
             diff["comment"] = comment
-        return self._save(
+        saved = self._save(
             user, case, {"status": target}, version, action.value, diff, refresh=refresh
         )
+        if self._notifier is not None and case.created_by != normalize_email(user.email):
+            if action == CaseAction.RETURN:
+                self._notifier.case_returned(
+                    email=case.created_by, project_id=self._project_id,
+                    case_id=case.id, comment=comment,
+                )
+            elif action == CaseAction.APPROVE:
+                self._notifier.case_approved(
+                    email=case.created_by, project_id=self._project_id, case_id=case.id
+                )
+        return saved
 
     def _require_edit(self, user: User, case: TestCase) -> None:
         if not self.can_edit(user, case):

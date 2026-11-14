@@ -11,6 +11,7 @@ from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.screens import ScreenRepository
 from app.core.repositories.test_cases import TestCaseRepository
 from app.core.repositories.users import UserRepository
+from app.core.services.notify import Notifier
 from app.core.time import today_in_vietnam
 
 
@@ -29,6 +30,7 @@ class AssignmentService:
         members: ProjectMemberRepository,
         users: UserRepository,
         audit_log: AuditLogRepository,
+        notifier: Notifier | None = None,
     ) -> None:
         self._project_id = project_id
         self._assignments = assignments
@@ -37,6 +39,7 @@ class AssignmentService:
         self._members = members
         self._users = users
         self._audit_log = audit_log
+        self._notifier = notifier
 
     def list_assignments(self, screen_id: str | None = None) -> list[Assignment]:
         assignments = self._assignments.list_all()
@@ -55,7 +58,8 @@ class AssignmentService:
         # viên cũng giữ khoá này khi kiểm tra, nên không request nào chen vào giữa được.
         created: list[Assignment] = []
         with self._assignments.lock():
-            if self._screens.get(screen_id) is None:
+            screen = self._screens.get(screen_id)
+            if screen is None:
                 raise InvalidAssignmentError("Không tìm thấy màn hình")
             for email in emails:
                 self._check_assignee(email)
@@ -79,6 +83,16 @@ class AssignmentService:
 
         for assignment in created:
             self._record(actor, "CREATE", assignment)
+            if (
+                self._notifier is not None
+                and assignment.assignee_email != normalize_email(actor.email)
+            ):
+                self._notifier.screen_assigned(
+                    email=assignment.assignee_email,
+                    project_id=self._project_id,
+                    screen_id=screen_id,
+                    screen_name=screen.name,
+                )
         return created
 
     def change_deadline(self, actor: User, assignment_id: str, deadline: date) -> Assignment:

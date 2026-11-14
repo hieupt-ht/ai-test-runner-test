@@ -17,6 +17,7 @@ from app.core.models.test_case import (
     TestStep,
 )
 from app.core.models.user import Role
+from app.core.notifications import NotificationStore
 from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
@@ -81,7 +82,9 @@ def assign(
     return response
 
 
-def test_assign_screen_to_two_testers(lead: TestClient, project: Project) -> None:
+def test_assign_screen_to_two_testers(
+    lead: TestClient, project: Project, redis: fakeredis.FakeRedis
+) -> None:
     response = assign(lead, project, ["tester@x.com", " Tester2@X.com"])
 
     assert response.status_code == 201
@@ -89,6 +92,28 @@ def test_assign_screen_to_two_testers(lead: TestClient, project: Project) -> Non
     assert [a["id"] for a in created] == ["AS-0001", "AS-0002"]
     assert [a["assignee_email"] for a in created] == ["tester@x.com", "tester2@x.com"]
     assert {a["status"] for a in created} == {"TODO"}
+    store = NotificationStore(redis)
+    assert [item.type for item in store.list("tester@x.com")] == ["screen_assigned"]
+    assert [item.type for item in store.list("tester2@x.com")] == ["screen_assigned"]
+    assert store.list("lead@x.com") == []
+
+
+def test_assign_succeeds_when_notification_fails(
+    lead: TestClient, project: Project, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = 0
+
+    def fail(*args: object, **kwargs: object) -> None:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("Redis lỗi")
+
+    monkeypatch.setattr(NotificationStore, "add", fail)
+    response = assign(lead, project, ["tester@x.com"])
+
+    assert response.status_code == 201
+    assert calls == 1
+    assert response.json()[0]["assignee_email"] == "tester@x.com"
 
 
 def test_assign_skips_existing_pair(lead: TestClient, project: Project) -> None:

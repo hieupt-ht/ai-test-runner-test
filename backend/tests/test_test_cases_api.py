@@ -2,6 +2,7 @@ import threading
 from datetime import timedelta
 from typing import Any
 
+import fakeredis
 import httpx
 import pytest
 from fastapi import FastAPI
@@ -11,6 +12,7 @@ from app.core.github.client import GitHubError
 from app.core.models.project import Project
 from app.core.models.test_case import TestCase
 from app.core.models.user import Role
+from app.core.notifications import NotificationStore
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
@@ -80,6 +82,59 @@ def binh(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient
 
 def url(project: Project, suffix: str = "") -> str:
     return f"/api/projects/{project.id}/test-cases{suffix}"
+
+
+@pytest.mark.parametrize("action", ["approve", "return"])
+def test_review_succeeds_when_notification_fails(
+    app: FastAPI,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    monkeypatch: pytest.MonkeyPatch,
+    action: str,
+) -> None:
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    calls = 0
+
+    def fail(*args: object, **kwargs: object) -> None:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("Redis lỗi")
+
+    monkeypatch.setattr(NotificationStore, "add", fail)
+    body: dict[str, object] = {"version": 2}
+    if action == "return":
+        body["comment"] = "Sửa lại"
+    response = lead.post(url(project, f"/{case['id']}/{action}"), json=body)
+
+    assert response.status_code == 200
+    assert calls == 1
+    assert response.json()["status"] == ("APPROVED" if action == "approve" else "DRAFT")
+
+
+@pytest.mark.parametrize(
+    ("action", "expected_type"),
+    [("approve", "case_approved"), ("return", "case_returned")],
+)
+def test_review_notifies_case_creator_only(
+    an: TestClient, lead: TestClient, project: Project, redis: fakeredis.FakeRedis,
+    action: str, expected_type: str,
+) -> None:
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    body: dict[str, object] = {"version": 2}
+    if action == "return":
+        body["comment"] = "Sửa lại"
+
+    response = lead.post(url(project, f"/{case['id']}/{action}"), json=body)
+
+    assert response.status_code == 200
+    store = NotificationStore(redis)
+    assert [item.type for item in store.list("an@x.com") if item.type.startswith("case_")] == [
+        expected_type
+    ]
+    assert not any(item.type.startswith("case_") for item in store.list("lead@x.com"))
 
 
 class RecordingIssueSink:

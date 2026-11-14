@@ -1,11 +1,13 @@
 from datetime import timedelta
 
+import fakeredis
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.models.project import Project
 from app.core.models.user import Role
+from app.core.notifications import NotificationStore
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
@@ -36,7 +38,8 @@ def members_url(project: Project) -> str:
 
 
 def test_qa_lead_adds_and_removes_member(
-    lead: TestClient, project: Project, gateway: FakeSheetsGateway
+    lead: TestClient, project: Project, gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
 ) -> None:
     added = lead.post(members_url(project), json={"email": " Binh@X.com"})
 
@@ -47,9 +50,33 @@ def test_qa_lead_adds_and_removes_member(
     assert {member["email"] for member in listed} == {"lead@x.com", "binh@x.com"}
     audit = gateway.data[SYSTEM_SHEET_ID]["AuditLog"][-1]
     assert audit[2:5] == ["CREATE", "project_member", f"{project.id}:binh@x.com"]
+    assert [item.type for item in NotificationStore(redis).list("binh@x.com")] == [
+        "member_added"
+    ]
+    assert NotificationStore(redis).list("lead@x.com") == []
 
     assert lead.delete(f"{members_url(project)}/binh@x.com").status_code == 204
     assert {m["email"] for m in lead.get(members_url(project)).json()} == {"lead@x.com"}
+
+
+def test_add_member_succeeds_when_notification_fails(
+    lead: TestClient, project: Project, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = 0
+
+    def fail(*args: object, **kwargs: object) -> None:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("Redis lỗi")
+
+    monkeypatch.setattr(NotificationStore, "add", fail)
+    response = lead.post(members_url(project), json={"email": "binh@x.com"})
+
+    assert response.status_code == 201
+    assert calls == 1
+    assert {member["email"] for member in lead.get(members_url(project)).json()} == {
+        "lead@x.com", "binh@x.com"
+    }
 
 
 @pytest.mark.parametrize("email", ["khong-co@x.com", "khoa@x.com"])

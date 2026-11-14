@@ -14,6 +14,7 @@ from app.core.models.user import User
 from app.core.permissions import Action
 from app.core.repositories.assignments import AssignmentNotFoundError
 from app.core.services.assignments import AssignmentService, InvalidAssignmentError
+from app.core.services.notify import Notifier
 
 router = APIRouter(prefix="/api/projects/{project_id}/assignments", tags=["assignments"])
 
@@ -43,6 +44,7 @@ def _service(
         members=services.members,
         users=services.users,
         audit_log=scope.audit_log,
+        notifier=Notifier(services.notifications),
     )
 
 

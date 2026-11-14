@@ -17,6 +17,7 @@ from app.core.permissions import Action
 from app.core.repositories.audit_log import AuditEntry
 from app.core.repositories.test_cases import TestCaseNotFoundError, VersionConflictError
 from app.core.services.issue_sync import IssueSyncer
+from app.core.services.notify import Notifier
 from app.core.services.test_cases import (
     CaseAction,
     InvalidTestCaseError,
@@ -99,6 +100,7 @@ def _service_for(services: Services, project: Project) -> TestCaseService:
         issue_sync=services.issue_sync,
         project=project,
         issue_syncer=IssueSyncer(services.github) if services.github else None,
+        notifier=Notifier(services.notifications),
     )
 
 

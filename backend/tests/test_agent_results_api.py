@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.core.models.project import Project
 from app.core.models.user import Role
+from app.core.notifications import NotificationStore
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
@@ -60,6 +61,59 @@ def approve_case(an: TestClient, lead: TestClient, project: Project) -> None:
 def test_disabled_when_token_not_configured_is_404(client: TestClient, project: Project) -> None:
     assert client.post(path(project), json={"results": [RESULT]}).status_code == 404
     assert client.post(path(project), json={"results": "bad"}).status_code == 404
+
+
+def test_agent_result_succeeds_when_notification_fails(
+    app: FastAPI,
+    client: TestClient,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    approve_case(an, lead, project)
+    calls = 0
+
+    def fail(*args: object, **kwargs: object) -> None:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("Redis lỗi")
+
+    monkeypatch.setattr(NotificationStore, "add", fail)
+    response = client.post(
+        path(project), json={"results": [RESULT]}, headers={"Authorization": "Bearer test-token"}
+    )
+
+    assert response.status_code == 200
+    assert calls >= 1
+    assert response.json()["written"] == 1
+
+
+@pytest.mark.parametrize("result_status", ["PASS", "FAIL"])
+def test_agent_result_notifies_leads_and_failed_case_creator(
+    app: FastAPI, client: TestClient, client_as_admin: TestClient,
+    an: TestClient, lead: TestClient, project: Project, result_status: str,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    approve_case(an, lead, project)
+    response = client.post(
+        path(project),
+        json={"results": [{**RESULT, "status": result_status}]},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    store = app.state.services.notifications
+    assert [item.type for item in store.list("lead@x.com") if item.type == "results_recorded"] == [
+        "results_recorded"
+    ]
+    assert [item.type for item in store.list("admin@x.com") if item.type == "results_recorded"] == [
+        "results_recorded"
+    ]
+    assert [item.type for item in store.list("an@x.com") if item.type == "results_recorded"] == (
+        ["results_recorded"] if result_status == "FAIL" else []
+    )
 
 
 def test_wrong_or_missing_token_is_401(app: FastAPI, client: TestClient, project: Project) -> None:

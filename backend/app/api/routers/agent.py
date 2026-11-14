@@ -11,7 +11,9 @@ from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.run import Result, ResultStatus, RunScope, RunStatus
 from app.core.models.test_case import TestCaseStatus
+from app.core.models.user import Role
 from app.core.repositories.runs import RunInProgressError
+from app.core.services.notify import Notifier
 from app.core.time import utc_now
 from app.settings import Settings
 
@@ -69,7 +71,9 @@ def write_agent_results(
 
     scope = scope_for(services, project)
     approved = {
-        case.id for case in scope.test_cases.list_all() if case.status == TestCaseStatus.APPROVED
+        case.id: case
+        for case in scope.test_cases.list_all()
+        if case.status == TestCaseStatus.APPROVED
     }
     accepted: list[AgentResult] = []
     ignored: list[IgnoredResult] = []
@@ -127,4 +131,28 @@ def write_agent_results(
     run.passed = sum(item.status == ResultStatus.PASS for item in accepted)
     run.failed = sum(item.status == ResultStatus.FAIL for item in accepted)
     scope.runs.save(run)
+    try:
+        member_emails = {
+            member.email for member in services.members.list_for_project(project.id)
+        }
+        recipients = {
+            user.email
+            for user in services.users.list_all()
+            if user.active
+            and (
+                user.role == Role.ADMIN
+                or (user.role == Role.QA_LEAD and user.email in member_emails)
+            )
+        }
+        recipients.update(
+            approved[item.test_case_id].created_by
+            for item in accepted
+            if item.status == ResultStatus.FAIL
+        )
+        Notifier(services.notifications).results_recorded(
+            emails=sorted(recipients), project_id=project.id, run_id=run.id,
+            failed=run.failed, total=run.total,
+        )
+    except Exception:
+        logger.warning("Không xác định được người nhận kết quả run %s", run.id, exc_info=True)
     return AgentResultsResponse(run_id=run.id, written=len(results), ignored=ignored)

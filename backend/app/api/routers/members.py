@@ -15,6 +15,7 @@ from app.core.services.members import (
     MemberService,
     MemberView,
 )
+from app.core.services.notify import Notifier
 
 router = APIRouter(prefix="/api/projects/{project_id}/members", tags=["members"])
 
@@ -31,6 +32,8 @@ def _service(services: Services, user: User, project_id: str, action: Action) ->
         users=services.users,
         assignments=scope_for(services, project).assignments,
         audit_log=services.audit_log,
+        project_name=project.name,
+        notifier=Notifier(services.notifications),
     )
 
 
