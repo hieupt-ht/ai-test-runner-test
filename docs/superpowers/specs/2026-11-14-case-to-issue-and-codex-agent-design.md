@@ -1,6 +1,6 @@
 # Test case vào cả GitHub issue và Google Sheets, Codex agent đọc issue để chạy test (thiết kế)
 
-Ngày: 2026-11-14 · Trạng thái: **chờ chủ dự án duyệt** (chưa duyệt thì chưa viết kế hoạch, chưa code) · Nhánh: `feature/ai-agent-runner` (tách từ `develop`)
+Ngày: 2026-11-14 · Trạng thái: **đã duyệt (mục 6), đang lập kế hoạch** · Nhánh: `feature/ai-agent-runner` (tách từ `develop`)
 
 Nhãn: **[Chủ dự án]** = chủ dự án đã chốt; **[Đề xuất]** = người viết tài liệu đề xuất, chủ dự án chưa xác nhận.
 
@@ -60,15 +60,15 @@ Dùng lại tab `Runs`/`Results` đã có trong Sheet dự án. Codex ghi qua m�
 - Hạn mức GitHub: tạo hàng loạt issue (ví dụ duyệt 100 case cùng lúc) cần xếp hàng và chậm lại, không gọi dồn.
 - Hạn mức đọc Google Sheets (~60 lượt/phút) vẫn áp dụng.
 
-## 6. Cần chủ dự án quyết (chặn kế hoạch)
+## 6. Các quyết định đã chốt (2026-11-14)
 
-**Đã chốt:** issue nằm ở **chính repo của app đang test** (repo gắn với dự án, lấy từ trường `repo_full_name`). **[Chủ dự án, 2026-11-14]**
+Trạng thái: chủ dự án đã trả lời mọi câu hỏi mở và nói "làm như bạn đề xuất"; coi là **đã duyệt** để lập kế hoạch.
 
-Còn 4 câu:
-1. **Khi nào tạo issue?** (a) ngay khi tạo case (có cả case nháp), hoặc (b) chỉ khi case được **duyệt**. Đề xuất (b) để issue không bị ngập case nháp; nhưng chủ dự án từng nói "khi tester nhập".
-2. **Codex được gọi bằng cách nào?** (a) chủ dự án tự mở Codex và gõ lệnh, hoặc (b) nút trên web làm worker gọi `codex exec`. Đề xuất (a) trước.
-3. **Kết quả ghi vào đâu?** Chỉ comment lên issue, hay thêm ghi vào tab `Results` của Sheet. Đề xuất cả hai.
-4. **Repo của app test là công khai hay riêng tư?** Quyết định có đưa `test_data` vào issue hay không.
+1. **Tạo issue khi case được duyệt** (trạng thái `APPROVED`), không tạo cho case nháp. Case đã có issue thì cập nhật khi sửa, trả lại, ngừng dùng, khôi phục. **[Chủ dự án chọn theo đề xuất]**
+2. **Chủ dự án tự mở Codex và gõ lệnh**; chưa có nút gọi Codex trên web. **[Chủ dự án chọn theo đề xuất]**
+3. **Kết quả ghi vào cả hai nơi**: comment lên issue (Codex làm qua GitHub MCP) và tab `Results` của Sheet (qua API của ai-test-runner). **[Chủ dự án chọn theo đề xuất]**
+4. **Repo của app test tạm thời là công khai.** Vì vậy **không đưa `test_data` vào issue**; thân issue cũng không chứa email người tạo. **[Chủ dự án + Đề xuất]**
+5. **Issue nằm ở chính repo của app đang test** (`repo_full_name` của dự án). **[Chủ dự án]**
 
 ## 7. Phạm vi việc cho người làm (để lập kế hoạch sau khi duyệt)
 1. `GitHubClient`: tìm/tạo/sửa/đóng-mở issue, tạo label, comment (kèm test với bản giả, theo mẫu `FakeGitHub`).
