@@ -30,5 +30,7 @@ export type AuditEntry = Schemas["AuditEntry"]
 export type BatchApproveResponse = Schemas["BatchApproveResponse"]
 export type SyncIssuesResult = Schemas["SyncIssuesResult"]
 export type ConflictResponse = Schemas["ConflictResponse"]
+export type ResultItem = Schemas["ResultItem"]
+export type ResultStatus = Schemas["ResultStatus"]
 
 export const ROLES: Role[] = ["ADMIN", "QA_LEAD", "TESTER", "VIEWER"]

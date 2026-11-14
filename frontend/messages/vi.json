@@ -31,6 +31,22 @@
     "readAll": "Đọc hết",
     "readError": "Không đánh dấu được thông báo. Vui lòng thử lại."
   },
+  "results": {
+    "title": "Kết quả test",
+    "filterStatus": "Lọc trạng thái",
+    "all": "Tất cả",
+    "status": {
+      "PASS": "PASS",
+      "FAIL": "FAIL",
+      "BLOCKED": "BLOCKED",
+      "INCONCLUSIVE": "INCONCLUSIVE"
+    },
+    "failedStep": "Bước lỗi: {step}",
+    "evidence": "Bằng chứng",
+    "empty": "Chưa có kết quả test",
+    "loading": "Đang tải kết quả...",
+    "error": "Không tải được kết quả test. Vui lòng thử lại."
+  },
   "overview": {
     "title": "Tổng quan",
     "greeting": "Xin chào, {name}!",
@@ -73,6 +89,7 @@
   "projectTabs": {
     "screens": "Màn hình",
     "testCases": "Test case",
+    "results": "Kết quả",
     "assignments": "Chia việc",
     "members": "Thành viên",
     "settings": "Cài đặt"
