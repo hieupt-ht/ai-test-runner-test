@@ -2,6 +2,8 @@
 
 Cập nhật: 2026-11-14. Dành cho người (hoặc AI) tiếp tục dự án mà chưa từng thấy nó.
 
+> **Mốc lưu hướng Playwright (2026-11-14):** toàn bộ M4 (worker Playwright chạy các bước tự động có cấu trúc, không dùng AI) nằm ở nhánh `feature/m4-playwright-worker`, đánh dấu bằng tag `m4-playwright-v1`. Chủ dự án đang cân nhắc một hướng khác (ví dụ AI có terminal hoặc MCP trình duyệt tự chạy hay tự viết bước, xem cuộc trao đổi về hướng A/B/C). Muốn quay lại hướng này: `git checkout m4-playwright-v1`. Nhánh `develop` và `main` chưa có M4.
+
 ## Dự án là gì
 
 **AI Test Runner**: web app nội bộ cho đội QA. Tester viết test case, QA Lead duyệt, rồi một **worker chạy test tự động trên app thật bằng Playwright** và ghi kết quả (PASS/FAIL/BLOCKED/INCONCLUSIVE, bước lỗi, ảnh chụp) vào Google Sheets. Sau này AI chỉ điền sẵn các bước tự động; **hiện tại không dùng AI**.
