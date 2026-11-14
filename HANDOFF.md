@@ -8,7 +8,7 @@ AI Test Runner là web app nội bộ cho QA: Tester viết case, QA Lead duyệ
 
 M1–M3 đã nằm ở `develop`. Kế hoạch mới ở `docs/superpowers/plans/2026-11-14-case-to-issue-and-codex-agent.md`, thiết kế ở `docs/superpowers/specs/2026-11-14-case-to-issue-and-codex-agent-design.md`. Hướng worker Playwright cũ được giữ ở nhánh `feature/m4-playwright-worker` và tag `m4-playwright-v1`; **không** có worker hay tab Chạy test trên nhánh hiện tại. Chỉ mô hình và repository `Runs`/`Results` được lấy lại từ tag để phục vụ API agent.
 
-Task 1–7 của kế hoạch đã được triển khai và commit theo từng task. Cách cấu hình và prompt mẫu ở `docs/codex-agent.md`. Kiểm tra cuối: backend **331 test**, frontend **59 test** qua; `mypy app`, `ruff check`, typecheck, lint đều sạch.
+Task 1–7 của kế hoạch đã được triển khai và commit theo từng task. Cách cấu hình và prompt mẫu ở `docs/codex-agent.md`. Kiểm tra cuối: backend **332 test**, frontend **59 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
 
 ## Việc còn dở
 

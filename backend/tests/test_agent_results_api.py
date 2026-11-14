@@ -239,3 +239,31 @@ def test_two_posts_at_same_time_second_gets_409(
     first = client.post(path(project), json={"results": [RESULT]}, headers=headers)
     assert first.status_code == 200
     assert responses == [409]
+
+
+def test_results_write_failure_marks_run_failed(
+    app: FastAPI,
+    client: TestClient,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    approve_case(an, lead, project)
+    original = gateway.append_rows
+
+    def fail_results(sheet: str, tab: str, rows: list[list[str]]) -> None:
+        if tab == "Results":
+            raise RuntimeError("Sheet tạm lỗi")
+        original(sheet, tab, rows)
+
+    monkeypatch.setattr(gateway, "append_rows", fail_results)
+    response = client.post(
+        path(project), json={"results": [RESULT]}, headers={"Authorization": "Bearer test-token"}
+    )
+    assert response.status_code == 503
+    run_rows = gateway.data[project.spreadsheet_id]["Runs"]
+    run = dict(zip(run_rows[0], run_rows[1], strict=True))
+    assert run["status"] == "FAILED"

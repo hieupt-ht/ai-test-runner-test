@@ -49,4 +49,4 @@ curl -X POST 'http://localhost:8000/api/agent/projects/PRJ-0001/results' \
   --data '{"results":[{"test_case_id":"TC-000001","status":"PASS","reason":"Đạt"},{"test_case_id":"TC-000002","status":"FAIL","reason":"Không thấy thông báo","failed_step":2,"evidence":"artifacts/TC-000002.png"}]}'
 ```
 
-API trả `run_id`, số `written` và danh sách `ignored` (case không tồn tại trong dự án hoặc chưa được duyệt). Mỗi request nhận tối đa 200 kết quả. Token sai trả 401; dự án đã lưu trữ hoặc đang có lần ghi khác trả 409. Không ghi `test_data` hoặc email người tạo/sửa vào issue của repo công khai.
+API trả `run_id`, số `written` và danh sách `ignored` (case không tồn tại trong dự án hoặc chưa được duyệt). Mỗi request nhận tối đa 200 kết quả. Token sai trả 401; dự án đã lưu trữ hoặc đang có lần ghi khác trả 409. Nếu Sheet lỗi khi ghi kết quả, API trả 503 và đánh dấu run `FAILED`; hãy kiểm tra Sheet trước khi gửi lại. Không ghi `test_data` hoặc email người tạo/sửa vào issue của repo công khai.

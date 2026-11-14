@@ -1,5 +1,6 @@
 """API ghi kết quả cho agent bên ngoài, xác thực bằng token riêng."""
 
+import logging
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -15,6 +16,7 @@ from app.core.time import utc_now
 from app.settings import Settings
 
 router = APIRouter(prefix="/api/agent/projects/{project_id}", tags=["agent"])
+logger = logging.getLogger(__name__)
 
 
 class AgentResult(BaseModel):
@@ -51,9 +53,7 @@ def _check_token(request: Request) -> None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token không hợp lệ")
 
 
-@router.post(
-    "/results", response_model=AgentResultsResponse, dependencies=[Depends(_check_token)]
-)
+@router.post("/results", response_model=AgentResultsResponse, dependencies=[Depends(_check_token)])
 def write_agent_results(
     project_id: str, body: AgentResultsRequest, request: Request
 ) -> AgentResultsResponse:
@@ -109,7 +109,19 @@ def write_agent_results(
         )
         for item in accepted
     ]
-    scope.results.append_batch(results)
+    try:
+        scope.results.append_batch(results)
+    except Exception:
+        run.status = RunStatus.FAILED
+        run.finished_at = utc_now()
+        try:
+            scope.runs.save(run)
+        except Exception:
+            logger.error("Không đánh dấu được run %s của dự án %s là FAILED", run.id, project.id)
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không ghi được kết quả, hãy kiểm tra Sheet trước khi thử lại",
+        ) from None
     run.status = RunStatus.COMPLETED
     run.finished_at = utc_now()
     run.passed = sum(item.status == ResultStatus.PASS for item in accepted)
