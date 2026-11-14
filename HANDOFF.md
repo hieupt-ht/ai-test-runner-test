@@ -12,8 +12,8 @@ Task 1–7 của kế hoạch đã được triển khai và commit theo từng 
 
 ## Việc còn dở
 
-1. **Chạy thử với repo thật** `hieupt-ht/126CQH01-NHOM-14`: cần GitHub App của AI Test Runner được cài vào repo với quyền Issues đọc/ghi; tạo/duyệt một case rồi kiểm tra issue. Đây là bước dùng tài khoản và repo thật, chưa làm trong lượt code này.
-2. Mở Codex theo `docs/codex-agent.md`, dùng tài khoản test riêng của app, chạy kịch bản Playwright thật và đối chiếu comment trên issue với tab `Results`. Chưa có bằng chứng chạy end-to-end trên app thật.
+1. **Chạy thử với repo thật** `hieupt-ht/126CQH01-NHOM-14`: đã xác nhận GitHub App đọc được repo và Issues; quyền ghi Issues chưa thử. Cần tạo/duyệt một case trong dự án thật rồi kiểm tra issue. Docker Desktop hiện chưa chạy trên máy này.
+2. Mở Codex theo `docs/codex-agent.md`, dùng tài khoản test riêng của app, chạy kịch bản Playwright thật và đối chiếu comment trên issue với tab `Results`. `AGENT_API_TOKEN` hiện chưa được cấu hình; chưa có bằng chứng chạy end-to-end trên app thật.
 3. Kiểm tra giao diện bằng mắt ở trình duyệt thật, đặc biệt nút đồng bộ lại trên màn hình hẹp. Test tự động frontend đã qua nhưng chưa thay thế kiểm tra này.
 4. Sau khi xem kết quả thực tế, quyết định có cần thông báo khi issue đồng bộ lỗi hoặc khi agent ghi kết quả xong.
 
