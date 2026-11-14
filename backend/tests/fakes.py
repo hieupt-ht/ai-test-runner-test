@@ -7,6 +7,7 @@ Bắt chước hai thói quen của Google thật:
 
 import re
 from collections.abc import Callable
+from typing import Literal
 
 import httplib2
 from fastapi import Request
@@ -14,7 +15,7 @@ from fastapi.responses import RedirectResponse, Response
 from googleapiclient.errors import HttpError
 
 from app.api.oauth import GoogleIdentity
-from app.core.github.client import GitHubError, RepoInfo
+from app.core.github.client import GitHubError, IssueInfo, RepoInfo
 from app.core.sheets.gateway import SheetAccessDeniedError
 
 _ROW_RANGE = re.compile(r"^(?P<start>\d+):(?P<end>\d+)$")
@@ -130,6 +131,13 @@ class FakeGitHub:
 
     def __init__(self, repos: dict[str, list[str]] | None = None) -> None:
         self.repos = repos if repos is not None else {"org/web": ["develop", "main"]}
+        self.issues: dict[str, list[tuple[IssueInfo, str]]] = {}
+        self.calls: list[str] = []
+        self.fail_with: Exception | None = None
+
+    def _check(self) -> None:
+        if self.fail_with is not None:
+            raise self.fail_with
 
     def list_repositories(self) -> list[RepoInfo]:
         return [
@@ -141,3 +149,52 @@ class FakeGitHub:
         if repo_full_name not in self.repos:
             raise GitHubError(f"GitHub trả lỗi 404 khi gọi {repo_full_name}")
         return sorted(self.repos[repo_full_name])
+
+    def find_issue_by_label(self, repo_full_name: str, label: str) -> IssueInfo | None:
+        self._check()
+        self.calls.append("find")
+        matches = [
+            issue for issue, _ in self.issues.get(repo_full_name, []) if label in issue.labels
+        ]
+        return min(matches, key=lambda issue: issue.number) if matches else None
+
+    def create_issue(
+        self, repo_full_name: str, *, title: str, body: str, labels: list[str]
+    ) -> IssueInfo:
+        self._check()
+        self.calls.append("create")
+        items = self.issues.setdefault(repo_full_name, [])
+        number = max((issue.number for issue, _ in items), default=0) + 1
+        issue = IssueInfo(
+            number=number,
+            url=f"https://github.com/{repo_full_name}/issues/{number}",
+            state="open",
+            title=title,
+            labels=labels,
+        )
+        items.append((issue, body))
+        return issue
+
+    def update_issue(
+        self,
+        repo_full_name: str,
+        number: int,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        state: Literal["open", "closed"],
+    ) -> IssueInfo:
+        self._check()
+        self.calls.append("update")
+        items = self.issues[repo_full_name]
+        for index, (old, _) in enumerate(items):
+            if old.number == number:
+                issue = old.model_copy(update={"title": title, "labels": labels, "state": state})
+                items[index] = (issue, body)
+                return issue
+        raise GitHubError("Không tìm thấy issue")
+
+    def ensure_label(self, repo_full_name: str, name: str) -> None:
+        self._check()
+        self.calls.append(f"label:{name}")
