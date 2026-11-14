@@ -45,3 +45,4 @@ Ghi lại những chỗ tài liệu thiết kế chưa nói rõ và cách đã c
 38. **[Quyết định M4] Chưa có thông báo cho các role** (ví dụ báo QA Lead khi run xong hoặc có FAIL). Người dùng tự mở tab "Chạy test". Để sau M5.
 39. **[Quyết định M4] Cổng đã có app khác trả lời thì không chạy.** Trước khi bật app, worker hỏi `app_url`; nếu đã có ai trả lời (app cũ còn sót, app bạn tự bật) thì run `FAILED` kèm lý do, để không chạy test nhầm vào app đó.
 40. **[Quyết định M4] Giao diện làm mới tab Chạy test mỗi 5 giây**, và `RunRepository.get` đọc Sheet đúng 1 lượt, để không vượt hạn mức khoảng 60 lượt đọc/phút của Google (dùng chung với worker).
+41. **[Quyết định M4] Bấm theo chữ ưu tiên nút/link khớp cả chữ, rồi mới đến chữ trơn.** Trang đăng nhập thật thường có tiêu đề "Đăng nhập" nằm trước nút "Đăng nhập"; chọn phần tử đầu tiên theo thứ tự trong trang sẽ bấm nhầm tiêu đề (lỗi tìm ra khi đọc app thật của chủ dự án). Thay cho phần cũ của quyết định 35.

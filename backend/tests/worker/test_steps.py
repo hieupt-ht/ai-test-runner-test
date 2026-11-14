@@ -151,3 +151,14 @@ def test_click_text_matches_whole_text_not_a_heading_containing_it(
     run(page, site, AutoStep(type=AutoType.CLICK, target=on(TargetBy.TEXT, "Đăng nhập")))
 
     run(page, site, AutoStep(type=AutoType.URL_IS, value="/home"))
+
+
+def test_click_text_prefers_the_button_over_a_heading_with_the_same_text(
+    page: Page, site: str
+) -> None:
+    """Tiêu đề h2 "Đăng nhập" đứng trước nút "Đăng nhập": phải bấm nút, không bấm tiêu đề."""
+    run(page, site, goto("/signin"))
+
+    run(page, site, AutoStep(type=AutoType.CLICK, target=on(TargetBy.TEXT, "Đăng nhập")))
+
+    run(page, site, AutoStep(type=AutoType.URL_IS, value="/form"))

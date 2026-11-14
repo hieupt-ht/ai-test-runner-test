@@ -26,22 +26,28 @@ def _describe(target: AutoTarget) -> str:
             return f'phần tử "{target.value}"'
 
 
-def _locator(page: Page, target: AutoTarget) -> Locator:
+def _locator(page: Page, target: AutoTarget, timeout_ms: int) -> Locator:
     match target.by:
         case TargetBy.TEXT:
-            # "Chữ hiển thị" phải khớp CẢ chữ (không phải một phần của chữ khác), nếu không
-            # "Đăng nhập" sẽ khớp nhầm tiêu đề "Trang đăng nhập" nằm trước nút.
-            value = target.value
-            return (
-                page.get_by_role("button", name=value, exact=True)
-                .or_(page.get_by_role("link", name=value, exact=True))
-                .or_(page.get_by_text(value, exact=True))
-                .first
-            )
+            return _by_visible_text(page, target.value, timeout_ms)
         case TargetBy.LABEL:
             return page.get_by_label(target.value).first
         case TargetBy.CSS:
             return page.locator(target.value).first
+
+
+def _by_visible_text(page: Page, value: str, timeout_ms: int) -> Locator:
+    """Tìm theo chữ hiển thị: nút hoặc link khớp CẢ chữ được ưu tiên, rồi mới đến chữ trơn.
+
+    Trang đăng nhập hay có tiêu đề "Đăng nhập" nằm TRƯỚC nút "Đăng nhập"; chỉ lấy phần tử đầu
+    tiên theo thứ tự trong trang sẽ bấm nhầm vào tiêu đề.
+    """
+    button = page.get_by_role("button", name=value, exact=True)
+    interactive = button.or_(page.get_by_role("link", name=value, exact=True))
+    plain = page.get_by_text(value, exact=True)
+    # Chờ tới khi có ít nhất một phần tử khớp (trang có thể còn đang tải), rồi mới chọn.
+    interactive.or_(plain).first.wait_for(state="attached", timeout=timeout_ms)
+    return interactive.first if interactive.count() > 0 else plain.first
 
 
 def _absolute(base_url: str, value: str) -> str:
@@ -59,11 +65,12 @@ def run_step(page: Page, step: AutoStep, base_url: str, *, timeout_ms: int) -> N
             case AutoType.GOTO:
                 _goto(page, _absolute(base_url, step.value), timeout_ms)
             case AutoType.FILL if target is not None:
-                _locator(page, target).fill(step.value, timeout=timeout_ms)
+                _locator(page, target, timeout_ms).fill(step.value, timeout=timeout_ms)
             case AutoType.CLICK if target is not None:
-                _locator(page, target).click(timeout=timeout_ms)
+                _locator(page, target, timeout_ms).click(timeout=timeout_ms)
             case AutoType.SELECT if target is not None:
-                _locator(page, target).select_option(label=step.value, timeout=timeout_ms)
+                field = _locator(page, target, timeout_ms)
+                field.select_option(label=step.value, timeout=timeout_ms)
             case AutoType.SEE_TEXT:
                 _see_text(page, step.value, timeout_ms)
             case AutoType.NOT_SEE_TEXT:

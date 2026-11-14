@@ -17,6 +17,11 @@ PAGES = {
 <label>Mật khẩu <input id="password" type="password"></label>
 <button onclick="document.cookie='session=1; path=/'; location.href='/home'">Đăng nhập</button>
 """,
+    # Tiêu đề "Đăng nhập" nằm TRƯỚC nút "Đăng nhập" (rất hay gặp ở trang đăng nhập thật).
+    "/signin": """
+<h2>Đăng nhập</h2>
+<button onclick="location.href='/form'">Đăng nhập</button>
+""",
     "/home": """
 <p id="greeting"></p>
 <script>
