@@ -8,6 +8,7 @@ from fastapi.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.routers import (
+    agent,
     assignments,
     auth,
     github,
@@ -74,6 +75,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(github.router)
     app.include_router(screens.router)
     app.include_router(assignments.router)
+    app.include_router(agent.router)
     app.include_router(test_cases.router)
     app.include_router(me.router)
     app.include_router(members.router)

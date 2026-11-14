@@ -882,6 +882,58 @@
         }
       }
     },
+    "/api/agent/projects/{project_id}/results": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Write Agent Results",
+        "operationId": "write_agent_results_api_agent_projects__project_id__results_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentResultsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResultsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/test-cases": {
       "get": {
         "tags": [
@@ -1800,6 +1852,90 @@
         ],
         "title": "AddMemberRequest"
       },
+      "AgentResult": {
+        "properties": {
+          "test_case_id": {
+            "type": "string",
+            "title": "Test Case Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResultStatus"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason",
+            "default": ""
+          },
+          "failed_step": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Step"
+          },
+          "evidence": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Evidence",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_case_id",
+          "status"
+        ],
+        "title": "AgentResult"
+      },
+      "AgentResultsRequest": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AgentResult"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "AgentResultsRequest"
+      },
+      "AgentResultsResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "written": {
+            "type": "integer",
+            "title": "Written"
+          },
+          "ignored": {
+            "items": {
+              "$ref": "#/components/schemas/IgnoredResult"
+            },
+            "type": "array",
+            "title": "Ignored"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "written",
+          "ignored"
+        ],
+        "title": "AgentResultsResponse"
+      },
       "ApproveItem": {
         "properties": {
           "case_id": {
@@ -2181,6 +2317,24 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "IgnoredResult": {
+        "properties": {
+          "test_case_id": {
+            "type": "string",
+            "title": "Test Case Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_case_id",
+          "reason"
+        ],
+        "title": "IgnoredResult"
+      },
       "MemberView": {
         "properties": {
           "email": {
@@ -2412,6 +2566,16 @@
           "private"
         ],
         "title": "RepoInfo"
+      },
+      "ResultStatus": {
+        "type": "string",
+        "enum": [
+          "PASS",
+          "FAIL",
+          "BLOCKED",
+          "INCONCLUSIVE"
+        ],
+        "title": "ResultStatus"
       },
       "ReturnedCase": {
         "properties": {

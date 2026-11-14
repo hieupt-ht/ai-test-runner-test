@@ -292,6 +292,23 @@ export interface paths {
         patch: operations["change_deadline_api_projects__project_id__assignments__assignment_id__patch"];
         trace?: never;
     };
+    "/api/agent/projects/{project_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Write Agent Results */
+        post: operations["write_agent_results_api_agent_projects__project_id__results_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases": {
         parameters: {
             query?: never;
@@ -536,6 +553,38 @@ export interface components {
             /** Email */
             email: string;
         };
+        /** AgentResult */
+        AgentResult: {
+            /** Test Case Id */
+            test_case_id: string;
+            status: components["schemas"]["ResultStatus"];
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Failed Step */
+            failed_step?: number | null;
+            /**
+             * Evidence
+             * @default
+             */
+            evidence: string;
+        };
+        /** AgentResultsRequest */
+        AgentResultsRequest: {
+            /** Results */
+            results: components["schemas"]["AgentResult"][];
+        };
+        /** AgentResultsResponse */
+        AgentResultsResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Written */
+            written: number;
+            /** Ignored */
+            ignored: components["schemas"]["IgnoredResult"][];
+        };
         /** ApproveItem */
         ApproveItem: {
             /** Case Id */
@@ -700,6 +749,13 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** IgnoredResult */
+        IgnoredResult: {
+            /** Test Case Id */
+            test_case_id: string;
+            /** Reason */
+            reason: string;
+        };
         /** MemberView */
         MemberView: {
             /** Email */
@@ -803,6 +859,11 @@ export interface components {
             /** Private */
             private: boolean;
         };
+        /**
+         * ResultStatus
+         * @enum {string}
+         */
+        ResultStatus: "PASS" | "FAIL" | "BLOCKED" | "INCONCLUSIVE";
         /**
          * ReturnedCase
          * @description Một case bị QA trả lại: tester cần biết case nào, lý do gì để sửa.
@@ -1741,6 +1802,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Assignment"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    write_agent_results_api_agent_projects__project_id__results_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentResultsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResultsResponse"];
                 };
             };
             /** @description Validation Error */

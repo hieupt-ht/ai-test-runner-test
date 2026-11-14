@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     github_app_id: str = ""
     github_app_private_key: str = ""
 
+    # Agent bên ngoài chỉ được phép ghi kết quả; để trống thì tắt API.
+    agent_api_token: str = ""
+
     # AI (từ M4)
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-5-5"
