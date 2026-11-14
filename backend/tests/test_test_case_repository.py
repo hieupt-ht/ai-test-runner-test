@@ -11,9 +11,9 @@ from app.core.models.test_case import (
     AutoType,
     Priority,
     Severity,
+    TargetBy,
     TestCaseContent,
     TestCaseStatus,
-    TargetBy,
     TestStep,
 )
 from app.core.repositories.test_cases import (

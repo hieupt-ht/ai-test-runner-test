@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import StrEnum
-
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
