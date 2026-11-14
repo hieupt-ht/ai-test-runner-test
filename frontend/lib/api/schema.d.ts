@@ -505,6 +505,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/runs/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Run */
+        post: operations["preview_run_api_projects__project_id__runs_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs_api_projects__project_id__runs_get"];
+        put?: never;
+        /** Start Run */
+        post: operations["start_run_api_projects__project_id__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_api_projects__project_id__runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Run */
+        post: operations["cancel_run_api_projects__project_id__runs__run_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/runs/{run_id}/screenshots/{filename}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Screenshot */
+        get: operations["get_screenshot_api_projects__project_id__runs__run_id__screenshots__filename__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -582,6 +668,31 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /**
+         * AutoStep
+         * @description Phần tự động của một bước: worker dựa vào đây để chạy bằng Playwright.
+         */
+        AutoStep: {
+            type: components["schemas"]["AutoType"];
+            target?: components["schemas"]["AutoTarget"] | null;
+            /**
+             * Value
+             * @default
+             */
+            value: string;
+        };
+        /** AutoTarget */
+        AutoTarget: {
+            by: components["schemas"]["TargetBy"];
+            /** Value */
+            value: string;
+        };
+        /**
+         * AutoType
+         * @description Hành động mà worker (Playwright) làm được.
+         * @enum {string}
+         */
+        AutoType: "goto" | "fill" | "click" | "select" | "see_text" | "not_see_text" | "url_is";
         /** BatchApproveRequest */
         BatchApproveRequest: {
             /** Items */
@@ -726,6 +837,11 @@ export interface components {
             /** Returned Cases */
             returned_cases?: components["schemas"]["ReturnedCase"][];
         };
+        /** PreviewResponse */
+        PreviewResponse: {
+            /** Count */
+            count: number;
+        };
         /**
          * Priority
          * @enum {string}
@@ -787,6 +903,34 @@ export interface components {
             private: boolean;
         };
         /**
+         * ResultStatus
+         * @enum {string}
+         */
+        ResultStatus: "PASS" | "FAIL" | "BLOCKED" | "INCONCLUSIVE";
+        /** ResultView */
+        ResultView: {
+            /** Id */
+            id: string;
+            /** Run Id */
+            run_id: string;
+            /** Test Case Id */
+            test_case_id: string;
+            status: components["schemas"]["ResultStatus"];
+            /** Reason */
+            reason: string;
+            /** Failed Step */
+            failed_step: number | null;
+            /** Screenshot */
+            screenshot: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Test Case Title */
+            test_case_title: string;
+        };
+        /**
          * ReturnedCase
          * @description Một case bị QA trả lại: tester cần biết case nào, lý do gì để sửa.
          */
@@ -805,6 +949,92 @@ export interface components {
          * @enum {string}
          */
         Role: "ADMIN" | "QA_LEAD" | "TESTER" | "VIEWER";
+        /** RunDetail */
+        RunDetail: {
+            /** Id */
+            id: string;
+            /** Triggered By */
+            triggered_by: string;
+            scope: components["schemas"]["RunScope"];
+            /** Branch */
+            branch: string;
+            /** Commit Sha */
+            commit_sha: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Total */
+            total: number;
+            /** Passed */
+            passed: number;
+            /** Failed */
+            failed: number;
+            /** Tokens Used */
+            tokens_used: number;
+            /** Note */
+            note: string;
+            /** Triggered By Name */
+            triggered_by_name: string;
+            /** Results */
+            results: components["schemas"]["ResultView"][];
+        };
+        /**
+         * RunScope
+         * @description Phạm vi một lần chạy. Danh sách rỗng nghĩa là "không lọc theo tiêu chí này".
+         */
+        RunScope: {
+            /** Screen Ids */
+            screen_ids?: string[];
+            /** Priorities */
+            priorities?: components["schemas"]["Priority"][];
+            /** Severities */
+            severities?: components["schemas"]["Severity"][];
+        };
+        /**
+         * RunStatus
+         * @enum {string}
+         */
+        RunStatus: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+        /**
+         * RunView
+         * @description Run kèm lý do lỗi (nếu có) và tên người bấm chạy.
+         */
+        RunView: {
+            /** Id */
+            id: string;
+            /** Triggered By */
+            triggered_by: string;
+            scope: components["schemas"]["RunScope"];
+            /** Branch */
+            branch: string;
+            /** Commit Sha */
+            commit_sha: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Total */
+            total: number;
+            /** Passed */
+            passed: number;
+            /** Failed */
+            failed: number;
+            /** Tokens Used */
+            tokens_used: number;
+            /** Note */
+            note: string;
+            /** Triggered By Name */
+            triggered_by_name: string;
+        };
         /** Screen */
         Screen: {
             /** Id */
@@ -840,6 +1070,15 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** StartRunRequest */
+        StartRunRequest: {
+            scope?: components["schemas"]["RunScope"];
+        };
+        /**
+         * TargetBy
+         * @enum {string}
+         */
+        TargetBy: "text" | "label" | "css";
         /**
          * TestCase
          * @description Một test case đầy đủ, như lưu ở tab TestCases.
@@ -942,6 +1181,8 @@ export interface components {
         /**
          * TestStep
          * @description Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống).
+         *
+         *     `auto` (tuỳ chọn) là phần để worker chạy tự động; case cũ không có thì để trống.
          */
         TestStep: {
             /** Action */
@@ -951,6 +1192,7 @@ export interface components {
              * @default
              */
             expected: string;
+            auto?: components["schemas"]["AutoStep"] | null;
         };
         /** TransitionRequest */
         TransitionRequest: {
@@ -2236,6 +2478,204 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_run_api_projects__project_id__runs_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunScope"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_runs_api_projects__project_id__runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_run_api_projects__project_id__runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_api_projects__project_id__runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_run_api_projects__project_id__runs__run_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_screenshot_api_projects__project_id__runs__run_id__screenshots__filename__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                run_id: string;
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {

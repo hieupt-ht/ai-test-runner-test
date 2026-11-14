@@ -1726,6 +1726,314 @@
           }
         }
       }
+    },
+    "/api/projects/{project_id}/runs/preview": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Preview Run",
+        "operationId": "preview_run_api_projects__project_id__runs_preview_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunScope"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/runs": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Start Run",
+        "operationId": "start_run_api_projects__project_id__runs_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List Runs",
+        "operationId": "list_runs_api_projects__project_id__runs_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunView"
+                  },
+                  "title": "Response List Runs Api Projects  Project Id  Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_api_projects__project_id__runs__run_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Cancel Run",
+        "operationId": "cancel_run_api_projects__project_id__runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/runs/{run_id}/screenshots/{filename}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Screenshot",
+        "operationId": "get_screenshot_api_projects__project_id__runs__run_id__screenshots__filename__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1885,6 +2193,68 @@
         ],
         "title": "AuditEntry",
         "description": "Một dòng lịch sử: ai làm gì lúc nào và đổi những gì."
+      },
+      "AutoStep": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/AutoType"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AutoTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Value",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "AutoStep",
+        "description": "Phần tự động của một bước: worker dựa vào đây để chạy bằng Playwright."
+      },
+      "AutoTarget": {
+        "properties": {
+          "by": {
+            "$ref": "#/components/schemas/TargetBy"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "by",
+          "value"
+        ],
+        "title": "AutoTarget"
+      },
+      "AutoType": {
+        "type": "string",
+        "enum": [
+          "goto",
+          "fill",
+          "click",
+          "select",
+          "see_text",
+          "not_see_text",
+          "url_is"
+        ],
+        "title": "AutoType",
+        "description": "Hành động mà worker (Playwright) làm được."
       },
       "BatchApproveRequest": {
         "properties": {
@@ -2233,6 +2603,19 @@
         "title": "MyAssignment",
         "description": "Một dòng trong trang \"Việc của tôi\"."
       },
+      "PreviewResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count"
+        ],
+        "title": "PreviewResponse"
+      },
       "Priority": {
         "type": "string",
         "enum": [
@@ -2371,6 +2754,83 @@
         ],
         "title": "RepoInfo"
       },
+      "ResultStatus": {
+        "type": "string",
+        "enum": [
+          "PASS",
+          "FAIL",
+          "BLOCKED",
+          "INCONCLUSIVE"
+        ],
+        "title": "ResultStatus"
+      },
+      "ResultView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "test_case_id": {
+            "type": "string",
+            "title": "Test Case Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResultStatus"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "failed_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Step"
+          },
+          "screenshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screenshot"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "test_case_title": {
+            "type": "string",
+            "title": "Test Case Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "test_case_id",
+          "status",
+          "reason",
+          "failed_step",
+          "screenshot",
+          "created_at",
+          "test_case_title"
+        ],
+        "title": "ResultView"
+      },
       "ReturnedCase": {
         "properties": {
           "case_id": {
@@ -2409,6 +2869,224 @@
           "VIEWER"
         ],
         "title": "Role"
+      },
+      "RunDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "triggered_by": {
+            "type": "string",
+            "title": "Triggered By"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/RunScope"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "tokens_used": {
+            "type": "integer",
+            "title": "Tokens Used"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "triggered_by_name": {
+            "type": "string",
+            "title": "Triggered By Name"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ResultView"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "triggered_by",
+          "scope",
+          "branch",
+          "commit_sha",
+          "status",
+          "started_at",
+          "finished_at",
+          "total",
+          "passed",
+          "failed",
+          "tokens_used",
+          "note",
+          "triggered_by_name",
+          "results"
+        ],
+        "title": "RunDetail"
+      },
+      "RunScope": {
+        "properties": {
+          "screen_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Screen Ids"
+          },
+          "priorities": {
+            "items": {
+              "$ref": "#/components/schemas/Priority"
+            },
+            "type": "array",
+            "title": "Priorities"
+          },
+          "severities": {
+            "items": {
+              "$ref": "#/components/schemas/Severity"
+            },
+            "type": "array",
+            "title": "Severities"
+          }
+        },
+        "type": "object",
+        "title": "RunScope",
+        "description": "Phạm vi một lần chạy. Danh sách rỗng nghĩa là \"không lọc theo tiêu chí này\"."
+      },
+      "RunStatus": {
+        "type": "string",
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "COMPLETED",
+          "FAILED",
+          "CANCELLED"
+        ],
+        "title": "RunStatus"
+      },
+      "RunView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "triggered_by": {
+            "type": "string",
+            "title": "Triggered By"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/RunScope"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "tokens_used": {
+            "type": "integer",
+            "title": "Tokens Used"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "triggered_by_name": {
+            "type": "string",
+            "title": "Triggered By Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "triggered_by",
+          "scope",
+          "branch",
+          "commit_sha",
+          "status",
+          "started_at",
+          "finished_at",
+          "total",
+          "passed",
+          "failed",
+          "tokens_used",
+          "note",
+          "triggered_by_name"
+        ],
+        "title": "RunView",
+        "description": "Run kèm lý do lỗi (nếu có) và tên người bấm chạy."
       },
       "Screen": {
         "properties": {
@@ -2491,6 +3169,24 @@
           "reason"
         ],
         "title": "SkippedItem"
+      },
+      "StartRunRequest": {
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/RunScope"
+          }
+        },
+        "type": "object",
+        "title": "StartRunRequest"
+      },
+      "TargetBy": {
+        "type": "string",
+        "enum": [
+          "text",
+          "label",
+          "css"
+        ],
+        "title": "TargetBy"
       },
       "TestCase": {
         "properties": {
@@ -2713,6 +3409,16 @@
             "maxLength": 500,
             "title": "Expected",
             "default": ""
+          },
+          "auto": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AutoStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -2720,7 +3426,7 @@
           "action"
         ],
         "title": "TestStep",
-        "description": "Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống)."
+        "description": "Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống).\n\n`auto` (tuỳ chọn) là phần để worker chạy tự động; case cũ không có thì để trống."
       },
       "TransitionRequest": {
         "properties": {
