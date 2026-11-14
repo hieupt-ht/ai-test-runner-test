@@ -4,10 +4,11 @@ import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useRef, useState } from "react"
 
+import { AutoStepFields } from "@/components/test-cases/auto-step-fields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import type { TestStep } from "@/lib/api/types"
+import type { AutoStep, TestStep } from "@/lib/api/types"
 import { LIMITS } from "@/lib/test-cases/form-schema"
 import { insertStepAfter, moveStep, removeStep } from "@/lib/test-cases/steps"
 
@@ -15,7 +16,7 @@ type Props = {
   steps: TestStep[]
   onChange: (steps: TestStep[]) => void
   /** Mã lỗi (khoá trong testCases.form.errors) theo từng bước, nếu có */
-  errors?: ({ action?: string; expected?: string } | undefined)[]
+  errors?: ({ action?: string; expected?: string; auto?: string } | undefined)[]
   disabled?: boolean
 }
 
@@ -36,6 +37,18 @@ export function StepsEditor({ steps, onChange, errors = [], disabled }: Props) {
 
   function update(index: number, patch: Partial<TestStep>) {
     onChange(steps.map((step, i) => (i === index ? { ...step, ...patch } : step)))
+  }
+
+  /** Gắn hoặc bỏ phần tự động của một bước (bỏ thì xoá hẳn khoá `auto`, không để undefined). */
+  function setAuto(index: number, auto: AutoStep | undefined) {
+    onChange(
+      steps.map((step, i) => {
+        if (i !== index) return step
+        const next = { ...step }
+        delete next.auto
+        return auto ? { ...next, auto } : next
+      }),
+    )
   }
 
   function addAfter(index: number) {
@@ -125,6 +138,13 @@ export function StepsEditor({ steps, onChange, errors = [], disabled }: Props) {
               {error?.expected && (
                 <p className="text-xs text-destructive">{t(`form.errors.${error.expected}`)}</p>
               )}
+              <AutoStepFields
+                stepNumber={index + 1}
+                value={step.auto ?? undefined}
+                onChange={(auto) => setAuto(index, auto)}
+                disabled={disabled}
+                error={error?.auto}
+              />
             </div>
 
             {!disabled && (

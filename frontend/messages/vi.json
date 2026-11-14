@@ -255,7 +255,10 @@
         "stepActionRequired": "Nhập nội dung bước",
         "stepActionTooLong": "Nội dung bước tối đa 500 ký tự",
         "stepExpectedTooLong": "Kết quả bước tối đa 500 ký tự",
-        "expectedResultRequired": "Nhập kết quả mong đợi"
+        "expectedResultRequired": "Nhập kết quả mong đợi",
+        "autoTargetRequired": "Nhập chữ hiển thị hoặc nhãn của phần tử",
+        "autoValueRequired": "Nhập giá trị cho bước tự động",
+        "autoValueTooLong": "Tối đa 500 ký tự"
       },
       "savedNotSubmitted": "Đã lưu case nhưng chưa gửi duyệt được."
     },
@@ -329,6 +332,53 @@
       "title": "Case đã bị thay đổi",
       "reload": "Tải lại",
       "hint": "Tải lại sẽ thay nội dung bạn đang sửa bằng bản mới nhất."
+    },
+    "auto": {
+      "title": "Tự động",
+      "hint": "Điền phần này để worker tự chạy bước bằng trình duyệt. Để trống thì case sẽ báo 'Chưa có bước tự động'.",
+      "type": "Hành động tự động",
+      "none": "Không dùng tự động",
+      "types": {
+        "goto": "Mở trang",
+        "fill": "Nhập chữ",
+        "click": "Bấm",
+        "select": "Chọn trong danh sách",
+        "see_text": "Thấy chữ",
+        "not_see_text": "Không thấy chữ",
+        "url_is": "URL là"
+      },
+      "by": "Tìm theo",
+      "byText": "Chữ hiển thị",
+      "byLabel": "Nhãn của ô",
+      "target": "Chữ hiển thị hoặc nhãn",
+      "targetPlaceholder": "Ví dụ: Đăng nhập",
+      "value": "Giá trị",
+      "valuePlaceholders": {
+        "goto": "Đường dẫn hoặc URL, ví dụ /login",
+        "fill": "Chữ cần nhập",
+        "select": "Lựa chọn (chữ đang hiện)",
+        "see_text": "Chữ cần thấy",
+        "not_see_text": "Chữ không được thấy",
+        "url_is": "URL mong đợi, ví dụ /home"
+      },
+      "advanced": "Nâng cao",
+      "css": "CSS selector",
+      "cssHint": "Chỉ dùng khi chữ hoặc nhãn không đủ để tìm phần tử.",
+      "cssPlaceholder": "Ví dụ: #submit-button",
+      "summary": {
+        "goto": "Mở trang {value}",
+        "fill": "Nhập \"{value}\" vào {target}",
+        "click": "Bấm {target}",
+        "select": "Chọn \"{value}\" trong {target}",
+        "see_text": "Thấy chữ \"{value}\"",
+        "not_see_text": "Không thấy chữ \"{value}\"",
+        "url_is": "URL là {value}"
+      },
+      "targets": {
+        "text": "chữ \"{value}\"",
+        "label": "ô \"{value}\"",
+        "css": "phần tử {value}"
+      }
     }
   },
   "statuses": {

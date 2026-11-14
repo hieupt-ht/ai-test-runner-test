@@ -156,7 +156,12 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, o
   }
 
   const stepErrors = Array.isArray(errors.steps)
-    ? errors.steps.map((e) => ({ action: e?.action?.message, expected: e?.expected?.message }))
+    ? errors.steps.map((e) => ({
+        action: e?.action?.message,
+        expected: e?.expected?.message,
+        // Lỗi của phần tự động có thể nằm ở cả auto, auto.target.value hoặc auto.value
+        auto: e?.auto?.message ?? e?.auto?.target?.value?.message ?? e?.auto?.value?.message,
+      }))
     : []
   const fieldError = (message?: string) =>
     message ? <p className="text-xs text-destructive">{t(`form.errors.${message}`)}</p> : null

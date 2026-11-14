@@ -2,11 +2,18 @@
 
 import { useTranslations } from "next-intl"
 
-import type { TestCase } from "@/lib/api/types"
+import type { AutoStep, TestCase } from "@/lib/api/types"
 
 /** Hiển thị nội dung case ở chế độ chỉ đọc (không có quyền sửa, hoặc case đã ngừng dùng). */
 export function CaseReadOnly({ testCase }: { testCase: TestCase }) {
   const t = useTranslations("testCases")
+
+  /** Một dòng tóm tắt phần tự động, ví dụ: Nhập "qa@x.com" vào ô "Email". */
+  function describeAuto(auto: AutoStep): string {
+    const target = auto.target ? t(`auto.targets.${auto.target.by}`, { value: auto.target.value }) : ""
+    return t(`auto.summary.${auto.type}`, { value: auto.value, target })
+  }
+
   return (
     <div className="flex flex-col gap-4 text-sm">
       <h2 className="text-lg font-semibold">{testCase.title}</h2>
@@ -24,6 +31,14 @@ export function CaseReadOnly({ testCase }: { testCase: TestCase }) {
                 <span className="mr-2 font-mono text-xs text-muted-foreground">{index + 1}</span>
                 {step.action}
               </p>
+              {step.auto && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  <span aria-hidden className="mr-1">
+                    ⚙
+                  </span>
+                  {describeAuto(step.auto)}
+                </p>
+              )}
               {step.expected && (
                 <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
                   {step.expected}

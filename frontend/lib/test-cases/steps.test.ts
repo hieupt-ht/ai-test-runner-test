@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest"
 
-import { insertStepAfter, moveStep, removeStep } from "@/lib/test-cases/steps"
+import {
+  AUTO_TYPES,
+  autoHasValueField,
+  autoNeedsTarget,
+  autoNeedsValue,
+  defaultAuto,
+  insertStepAfter,
+  isAutoComplete,
+  moveStep,
+  removeStep,
+} from "@/lib/test-cases/steps"
 
 const steps = [
   { action: "a", expected: "" },
@@ -37,5 +47,71 @@ describe("removeStep", () => {
   it("không xoá bước cuối cùng", () => {
     const only = [{ action: "a", expected: "" }]
     expect(removeStep(only, 0)).toEqual(only)
+  })
+})
+
+describe("bước tự động", () => {
+  it("AUTO_TYPES đúng thứ tự cố định", () => {
+    expect(AUTO_TYPES).toEqual([
+      "goto",
+      "fill",
+      "click",
+      "select",
+      "see_text",
+      "not_see_text",
+      "url_is",
+    ])
+  })
+
+  it("autoNeedsTarget: chỉ nhập chữ, bấm và chọn cần chỉ ra phần tử", () => {
+    expect(AUTO_TYPES.filter(autoNeedsTarget)).toEqual(["fill", "click", "select"])
+  })
+
+  it("autoNeedsValue: bấm và nhập chữ được để trống giá trị, các loại khác bắt buộc", () => {
+    expect(AUTO_TYPES.filter(autoNeedsValue)).toEqual([
+      "goto",
+      "select",
+      "see_text",
+      "not_see_text",
+      "url_is",
+    ])
+  })
+
+  it("autoHasValueField: mọi loại trừ bấm có ô giá trị", () => {
+    expect(AUTO_TYPES.filter(autoHasValueField)).toEqual([
+      "goto",
+      "fill",
+      "select",
+      "see_text",
+      "not_see_text",
+      "url_is",
+    ])
+  })
+
+  it("defaultAuto: có phần tử đúng loại khi cần, không có khi không cần", () => {
+    expect(defaultAuto("goto")).toEqual({ type: "goto", value: "" })
+    expect(defaultAuto("fill")).toEqual({
+      type: "fill",
+      value: "",
+      target: { by: "label", value: "" },
+    })
+    expect(defaultAuto("select").target?.by).toBe("label")
+    expect(defaultAuto("click").target).toEqual({ by: "text", value: "" })
+  })
+
+  it("isAutoComplete: kiểm tra phần tử và giá trị bắt buộc", () => {
+    expect(isAutoComplete(defaultAuto("click"))).toBe(false)
+    expect(isAutoComplete({ type: "click", target: { by: "text", value: "Gửi" }, value: "" })).toBe(
+      true,
+    )
+    expect(isAutoComplete(defaultAuto("goto"))).toBe(false)
+    expect(isAutoComplete({ type: "goto", value: "/login" })).toBe(true)
+    expect(
+      isAutoComplete({ type: "fill", target: { by: "label", value: "Email" }, value: "" }),
+    ).toBe(true)
+  })
+
+  it("insertStepAfter vẫn tạo bước trống không có auto", () => {
+    expect(insertStepAfter(steps, 0)[1]).not.toHaveProperty("auto")
   })
 })
