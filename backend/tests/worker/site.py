@@ -71,3 +71,10 @@ def serve() -> Iterator[str]:
     finally:
         server.shutdown()
         server.server_close()
+
+
+if __name__ == "__main__":
+    # Chạy như một "app" thật để thử RunExecutor từ đầu đến cuối: python site.py <cổng>
+    import sys
+
+    HTTPServer(("127.0.0.1", int(sys.argv[1])), _Handler).serve_forever()
