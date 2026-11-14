@@ -80,9 +80,18 @@ Lưu ở thư mục `artifacts/<run_id>/` trên máy worker (bỏ qua git), khô
 **Thay đổi so với bản đầu [Đề xuất]:** `app_path`, `start_command`, `app_url` và tài khoản test (email, mật khẩu) đều để trong **một file cấu hình riêng trên máy worker**, `worker-projects.json` ở thư mục gốc repo (đã gitignore), theo `project_id`:
 
 ```json
-{ "PRJ-0001": { "app_path": "D:/code/shop", "start_command": "npm run dev",
-                "app_url": "http://localhost:3000", "test_email": "qa@x.com", "test_password": "..." } }
+{ "PRJ-0001": {
+    "app_path": "D:/code/shop", "start_command": "npm run dev", "app_url": "http://localhost:3000",
+    "test_email": "qa@x.com", "test_password": "...",
+    "login_steps": [
+      { "type": "goto", "value": "/login" },
+      { "type": "fill", "target": { "by": "label", "value": "Email" }, "value": "{email}" },
+      { "type": "fill", "target": { "by": "label", "value": "Mật khẩu" }, "value": "{password}" },
+      { "type": "click", "target": { "by": "text", "value": "Đăng nhập" } }
+    ] } }
 ```
+
+`login_steps` dùng đúng cấu trúc bước tự động ở mục 4; `{email}` và `{password}` được thay bằng tài khoản test. Worker chạy các bước này **một lần đầu run**, lưu phiên đăng nhập của trình duyệt, rồi mỗi case dùng lại phiên đó. Đăng nhập lỗi thì cả run `FAILED` (không ghi FAIL cho từng case).
 
 Lý do: đường dẫn và lệnh chạy chỉ có ý nghĩa trên máy này; không phải thêm cột vào tab `Projects` (sheet đang dùng sẽ không bị lỗi thiếu cột); và **không có API hay giao diện nào sửa được lệnh chạy**, nên không ai chèn được lệnh lạ vào máy bạn qua web. Đổi lại: muốn đổi lệnh thì sửa file bằng tay. Dự án chưa có trong file thì run bị `FAILED` kèm lý do rõ ràng.
 
