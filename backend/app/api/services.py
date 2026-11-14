@@ -36,6 +36,8 @@ class Services:
     github: GitHubClient | None  # None khi chưa cấu hình GitHub App
     lock_wait_seconds: float = 5.0
     sheet_cache_ttl_seconds: int = 60
+    max_cases_per_run: int = 200
+    artifacts_dir: Path = Path("artifacts")
 
 
 def is_configured(settings: Settings) -> bool:
@@ -83,4 +85,6 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         ),
         github=build_github(settings),
         sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,
+        max_cases_per_run=settings.max_cases_per_run,
+        artifacts_dir=settings.artifacts_dir,
     )

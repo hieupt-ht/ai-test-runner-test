@@ -5,6 +5,7 @@ Việc kiểm tra "thiếu cấu hình bắt buộc" nằm ở bước bootstrap
 """
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,11 +29,18 @@ class Settings(BaseSettings):
     github_app_id: str = ""
     github_app_private_key: str = ""
 
-    # AI (từ M4)
+    # AI (sau này; M4 chưa dùng)
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-5-5"
-    case_timeout_seconds: int = 300
+
+    # Chạy test bằng Playwright (M4)
     max_cases_per_run: int = 200
+    case_timeout_seconds: int = 120
+    step_timeout_ms: int = 10_000
+    app_start_timeout_seconds: int = 120
+    # Thư mục lưu ảnh chụp lỗi, và file cấu hình app của từng dự án (chỉ có trên máy worker)
+    artifacts_dir: Path = Path("artifacts")
+    worker_config_path: Path = Path("worker-projects.json")
 
     # Hạ tầng
     redis_url: str = "redis://localhost:6379/0"
