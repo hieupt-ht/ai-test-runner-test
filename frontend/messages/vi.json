@@ -50,8 +50,24 @@
   "overview": {
     "title": "Tổng quan",
     "greeting": "Xin chào, {name}!",
-    "emptyTitle": "Chưa có dự án nào",
-    "emptyDescription": "Phần dự án sẽ có ở mốc M2. Hiện bạn có thể quản lý người dùng (nếu là Admin)."
+    "description": "Các thông tin cần chú ý theo vai trò của bạn.",
+    "testerSection": "Tổng quan công việc của Tester",
+    "qaSection": "Tổng quan công việc của QA Lead",
+    "adminSection": "Tổng quan dành cho Admin",
+    "activeWork": "Việc đang làm",
+    "activeWorkDescription": "Các màn hình đang cần bạn xử lý.",
+    "dueSoon": "Sắp hết hạn",
+    "dueSoonDescription": "Công việc hết hạn trong 3 ngày tới.",
+    "returnedCases": "Case bị trả lại",
+    "returnedCasesDescription": "Các case cần sửa theo góp ý của QA.",
+    "pendingReview": "Chờ duyệt",
+    "pendingReviewDescription": "Các case đang chờ QA kiểm tra.",
+    "projectCount": "Tổng số dự án",
+    "projectCountDescription": "Các dự án đang có trong hệ thống.",
+    "latestResult": "Kết quả gần nhất",
+    "noProjects": "Chưa có dự án nào.",
+    "noResults": "Chưa có kết quả test.",
+    "viewerEmpty": "Bạn chưa có công việc cần xử lý."
   },
   "roles": {
     "ADMIN": "Admin",
