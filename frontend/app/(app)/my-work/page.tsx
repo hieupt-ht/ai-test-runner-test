@@ -22,6 +22,7 @@ export default function MyWorkPage() {
   const tCases = useTranslations("testCases")
   const { data: items = [], isLoading } = useMyAssignments()
   const [tab, setTab] = useState<WorkTab>("active")
+  const [includeArchived, setIncludeArchived] = useState(false)
   const activeItems = items.filter((item) => ACTIVE_STATUSES.has(item.status))
   const doneItems = items.filter((item) => DONE_STATUSES.has(item.status))
   const visibleItems = tab === "active" ? activeItems : doneItems
@@ -31,6 +32,14 @@ export default function MyWorkPage() {
   // Danh sách đã được backend sắp xếp theo deadline (gần nhất lên trước).
   return (
     <div className="mx-auto max-w-4xl space-y-4">
+      <label className="flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-sm">
+        <input
+          type="checkbox"
+          checked={includeArchived}
+          onChange={(event) => setIncludeArchived(event.target.checked)}
+        />
+        {tCases("includeArchived")}
+      </label>
       <div role="tablist" aria-label={t("title")} className="flex gap-1 border-b">
         <button
           type="button"
@@ -97,7 +106,9 @@ export default function MyWorkPage() {
                 <StatusBadge status={item.status} />
                 <DeadlineBadge deadline={item.deadline} />
                 <Link
-                  href={`/projects/${item.project_id}/test-cases?screen=${item.screen_id}`}
+                  href={`/projects/${item.project_id}/test-cases?screen=${item.screen_id}${
+                    includeArchived ? "&include_archived=true" : ""
+                  }`}
                   className={buttonVariants({ size: "sm" })}
                 >
                   {tCases("writeCases")} <ArrowRight />

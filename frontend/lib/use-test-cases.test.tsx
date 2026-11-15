@@ -4,10 +4,10 @@ import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { api } from "@/lib/api/client"
-import { useApproveTestCases, useSyncIssues, useTransitionTestCase } from "@/lib/use-test-cases"
+import { useApproveTestCases, useArchiveTestCase, useSyncIssues, useTestCases, useTransitionTestCase } from "@/lib/use-test-cases"
 
 vi.mock("@/lib/api/client", () => ({
-  api: { POST: vi.fn() },
+  api: { POST: vi.fn(), GET: vi.fn() },
   ApiError: class extends Error {},
   errorMessage: () => "",
 }))
@@ -31,6 +31,39 @@ describe("useTransitionTestCase", () => {
         params: { path: { project_id: "P1", case_id: "TC-000009" } },
         body: { version: 1, comment: "" },
       },
+    )
+  })
+})
+
+describe("useTestCases", () => {
+  it("gửi include_archived=true khi người dùng bật bộ lọc", async () => {
+    vi.mocked(api.GET).mockResolvedValue({ data: [], response: { ok: true, status: 200 } } as never)
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useTestCases("P1", true), { wrapper })
+
+    await act(async () => result.current.refetch())
+
+    expect(api.GET).toHaveBeenCalledWith("/api/projects/{project_id}/test-cases", {
+      params: { path: { project_id: "P1" }, query: { include_archived: true } },
+    })
+  })
+})
+
+describe("useArchiveTestCase", () => {
+  it("gọi đúng endpoint và version khi lưu trữ", async () => {
+    vi.mocked(api.POST).mockResolvedValue({ data: undefined, response: { ok: true, status: 204 } } as never)
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useArchiveTestCase("P1", "archive"), { wrapper })
+
+    await act(() => result.current.mutateAsync({ caseId: "TC-1", version: 4 }))
+
+    expect(api.POST).toHaveBeenCalledWith(
+      "/api/projects/{project_id}/test-cases/{case_id}/archive",
+      { params: { path: { project_id: "P1", case_id: "TC-1" } }, body: { version: 4, comment: "" } },
     )
   })
 })

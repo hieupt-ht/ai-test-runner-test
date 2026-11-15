@@ -45,7 +45,8 @@ function TestCaseList() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: project } = useProject(projectId)
-  const casesQuery = useTestCases(projectId)
+  const [includeArchived, setIncludeArchived] = useState(searchParams.get("include_archived") === "true")
+  const casesQuery = useTestCases(projectId, includeArchived)
   const syncIssues = useSyncIssues(projectId)
   const screensQuery = useScreens(projectId)
 
@@ -107,6 +108,14 @@ function TestCaseList() {
           creators={creators}
         />
         <div className="flex flex-wrap gap-2">
+          <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              checked={includeArchived}
+              onChange={(event) => setIncludeArchived(event.target.checked)}
+            />
+            {t("includeArchived")}
+          </label>
           {canReview && (
             <Button
               variant="outline"

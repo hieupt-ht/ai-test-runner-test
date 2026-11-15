@@ -430,6 +430,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/{case_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Test Case */
+        post: operations["archive_test_case_api_projects__project_id__test_cases__case_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/test-cases/{case_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Test Case */
+        post: operations["unarchive_test_case_api_projects__project_id__test_cases__case_id__unarchive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases/approve-batch": {
         parameters: {
             query?: never;
@@ -1165,12 +1199,14 @@ export interface components {
             can_edit: boolean;
             /** Can Review */
             can_review: boolean;
+            /** Can Archive */
+            can_archive: boolean;
         };
         /**
          * TestCaseStatus
          * @enum {string}
          */
-        TestCaseStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "DEPRECATED";
+        TestCaseStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "TESTED" | "ARCHIVED" | "DEPRECATED";
         /**
          * TestStep
          * @description Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống).
@@ -1966,7 +2002,9 @@ export interface operations {
     };
     list_test_cases_api_projects__project_id__test_cases_get: {
         parameters: {
-            query?: never;
+            query?: {
+                include_archived?: boolean;
+            };
             header?: never;
             path: {
                 project_id: string;
@@ -2320,6 +2358,74 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ConflictResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_test_case_api_projects__project_id__test_cases__case_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchive_test_case_api_projects__project_id__test_cases__case_id__unarchive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -240,6 +240,9 @@
       "skippedItem": "{id}: {reason}"
     },
     "searchPlaceholder": "Tìm theo mã hoặc tiêu đề",
+    "includeArchived": "Hiện case đã lưu trữ",
+    "archive": "Lưu trữ",
+    "unarchive": "Khôi phục",
     "filterScreen": "Tất cả màn hình",
     "filterStatus": "Mọi trạng thái (ẩn ngừng dùng)",
     "filterSeverity": "Mọi mức độ",
@@ -260,6 +263,8 @@
       "DRAFT": "Nháp",
       "IN_REVIEW": "Chờ duyệt",
       "APPROVED": "Đã duyệt",
+      "TESTED": "Đã kiểm thử",
+      "ARCHIVED": "Đã lưu trữ",
       "DEPRECATED": "Ngừng dùng"
     },
     "severity": {

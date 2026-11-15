@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl"
 import { Suspense, useState } from "react"
 
 import { CaseForm } from "@/components/test-cases/case-form"
+import { ArchiveAction } from "@/components/test-cases/archive-action"
 import { CaseReadOnly } from "@/components/test-cases/case-read-only"
 import { HistoryPanel, commentOf } from "@/components/test-cases/history-panel"
 import { ReviewActions } from "@/components/test-cases/review-actions"
@@ -41,7 +42,7 @@ function TestCaseDetailView() {
   const history = historyQuery.data ?? []
   // Case đang ở Nháp mà từng bị trả lại thì cho người viết thấy nhận xét ngay đầu trang.
   const returned = testCase.status === "DRAFT" ? latestReturn(history) : undefined
-  const editable = testCase.can_edit && testCase.status !== "DEPRECATED"
+  const editable = testCase.can_edit && !["DEPRECATED", "ARCHIVED"].includes(testCase.status)
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
@@ -74,6 +75,7 @@ function TestCaseDetailView() {
           hideSubmit={editable}
           formDirty={editable && formDirty}
         />
+        <ArchiveAction projectId={projectId} testCase={testCase} />
       </div>
 
       {testCase.status === "DEPRECATED" && (

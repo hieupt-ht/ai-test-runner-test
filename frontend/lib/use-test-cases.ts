@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
-import { unwrap } from "@/lib/api/request"
+import { ensureOk, unwrap } from "@/lib/api/request"
 import type {
   AuditEntry,
   BatchApproveResponse,
@@ -15,7 +15,8 @@ import type {
 import type { CaseAction } from "@/lib/test-cases/actions"
 
 // Khoá cache bắt đầu bằng ["projects", projectId] nên được làm mới cùng các dữ liệu khác của dự án.
-const casesKey = (projectId: string) => ["projects", projectId, "test-cases"] as const
+const casesKey = (projectId: string, includeArchived = false) =>
+  ["projects", projectId, "test-cases", { includeArchived }] as const
 const caseKey = (projectId: string, caseId: string) => [...casesKey(projectId), caseId] as const
 const historyKey = (projectId: string, caseId: string) =>
   [...caseKey(projectId, caseId), "history"] as const
@@ -24,15 +25,31 @@ export const casePath = (projectId: string, caseId: string) => ({
   params: { path: { project_id: projectId, case_id: caseId } },
 })
 
-export function useTestCases(projectId: string) {
+export function useTestCases(projectId: string, includeArchived = false) {
   return useQuery({
-    queryKey: casesKey(projectId),
+    queryKey: casesKey(projectId, includeArchived),
     queryFn: async (): Promise<TestCase[]> =>
       unwrap(
         await api.GET("/api/projects/{project_id}/test-cases", {
-          params: { path: { project_id: projectId } },
+          params: {
+            path: { project_id: projectId },
+            query: includeArchived ? { include_archived: true } : {},
+          },
         }),
       ),
+  })
+}
+
+export function useArchiveTestCase(projectId: string, action: "archive" | "unarchive") {
+  const doRefresh = useRefreshCases(projectId)
+  return useMutation({
+    mutationFn: async ({ caseId, version }: { caseId: string; version: number }) => {
+      ensureOk(await api.POST(`/api/projects/{project_id}/test-cases/{case_id}/${action}`, {
+        ...casePath(projectId, caseId),
+        body: { version, comment: "" },
+      }))
+    },
+    onSuccess: doRefresh,
   })
 }
 
