@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { NextIntlClientProvider } from "next-intl"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -200,18 +200,24 @@ describe("ResultsPage", () => {
     expect(mocks.push).toHaveBeenCalledWith("/projects/p1/results")
   })
 
-  it("dùng badge đỏ khi có FAIL và badge xanh khi toàn PASS", () => {
+  it("card màn hình dùng icon thay emoji và tô màu theo trạng thái", () => {
     mocks.searchParams = ""
     mocks.useResults.mockReturnValue({
       data: [...results, homeResult, blockedResult],
       isLoading: false,
       isError: false,
     })
-    renderPage()
+    const { container } = renderPage()
 
-    expect(screen.getByText("✅ 1 · ❌ 1 · ⚠️ 0")).toHaveClass("text-destructive")
-    expect(screen.getByText("✅ 1 · ❌ 0 · ⚠️ 0")).toHaveClass("bg-emerald-100")
-    expect(screen.getByText("✅ 0 · ❌ 0 · ⚠️ 1")).toHaveClass("bg-amber-100")
+    expect(container.textContent).not.toMatch(/[✅❌⚠]/u)
+    const login = screen.getByRole("button", { name: /Đăng nhập/ })
+    expect(within(login).getByLabelText("PASS: 1")).toHaveClass("text-emerald-800")
+    expect(within(login).getByLabelText("FAIL: 1")).toHaveClass("text-red-800")
+    // Số 0 thì làm mờ để mắt chỉ dừng ở trạng thái có case
+    expect(within(login).getByLabelText("BLOCKED: 0")).toHaveClass("text-muted-foreground")
+    const blocked = screen.getByRole("button", { name: /Thanh toán/ })
+    expect(within(blocked).getByLabelText("BLOCKED: 1")).toHaveClass("text-amber-800")
+    expect(login.querySelectorAll("svg")).toHaveLength(3)
   })
 
   it("không có kết quả ở danh sách thì hiện empty state", () => {

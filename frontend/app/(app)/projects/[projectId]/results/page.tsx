@@ -4,7 +4,7 @@ import { Suspense, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 import { useRouter, useSearchParams } from "next/navigation"
 
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react"
+import { CheckCircle2, ChevronDown, ChevronRight, Loader2, TriangleAlert, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -58,11 +58,42 @@ function summarizeScreens(results: ResultItem[]): ScreenSummary[] {
   return [...summaries.values()]
 }
 
-/** Màu nền nhạt như các huy hiệu ở trang khác: đỏ khi có FAIL (do variant), cam khi có BLOCKED, xanh khi toàn PASS. */
-function summaryColor(summary: ScreenSummary): string | undefined {
-  if (summary.fail > 0) return undefined
-  if (summary.blocked > 0) return "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200"
-  return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200"
+const COUNT_STYLES = {
+  PASS: {
+    icon: CheckCircle2,
+    color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+  },
+  FAIL: {
+    icon: XCircle,
+    color: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
+  },
+  BLOCKED: {
+    icon: TriangleAlert,
+    color: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
+  },
+} as const
+
+/** Một ô đếm: icon + số, tô màu theo trạng thái; số 0 thì làm mờ. */
+function CountBadge({
+  kind,
+  count,
+  label,
+}: {
+  kind: keyof typeof COUNT_STYLES
+  count: number
+  label: string
+}) {
+  const { icon: Icon, color } = COUNT_STYLES[kind]
+  return (
+    <Badge
+      variant="outline"
+      aria-label={`${label}: ${count}`}
+      className={cn("border-transparent", count > 0 ? color : "bg-muted text-muted-foreground")}
+    >
+      <Icon aria-hidden />
+      {count}
+    </Badge>
+  )
 }
 
 function ResultsContent() {
@@ -184,12 +215,11 @@ function ResultsContent() {
                 <CardTitle className="text-lg font-semibold">{summary.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <Badge
-                  variant={summary.fail > 0 ? "destructive" : "outline"}
-                  className={cn("border-transparent", summaryColor(summary))}
-                >
-                  ✅ {summary.pass} · ❌ {summary.fail} · ⚠️ {summary.blocked}
-                </Badge>
+                <div className="flex flex-wrap gap-2">
+                  <CountBadge kind="PASS" count={summary.pass} label={t("status.PASS")} />
+                  <CountBadge kind="FAIL" count={summary.fail} label={t("status.FAIL")} />
+                  <CountBadge kind="BLOCKED" count={summary.blocked} label={t("status.BLOCKED")} />
+                </div>
               </CardContent>
             </Card>
           ))}
