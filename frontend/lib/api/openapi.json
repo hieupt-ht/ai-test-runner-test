@@ -2063,6 +2063,22 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "screen_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Screen Id"
+            }
           }
         ],
         "responses": {
@@ -2936,6 +2952,14 @@
             "type": "string",
             "title": "Case Title"
           },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "screen_name": {
+            "type": "string",
+            "title": "Screen Name"
+          },
           "status": {
             "$ref": "#/components/schemas/ResultStatus"
           },
@@ -2972,6 +2996,8 @@
         "required": [
           "case_id",
           "case_title",
+          "screen_id",
+          "screen_name",
           "status",
           "reason",
           "failed_step",

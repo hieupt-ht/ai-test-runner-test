@@ -43,6 +43,12 @@ def browser(
 
 def seed_results(app: FastAPI, project: Project) -> tuple[str, str]:
     scope = scope_for(app.state.services, project)
+    login_screen = scope.screens.create(
+        name="Đăng nhập", description="", route="/login", code_paths=[]
+    )
+    home_screen = scope.screens.create(
+        name="Trang chủ", description="", route="/", code_paths=[]
+    )
     content = TestCaseContent(
         title="Đăng nhập",
         steps=[TestStep(action="Mở trang")],
@@ -50,9 +56,9 @@ def seed_results(app: FastAPI, project: Project) -> tuple[str, str]:
         severity=Severity.HIGH,
         priority=Priority.P1,
     )
-    first = scope.test_cases.create(screen_id="SC-0001", content=content, actor="an@x.com")
+    first = scope.test_cases.create(screen_id=login_screen.id, content=content, actor="an@x.com")
     second = scope.test_cases.create(
-        screen_id="SC-0001",
+        screen_id=home_screen.id,
         content=content.model_copy(update={"title": "Đăng xuất"}),
         actor="binh@x.com",
     )
@@ -114,8 +120,11 @@ def test_qa_lead_sees_all_latest_results(
     assert items[first_id]["evidence"] == "https://example.com/evidence"
     assert items[first_id]["run_id"] == "RUN-0002"
     assert items[first_id]["finished_at"]
+    assert items[first_id]["screen_id"] == "SC-0001"
+    assert items[first_id]["screen_name"] == "Đăng nhập"
     assert gateway.calls.count("Runs") == 1
     assert gateway.calls.count("Results") == 1
+    assert gateway.calls.count("Screens") == 1
 
 
 def test_tester_sees_only_own_cases(
@@ -146,6 +155,66 @@ def test_filter_by_status(
 
     assert response.status_code == 200
     assert [item["case_id"] for item in response.json()] == [first_id]
+
+
+def test_filter_by_screen_id(
+    app: FastAPI,
+    oauth: FakeOAuth,
+    users: UserRepository,
+    project: Project,
+) -> None:
+    first_id, _ = seed_results(app, project)
+
+    response = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD).get(
+        path(project, "?screen_id=SC-0001")
+    )
+
+    assert response.status_code == 200
+    assert [item["case_id"] for item in response.json()] == [first_id]
+
+
+def test_missing_screen_uses_screen_id_as_name(
+    app: FastAPI,
+    oauth: FakeOAuth,
+    users: UserRepository,
+    project: Project,
+) -> None:
+    scope = scope_for(app.state.services, project)
+    case = scope.test_cases.create(
+        screen_id="SC-DELETED",
+        content=TestCaseContent(
+            title="Màn hình đã xóa",
+            steps=[TestStep(action="Mở trang")],
+            expected_result="Thành công",
+            severity=Severity.MEDIUM,
+            priority=Priority.P2,
+        ),
+        actor="an@x.com",
+    )
+    run = scope.runs.create(triggered_by="agent", scope=RunScope(), branch="main", total=1)
+    run.status = RunStatus.COMPLETED
+    run.finished_at = utc_now()
+    scope.runs.save(run)
+    scope.results.append_batch(
+        [
+            Result(
+                id=f"{run.id}-{case.id}",
+                run_id=run.id,
+                test_case_id=case.id,
+                status=ResultStatus.PASS,
+                reason="Đạt",
+                failed_step=None,
+                screenshot=None,
+                created_at=run.finished_at,
+            )
+        ]
+    )
+
+    response = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD).get(path(project))
+
+    assert response.status_code == 200
+    assert response.json()[0]["screen_id"] == "SC-DELETED"
+    assert response.json()[0]["screen_name"] == "SC-DELETED"
 
 
 def test_non_member_forbidden(

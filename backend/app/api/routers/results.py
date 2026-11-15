@@ -20,6 +20,8 @@ router = APIRouter(prefix="/api/projects/{project_id}/results", tags=["results"]
 class ResultItem(BaseModel):
     case_id: str
     case_title: str
+    screen_id: str
+    screen_name: str
     status: ResultStatus
     reason: str
     failed_step: int | None
@@ -34,9 +36,10 @@ def list_results(
     user: CurrentUser,
     services: ServicesDep,
     status: ResultStatus | None = None,
+    screen_id: str | None = None,
 ) -> list[ResultItem]:
     project = load_project(services, user, project_id, Action.VIEW_PROJECT, allow_archived=True)
-    return results_for_project(services, project, user, status=status)
+    return results_for_project(services, project, user, status=status, screen_id=screen_id)
 
 
 def results_for_project(
@@ -45,6 +48,7 @@ def results_for_project(
     user: CurrentUser,
     *,
     status: ResultStatus | None = None,
+    screen_id: str | None = None,
     cases: list[TestCase] | None = None,
 ) -> list[ResultItem]:
     """Đọc kết quả một dự án; `cases` giúp Tổng quan không đọc lại tab TestCases."""
@@ -63,6 +67,7 @@ def results_for_project(
         results_by_run.setdefault(result.run_id, []).append(result)
     case_list = scope.test_cases.list_all() if cases is None else cases
     cases_by_id = {case.id: case for case in case_list}
+    screen_names = {screen.id: screen.name for screen in scope.screens.list_all()}
     latest: dict[str, ResultItem] = {}
     for run in sorted(
         runs, key=lambda item: (item.finished_at or item.started_at, item.id), reverse=True
@@ -73,12 +78,16 @@ def results_for_project(
             case = cases_by_id.get(result.test_case_id)
             if case is None or case.id in latest:
                 continue
+            if screen_id is not None and case.screen_id != screen_id:
+                continue
             if user.role == Role.TESTER and case.created_by != normalize_email(user.email):
                 continue
             # Lọc sau khi tìm mới nhất; kết quả cũ khớp lọc không được hiện thay.
             latest[case.id] = ResultItem(
                 case_id=case.id,
                 case_title=case.title,
+                screen_id=case.screen_id,
+                screen_name=screen_names.get(case.screen_id, case.screen_id),
                 status=result.status,
                 reason=result.reason,
                 failed_step=result.failed_step,

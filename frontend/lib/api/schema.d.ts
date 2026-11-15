@@ -1026,6 +1026,10 @@ export interface components {
             case_id: string;
             /** Case Title */
             case_title: string;
+            /** Screen Id */
+            screen_id: string;
+            /** Screen Name */
+            screen_name: string;
             status: components["schemas"]["ResultStatus"];
             /** Reason */
             reason: string;
@@ -2777,6 +2781,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: components["schemas"]["ResultStatus"] | null;
+                screen_id?: string | null;
             };
             header?: never;
             path: {
