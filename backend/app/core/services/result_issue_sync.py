@@ -12,6 +12,7 @@ from app.core.models.test_case import TestCase
 RESULT_MARKER = "<!-- ai-test-runner-result -->"
 PASS_LABEL = "test: pass"
 FAIL_LABEL = "test: fail"
+RERUN_LABEL = "needs-rerun"  # có kết quả mới thì yêu cầu chạy lại đã được đáp ứng
 
 
 def _private_values(case: TestCase) -> list[str]:
@@ -138,7 +139,7 @@ def sync_issue_state(
     state: Literal["open", "closed"] = "closed" if passed else "open"
     add_label, remove_label = (PASS_LABEL, FAIL_LABEL) if passed else (FAIL_LABEL, PASS_LABEL)
     github.ensure_label(repo, add_label, color="2da44e" if passed else "d73a4a")
-    labels = [label for label in issue.labels if label != remove_label]
+    labels = [label for label in issue.labels if label not in (remove_label, RERUN_LABEL)]
     if add_label not in labels:
         labels.append(add_label)
     github.update_issue_state_and_labels(repo, issue.number, state=state, labels=labels)

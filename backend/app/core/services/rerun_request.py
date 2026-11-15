@@ -8,12 +8,12 @@ from datetime import datetime
 
 from app.core.github.client import GitHubClient
 from app.core.github.issue_format import case_label
-from app.core.services.result_issue_sync import FAIL_LABEL, PASS_LABEL
+from app.core.services.result_issue_sync import FAIL_LABEL, PASS_LABEL, RERUN_LABEL
+from app.core.time import VIETNAM
 
 logger = logging.getLogger(__name__)
 
 RERUN_MARKER = "<!-- ai-test-runner-rerun -->"
-RERUN_LABEL = "needs-rerun"
 RERUN_LABEL_COLOR = "e6a817"
 
 
@@ -21,7 +21,7 @@ def format_rerun_comment(user_name: str, requested_at: datetime) -> str:
     return "\n".join(
         [
             RERUN_MARKER,
-            f"🔄 **Yêu cầu chạy lại** — {user_name} · {requested_at:%Y-%m-%d %H:%M}",
+            f"🔄 **Yêu cầu chạy lại** — {user_name} · {requested_at.astimezone(VIETNAM):%Y-%m-%d %H:%M}",
             "Mở Codex và chạy lại case này.",
         ]
     )
