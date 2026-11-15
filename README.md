@@ -48,6 +48,10 @@ Google Sheets  ── nơi lưu dữ liệu (chỉ backend được ghi)
 
 ## Chuẩn bị (làm một lần)
 
+> **Tiếp nhận dự án hoặc muốn setup dưới tài khoản của bạn?** Xem [SETUP.md](SETUP.md) — có giải thích tại sao từng bước cần làm.
+
+
+
 Cần: **Docker Desktop**. Nếu muốn chạy từng phần để phát triển thì cần thêm **Python 3.12+**, **[uv](https://docs.astral.sh/uv/)** và **Node 24**.
 
 ### 1. Google OAuth (để đăng nhập)
