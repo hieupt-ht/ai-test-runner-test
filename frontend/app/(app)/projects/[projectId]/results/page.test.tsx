@@ -52,10 +52,11 @@ describe("ResultsPage", () => {
     mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
     const { container } = renderPage()
 
-    expect(screen.getByText("FAIL", { selector: '[data-slot="badge"]' })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /FAIL: 1/ })).toBeInTheDocument()
     expect(screen.getByText("Sai mật khẩu vẫn đăng nhập được")).toBeInTheDocument()
     expect(screen.getByText("Bước lỗi: 2")).toBeInTheDocument()
     expect(container.querySelector('a[href^="javascript:"]')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /PASS: 1/ }))
     expect(screen.getByRole("link", { name: "Bằng chứng" })).toHaveAttribute(
       "href",
       "https://example.com/evidence.png",
@@ -77,5 +78,34 @@ describe("ResultsPage", () => {
     renderPage()
 
     expect(screen.getByText("Chưa có kết quả test")).toBeInTheDocument()
+  })
+
+  it("tính số kết quả và mở FAIL/BLOCKED nhưng thu PASS mặc định", () => {
+    mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+    renderPage()
+
+    expect(screen.getByText("PASS: 1")).toBeInTheDocument()
+    expect(screen.getByText("FAIL: 1")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /PASS: 1/ })).toHaveAttribute("aria-expanded", "false")
+    expect(screen.getByRole("button", { name: /FAIL: 1/ })).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("bấm tiêu đề nhóm để đổi trạng thái thu mở", () => {
+    mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+    renderPage()
+
+    fireEvent.click(screen.getByRole("button", { name: /FAIL: 1/ }))
+    expect(screen.getByRole("button", { name: /FAIL: 1/ })).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("chỉ hiện nhóm được lọc", () => {
+    mocks.useResults.mockReturnValue({ data: results.filter((result) => result.status === "FAIL"), isLoading: false, isError: false })
+    renderPage()
+    fireEvent.change(screen.getByRole("combobox", { name: "Lọc trạng thái" }), {
+      target: { value: "FAIL" },
+    })
+
+    expect(screen.getByRole("button", { name: /FAIL:/ })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /PASS:/ })).not.toBeInTheDocument()
   })
 })

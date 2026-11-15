@@ -44,6 +44,11 @@
     },
     "failedStep": "Bước lỗi: {step}",
     "evidence": "Bằng chứng",
+    "summary": "PASS: {PASS} · FAIL: {FAIL} · BLOCKED: {BLOCKED}",
+    "caseId": "Mã case",
+    "caseTitle": "Tiêu đề",
+    "reasonColumn": "Lý do",
+    "failedStepColumn": "Bước lỗi",
     "empty": "Chưa có kết quả test",
     "loading": "Đang tải kết quả...",
     "error": "Không tải được kết quả test. Vui lòng thử lại."

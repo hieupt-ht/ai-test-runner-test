@@ -1,22 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { useProjectId } from "@/lib/use-project-id"
 import { useResults } from "@/lib/use-results"
 import type { ResultStatus } from "@/lib/api/types"
 
 const STATUSES: ResultStatus[] = ["PASS", "FAIL", "BLOCKED", "INCONCLUSIVE"]
 
-const statusStyles: Record<ResultStatus, string> = {
-  PASS: "border-emerald-600/30 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
-  FAIL: "border-destructive/30 bg-destructive/10 text-destructive",
-  BLOCKED: "border-amber-600/30 bg-amber-600/10 text-amber-700 dark:text-amber-400",
-  INCONCLUSIVE: "border-amber-600/30 bg-amber-600/10 text-amber-700 dark:text-amber-400",
-}
+const GROUPS = ["FAIL", "BLOCKED", "PASS"] as const
 
 function safeEvidenceUrl(value: string): string | null {
   try {
@@ -31,7 +25,21 @@ export default function ResultsPage() {
   const t = useTranslations("results")
   const projectId = useProjectId()
   const [status, setStatus] = useState<ResultStatus | undefined>()
+  const [collapsed, setCollapsed] = useState<ResultStatus[]>(["PASS"])
   const { data = [], isLoading, isError } = useResults(projectId, status)
+  const groups = useMemo(() => {
+    const rows = status ? data.filter((item) => item.status === status) : data
+    return {
+      FAIL: rows.filter((item) => item.status === "FAIL"),
+      BLOCKED: rows.filter((item) => item.status === "BLOCKED" || item.status === "INCONCLUSIVE"),
+      PASS: rows.filter((item) => item.status === "PASS"),
+    }
+  }, [data, status])
+  const counts = {
+    PASS: data.filter((item) => item.status === "PASS").length,
+    FAIL: data.filter((item) => item.status === "FAIL").length,
+    BLOCKED: data.filter((item) => item.status === "BLOCKED" || item.status === "INCONCLUSIVE").length,
+  }
 
   return (
     <section className="space-y-4">
@@ -66,37 +74,65 @@ export default function ResultsPage() {
       ) : data.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">{t("empty")}</p>
       ) : (
-        <div className="grid gap-3">
-          {data.map((result) => {
-            const evidenceUrl = result.evidence ? safeEvidenceUrl(result.evidence) : null
+        <div className="space-y-3">
+          <p className="rounded-lg border bg-muted/30 px-4 py-3 text-sm font-medium" aria-live="polite">
+            {t("summary", counts)}
+          </p>
+          {GROUPS.map((group) => {
+            const rows = groups[group]
+            if (rows.length === 0) return null
+            const isCollapsed = collapsed.includes(group)
             return (
-              <Card key={`${result.case_id}-${result.run_id}`} size="sm">
-                <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-                  <CardTitle className="min-w-0">
-                    <span className="mr-2 font-mono text-xs text-muted-foreground">{result.case_id}</span>
-                    {result.case_title}
-                  </CardTitle>
-                  <Badge className={statusStyles[result.status]}>{t(`status.${result.status}`)}</Badge>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {result.reason && <p>{result.reason}</p>}
-                  {result.failed_step !== null && (
-                    <p className="text-sm text-muted-foreground">
-                      {t("failedStep", { step: result.failed_step })}
-                    </p>
+              <section key={group} className="overflow-hidden rounded-lg border">
+                <button
+                  type="button"
+                  aria-expanded={!isCollapsed}
+                  onClick={() => setCollapsed((items) =>
+                    isCollapsed ? items.filter((item) => item !== group) : [...items, group],
                   )}
-                  {evidenceUrl && (
-                    <a
-                      href={evidenceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary underline underline-offset-4"
-                    >
-                      {t("evidence")}
-                    </a>
-                  )}
-                </CardContent>
-              </Card>
+                  className="flex w-full items-center gap-2 bg-muted/40 px-4 py-3 text-left font-semibold"
+                >
+                  {isCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                  {t(`status.${group}`)}: {rows.length}
+                </button>
+                {!isCollapsed && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-left text-sm">
+                      <thead className="bg-muted/20 text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-2">{t("caseId")}</th>
+                          <th className="px-4 py-2">{t("caseTitle")}</th>
+                          <th className="px-4 py-2">{t("reasonColumn")}</th>
+                          <th className="px-4 py-2">{t("failedStepColumn")}</th>
+                          <th className="px-4 py-2">{t("evidence")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {rows.map((result) => {
+                          const evidenceUrl = result.evidence ? safeEvidenceUrl(result.evidence) : null
+                          return (
+                            <tr key={`${result.case_id}-${result.run_id}`}>
+                              <td className="px-4 py-3 font-mono text-xs">{result.case_id}</td>
+                              <td className="px-4 py-3">{result.case_title}</td>
+                              <td className="max-w-sm px-4 py-3">{result.reason || "—"}</td>
+                              <td className="px-4 py-3">
+                                {result.failed_step === null ? "—" : t("failedStep", { step: result.failed_step })}
+                              </td>
+                              <td className="px-4 py-3">
+                                {evidenceUrl && (
+                                  <a href={evidenceUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4">
+                                    {t("evidence")}
+                                  </a>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
             )
           })}
         </div>
