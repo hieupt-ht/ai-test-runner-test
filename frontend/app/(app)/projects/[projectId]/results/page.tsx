@@ -8,8 +8,11 @@ import { ChevronDown, ChevronRight, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useProjectId } from "@/lib/use-project-id"
+import { cn } from "@/lib/utils"
 import { useMe } from "@/lib/use-me"
 import { useRequestRerun, useResults } from "@/lib/use-results"
 import type { ResultItem, ResultStatus } from "@/lib/api/types"
@@ -53,6 +56,13 @@ function summarizeScreens(results: ResultItem[]): ScreenSummary[] {
     summaries.set(result.screen_id, summary)
   }
   return [...summaries.values()]
+}
+
+/** Màu nền nhạt như các huy hiệu ở trang khác: đỏ khi có FAIL (do variant), cam khi có BLOCKED, xanh khi toàn PASS. */
+function summaryColor(summary: ScreenSummary): string | undefined {
+  if (summary.fail > 0) return undefined
+  if (summary.blocked > 0) return "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200"
+  return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200"
 }
 
 function ResultsContent() {
@@ -120,7 +130,7 @@ function ResultsContent() {
               ← {t("allScreens")}
             </button>
           )}
-          <h1 className="text-xl font-semibold">{screenId ? screenName : t("title")}</h1>
+          {screenId && <h2 className="text-lg font-semibold">{screenName}</h2>}
         </div>
         {screenId && (
           <label className="flex items-center gap-2 text-sm">
@@ -131,7 +141,7 @@ function ResultsContent() {
               onChange={(event) =>
                 setStatus(event.target.value === "all" ? undefined : (event.target.value as ResultStatus))
               }
-              className="h-9 rounded-lg border border-input bg-background px-3"
+              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
             >
               <option value="all">{t("all")}</option>
               {STATUSES.map((item) => (
@@ -145,13 +155,15 @@ function ResultsContent() {
       </div>
 
       {isLoading ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">{t("loading")}</p>
+        <Skeleton className="h-48 w-full" aria-label={t("loading")} />
       ) : isError ? (
-        <p role="alert" className="py-8 text-center text-sm text-destructive">
+        <p role="alert" className="rounded-lg border py-10 text-center text-sm text-destructive">
           {t("error")}
         </p>
       ) : data.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">{t("empty")}</p>
+        <p className="rounded-lg border py-10 text-center text-sm text-muted-foreground">
+          {t("empty")}
+        </p>
       ) : !screenId ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {screenSummaries.map((summary) => (
@@ -173,12 +185,8 @@ function ResultsContent() {
               </CardHeader>
               <CardContent>
                 <Badge
-                  variant={summary.fail > 0 ? "destructive" : summary.blocked > 0 ? "secondary" : "default"}
-                  className={
-                    summary.fail === 0 && summary.blocked === 0
-                      ? "bg-emerald-600 text-white"
-                      : undefined
-                  }
+                  variant={summary.fail > 0 ? "destructive" : "outline"}
+                  className={cn("border-transparent", summaryColor(summary))}
                 >
                   ✅ {summary.pass} · ❌ {summary.fail} · ⚠️ {summary.blocked}
                 </Badge>
@@ -209,64 +217,67 @@ function ResultsContent() {
                   {t(`status.${group}`)}: {rows.length}
                 </button>
                 {!isCollapsed && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[640px] text-left text-sm">
-                      <thead className="bg-muted/20 text-muted-foreground">
-                        <tr>
-                          <th className="px-4 py-2">{t("caseId")}</th>
-                          <th className="px-4 py-2">{t("caseTitle")}</th>
-                          <th className="px-4 py-2">{t("reasonColumn")}</th>
-                          <th className="px-4 py-2">{t("failedStepColumn")}</th>
-                          <th className="px-4 py-2">{t("evidence")}</th>
-                          {canRerun && <th className="px-4 py-2">{t("actionsColumn")}</th>}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {rows.map((result) => {
-                          const evidenceUrl = result.evidence ? safeEvidenceUrl(result.evidence) : null
-                          return (
-                            <tr key={`${result.case_id}-${result.run_id}`}>
-                              <td className="px-4 py-3 font-mono text-xs">{result.case_id}</td>
-                              <td className="px-4 py-3">{result.case_title}</td>
-                              <td className="max-w-sm px-4 py-3">{result.reason || "—"}</td>
-                              <td className="px-4 py-3">
-                                {result.failed_step === null ? "—" : t("failedStep", { step: result.failed_step })}
-                              </td>
-                              <td className="px-4 py-3">
-                                {evidenceUrl && (
-                                  <a href={evidenceUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4">
-                                    {t("evidence")}
-                                  </a>
-                                )}
-                              </td>
-                              {canRerun && (
-                                <td className="px-4 py-3">
-                                  {result.status !== "PASS" && (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      disabled={rerun.isPending}
-                                      onClick={() => requestRerun(result.case_id)}
-                                    >
-                                      {rerun.isPending && rerun.variables === result.case_id ? (
-                                        <>
-                                          <Loader2 className="size-4 animate-spin" aria-hidden />
-                                          {t("rerunPending")}
-                                        </>
-                                      ) : (
-                                        t("rerun")
-                                      )}
-                                    </Button>
-                                  )}
-                                </td>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-28">{t("caseId")}</TableHead>
+                        <TableHead>{t("caseTitle")}</TableHead>
+                        <TableHead>{t("reasonColumn")}</TableHead>
+                        <TableHead>{t("failedStepColumn")}</TableHead>
+                        <TableHead>{t("evidence")}</TableHead>
+                        {canRerun && <TableHead className="w-32 text-right">{t("actionsColumn")}</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rows.map((result) => {
+                        const evidenceUrl = result.evidence ? safeEvidenceUrl(result.evidence) : null
+                        return (
+                          <TableRow key={`${result.case_id}-${result.run_id}`}>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{result.case_id}</TableCell>
+                            <TableCell className="font-medium">{result.case_title}</TableCell>
+                            <TableCell className="max-w-sm whitespace-normal">{result.reason || "—"}</TableCell>
+                            <TableCell>
+                              {result.failed_step === null ? "—" : t("failedStep", { step: result.failed_step })}
+                            </TableCell>
+                            <TableCell>
+                              {evidenceUrl && (
+                                <a
+                                  href={evidenceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline-offset-2 hover:underline"
+                                >
+                                  {t("evidence")}
+                                </a>
                               )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                            </TableCell>
+                            {canRerun && (
+                              <TableCell className="text-right">
+                                {result.status !== "PASS" && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={rerun.isPending}
+                                    onClick={() => requestRerun(result.case_id)}
+                                  >
+                                    {rerun.isPending && rerun.variables === result.case_id ? (
+                                      <>
+                                        <Loader2 className="animate-spin" aria-hidden />
+                                        {t("rerunPending")}
+                                      </>
+                                    ) : (
+                                      t("rerun")
+                                    )}
+                                  </Button>
+                                )}
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
                 )}
               </section>
             )

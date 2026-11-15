@@ -210,8 +210,8 @@ describe("ResultsPage", () => {
     renderPage()
 
     expect(screen.getByText("✅ 1 · ❌ 1 · ⚠️ 0")).toHaveClass("text-destructive")
-    expect(screen.getByText("✅ 1 · ❌ 0 · ⚠️ 0")).toHaveClass("bg-emerald-600")
-    expect(screen.getByText("✅ 0 · ❌ 0 · ⚠️ 1")).not.toHaveClass("bg-emerald-600")
+    expect(screen.getByText("✅ 1 · ❌ 0 · ⚠️ 0")).toHaveClass("bg-emerald-100")
+    expect(screen.getByText("✅ 0 · ❌ 0 · ⚠️ 1")).toHaveClass("bg-amber-100")
   })
 
   it("không có kết quả ở danh sách thì hiện empty state", () => {
