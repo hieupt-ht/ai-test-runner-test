@@ -66,6 +66,19 @@ def test_body_has_marker_with_case_id_and_version() -> None:
     assert "<!-- tc:TC-000123 v3 -->" in render_issue(make_case()).body
 
 
+def test_body_has_project_and_endpoint_for_agent_to_report_result() -> None:
+    body = render_issue(
+        make_case(),
+        project_id="PRJ-0001",
+        app_base_url="http://localhost:3000/",
+    ).body
+    assert "Mã dự án: `PRJ-0001`" in body
+    assert (
+        "Endpoint: `http://localhost:3000/api/agent/projects/PRJ-0001/results`" in body
+    )
+    assert "AGENT_API_TOKEN" in body
+
+
 def test_very_long_case_body_is_truncated_under_github_limit() -> None:
     case = make_case().model_copy(update={"precondition": "a" * 70000})
     body = render_issue(case).body

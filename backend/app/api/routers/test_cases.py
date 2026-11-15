@@ -99,7 +99,11 @@ def _service_for(services: Services, project: Project) -> TestCaseService:
         audit_log=scope.audit_log,
         issue_sync=services.issue_sync,
         project=project,
-        issue_syncer=IssueSyncer(services.github) if services.github else None,
+        issue_syncer=(
+            IssueSyncer(services.github, app_base_url=services.app_base_url)
+            if services.github
+            else None
+        ),
         notifier=Notifier(services.notifications),
     )
 

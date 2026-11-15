@@ -29,9 +29,17 @@ def make_project() -> Project:
 
 def test_approved_case_without_issue_creates_one_with_labels() -> None:
     github = FakeGitHub()
-    result = IssueSyncer(github).sync_case(make_project(), make_case())
+    result = IssueSyncer(github, app_base_url="https://runner.example.com").sync_case(
+        make_project(), make_case()
+    )
     assert result == "created"
-    assert github.issues["org/web"][0][0].labels == ["test-case", "tc:TC-000123", "status:APPROVED"]
+    issue, body = github.issues["org/web"][0]
+    assert issue.labels == ["test-case", "tc:TC-000123", "status:APPROVED"]
+    assert "Mã dự án: `PRJ-0001`" in body
+    assert (
+        "Endpoint: `https://runner.example.com/api/agent/projects/PRJ-0001/results`"
+        in body
+    )
 
 
 def test_draft_case_without_issue_is_skipped() -> None:

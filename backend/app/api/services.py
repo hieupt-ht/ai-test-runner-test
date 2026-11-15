@@ -38,6 +38,7 @@ class Services:
     members: ProjectMemberRepository
     github: GitHubClient | None  # None khi chưa cấu hình GitHub App
     issue_sync: IssueSink | None = None
+    app_base_url: str = "http://localhost:3000"
     lock_wait_seconds: float = 5.0
     sheet_cache_ttl_seconds: int = 60
 
@@ -88,6 +89,11 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
             gateway, system_sheet, redis, cache_ttl_seconds=settings.user_cache_ttl_seconds
         ),
         github=github,
-        issue_sync=BackgroundIssueSync(IssueSyncer(github)) if github else None,
+        issue_sync=(
+            BackgroundIssueSync(IssueSyncer(github, app_base_url=settings.app_base_url))
+            if github
+            else None
+        ),
+        app_base_url=settings.app_base_url,
         sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,
     )

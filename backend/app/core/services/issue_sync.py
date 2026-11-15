@@ -18,15 +18,26 @@ class IssueSink(Protocol):
 
 
 class IssueSyncer:
-    def __init__(self, github: GitHubClient | None) -> None:
+    def __init__(
+        self,
+        github: GitHubClient | None,
+        *,
+        app_base_url: str = "http://localhost:3000",
+    ) -> None:
         self._github = github
+        self._app_base_url = app_base_url
 
     def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> SyncResult:
         github = self._github
         if github is None or project.archived:
             return "skipped"
 
-        content = render_issue(case, screen_name=screen_name)
+        content = render_issue(
+            case,
+            screen_name=screen_name,
+            project_id=project.id,
+            app_base_url=self._app_base_url,
+        )
         # Mã case chỉ duy nhất bên trong một dự án; luôn tìm trong repo của dự án đó.
         existing = github.find_issue_by_label(project.repo_full_name, content.labels[1])
         if existing is None and case.status != TestCaseStatus.APPROVED:

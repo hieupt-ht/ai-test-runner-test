@@ -36,21 +36,44 @@ def _safe_text(value: str) -> str:
     )
 
 
-def render_issue(case: TestCase, *, screen_name: str = "") -> IssueContent:
+def render_issue(
+    case: TestCase,
+    *,
+    screen_name: str = "",
+    project_id: str = "",
+    app_base_url: str = "",
+) -> IssueContent:
     lines = [
         f"<!-- {case_label(case.id)} v{case.version} -->",
         f"# [{case.id}] {_safe_text(case.title)}",
-        "",
-        f"- Màn hình: {_safe_text(screen_name or case.screen_id)}",
-        f"- Mức độ: {case.severity.value}",
-        f"- Ưu tiên: {case.priority.value}",
-        f"- Trạng thái: {case.status.value}",
-        "",
-        "## Điều kiện tiên quyết",
-        _safe_text(case.precondition),
-        "",
-        "## Các bước",
     ]
+    if project_id and app_base_url:
+        endpoint = (
+            f"{app_base_url.rstrip('/')}/api/agent/projects/{project_id}/results"
+        )
+        lines.extend(
+            [
+                "",
+                "## Báo cáo cho AI Test Runner",
+                f"- Mã dự án: `{_safe_text(project_id)}`",
+                f"- Endpoint: `{_safe_text(endpoint)}`",
+                "- Xác thực: `Authorization: Bearer` từ biến môi trường `AGENT_API_TOKEN`",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            f"- Màn hình: {_safe_text(screen_name or case.screen_id)}",
+            f"- Mức độ: {case.severity.value}",
+            f"- Ưu tiên: {case.priority.value}",
+            f"- Trạng thái: {case.status.value}",
+            "",
+            "## Điều kiện tiên quyết",
+            _safe_text(case.precondition),
+            "",
+            "## Các bước",
+        ]
+    )
     for number, step in enumerate(case.steps, start=1):
         lines.append(f"{number}. {_safe_text(step.action)}")
         if step.expected:

@@ -28,13 +28,13 @@ Mở lại Codex, dùng `/mcp` để kiểm tra các công cụ GitHub đã hi�
 - Mở Codex tại **bản sao repo app cần test trong một thư mục riêng**. Đọc README của app để biết cách khởi động và URL. Chỉ cho phép các lệnh cần thiết như `npm install`, `npm run dev`, `npx playwright install chromium`, `npx playwright test --reporter=json`.
 - Cài Playwright và Chromium trong thư mục đó nếu app chưa có. Dùng tài khoản kiểm thử riêng khi cần đăng nhập. Không yêu cầu Codex mở `.env`, không chép mật khẩu hoặc token vào issue/comment.
 - Trong `.env` **của AI Test Runner**, đặt `AGENT_API_TOKEN` là chuỗi ngẫu nhiên dài. Để trống thì API agent trả 404. Cung cấp token này cho tiến trình Codex qua biến môi trường, ngoài repo và ngoài prompt; không đưa giá trị token vào lời nhắn cho Codex.
-- Nếu Codex chạy trên máy khác backend, thay `localhost:8000` trong ví dụ bên dưới bằng địa chỉ backend mà máy đó truy cập được.
+- App ghi sẵn mã dự án và endpoint báo cáo vào từng issue. `APP_BASE_URL` phải là địa chỉ AI Test Runner mà máy chạy Codex truy cập được. Khi chạy cùng máy, giá trị mặc định `http://localhost:3000` là đủ.
 
 ## 3. Prompt mẫu cho Codex
 
-Thay `<owner/repo>`, `<project_id>` và URL bằng giá trị của dự án:
+Chỉ cần thay `<owner/repo>` bằng repo của dự án. Mã dự án và endpoint đã có trong issue:
 
-> Trong repo `<owner/repo>`, dùng GitHub MCP liệt kê issue có cả hai label `test-case` và `status:APPROVED`. Đọc từng issue và README/source của app để hiểu cách chạy. Viết kịch bản Playwright cho các bước trong issue, chạy bằng `npx playwright test --reporter=json` và lưu báo cáo JSON. Lấy PASS/FAIL từ **báo cáo JSON và mã thoát của lệnh**, không tự đoán từ lời giải thích. Nếu không chạy được, dùng `BLOCKED` hoặc `INCONCLUSIVE` kèm lý do. Comment kết quả lên đúng issue: trạng thái, bước lỗi nếu có, và đường dẫn bằng chứng không chứa bí mật. Sau đó gọi `POST <backend_url>/api/agent/projects/<project_id>/results` bằng `Authorization: Bearer` lấy từ biến môi trường `AGENT_API_TOKEN`; gửi một phần tử kết quả cho mỗi case. Báo lại mã run và các case bị API bỏ qua. Không đọc `.env` và không đưa mật khẩu/token vào issue hay comment.
+> Trong repo `<owner/repo>`, dùng GitHub MCP liệt kê issue có cả hai label `test-case` và `status:APPROVED`. Đọc từng issue và README/source của app để hiểu cách chạy. Viết kịch bản Playwright cho các bước trong issue, chạy bằng `npx playwright test --reporter=json` và lưu báo cáo JSON. Lấy PASS/FAIL từ **báo cáo JSON và mã thoát của lệnh**, không tự đoán từ lời giải thích. Nếu không chạy được, dùng `BLOCKED` hoặc `INCONCLUSIVE` kèm lý do. Comment kết quả lên đúng issue: trạng thái, bước lỗi nếu có, và đường dẫn bằng chứng không chứa bí mật. Sau đó đọc mục **Báo cáo cho AI Test Runner** trong issue và gọi đúng endpoint ở đó bằng `Authorization: Bearer` lấy từ biến môi trường `AGENT_API_TOKEN`; gửi một phần tử kết quả cho mỗi case. Báo lại mã run và các case bị API bỏ qua. Không đọc `.env` và không đưa mật khẩu/token vào issue hay comment.
 
 **Lưu ý:** API ghi Sheet không tự comment lên GitHub; Codex phải làm cả hai thao tác. Nếu issue đã cũ so với case trong Sheet, QA Lead bấm **Đồng bộ lại issue** trước khi chạy.
 
@@ -43,7 +43,7 @@ Thay `<owner/repo>`, `<project_id>` và URL bằng giá trị của dự án:
 Ví dụ cho terminal Bash, khi `AGENT_API_TOKEN` đã có trong môi trường của tiến trình Codex:
 
 ```bash
-curl -X POST 'http://localhost:8000/api/agent/projects/PRJ-0001/results' \
+curl -X POST 'http://localhost:3000/api/agent/projects/PRJ-0001/results' \
   -H "Authorization: Bearer $AGENT_API_TOKEN" \
   -H 'Content-Type: application/json' \
   --data '{"results":[{"test_case_id":"TC-000001","status":"PASS","reason":"Đạt"},{"test_case_id":"TC-000002","status":"FAIL","reason":"Không thấy thông báo","failed_step":2,"evidence":"artifacts/TC-000002.png"}]}'

@@ -102,7 +102,11 @@ def app(
         lock_wait_seconds=0.1,
     )
     settings = Settings(
-        _env_file=None, session_secret="test-secret", app_base_url="http://localhost:3000"
+        _env_file=None,
+        session_secret="test-secret",
+        app_base_url="http://localhost:3000",
+        # Test không được phụ thuộc token thật đang có trong môi trường chạy.
+        agent_api_token="",
     )
     return create_app(settings, services=services)
 
