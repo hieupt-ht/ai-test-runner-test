@@ -16,13 +16,16 @@ describe("useResults", () => {
         {children}
       </QueryClientProvider>
     )
-    const { result } = renderHook(() => useResults("p1", "FAIL"), { wrapper })
+    const { result } = renderHook(() => useResults("p1", "FAIL", "SC-login"), { wrapper })
 
     await act(async () => {
       await waitFor(() => expect(result.current.data).toEqual([]))
     })
     expect(api.GET).toHaveBeenCalledWith("/api/projects/{project_id}/results", {
-      params: { path: { project_id: "p1" }, query: { status: "FAIL" } },
+      params: {
+        path: { project_id: "p1" },
+        query: { status: "FAIL", screen_id: "SC-login" },
+      },
     })
   })
 })

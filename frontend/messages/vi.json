@@ -34,6 +34,7 @@
   },
   "results": {
     "title": "Kết quả test",
+    "allScreens": "Tất cả màn hình",
     "filterStatus": "Lọc trạng thái",
     "all": "Tất cả",
     "status": {

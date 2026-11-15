@@ -63,6 +63,8 @@ const project: Project = {
 const result: ResultItem = {
   case_id: "TC-1",
   case_title: "Đăng nhập thành công",
+  screen_id: "SC-login",
+  screen_name: "Đăng nhập",
   status: "PASS",
   reason: "Đúng kết quả mong đợi",
   failed_step: null,
