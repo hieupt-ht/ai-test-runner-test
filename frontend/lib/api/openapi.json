@@ -1773,6 +1773,28 @@
         }
       }
     },
+    "/api/me/overview": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "My Overview",
+        "description": "Số case chờ duyệt và kết quả mới nhất trên mọi dự án người dùng được xem.",
+        "operationId": "my_overview_api_me_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/assignments": {
       "get": {
         "tags": [
@@ -2744,6 +2766,27 @@
           "unread"
         ],
         "title": "NotificationList"
+      },
+      "OverviewSummary": {
+        "properties": {
+          "pending_review": {
+            "type": "integer",
+            "title": "Pending Review",
+            "default": 0
+          },
+          "latest_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "OverviewSummary"
       },
       "Priority": {
         "type": "string",

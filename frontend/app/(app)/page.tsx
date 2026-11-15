@@ -6,9 +6,9 @@ import { useTranslations } from "next-intl"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { ResultItem } from "@/lib/api/types"
 import { useMe } from "@/lib/use-me"
+import { useOverview } from "@/lib/use-overview"
 import { useMyAssignments } from "@/lib/use-project-data"
 import { useProjects } from "@/lib/use-projects"
-import { useResults } from "@/lib/use-results"
 
 const ACTIVE_STATUSES = new Set(["TODO", "WRITING", "IN_REVIEW"])
 const DAY_IN_MS = 24 * 60 * 60 * 1000
@@ -71,11 +71,11 @@ function LatestResultCard({ result, emptyText }: { result?: ResultItem; emptyTex
 export default function OverviewPage() {
   const t = useTranslations("overview")
   const { user } = useMe()
-  const { data: assignments = [] } = useMyAssignments()
-  const { data: projects = [] } = useProjects()
+  const { data: assignments = [] } = useMyAssignments(user?.role === "TESTER")
+  const { data: projects = [] } = useProjects(user?.role === "ADMIN")
 
   const canSeeResults = user?.role === "QA_LEAD" || user?.role === "ADMIN"
-  const { data: results = [] } = useResults(canSeeResults ? (projects[0]?.id ?? "") : "")
+  const { data: overview } = useOverview(canSeeResults)
 
   const activeAssignments = assignments.filter((assignment) => ACTIVE_STATUSES.has(assignment.status))
   const dueSoon = activeAssignments.filter((assignment) => {
@@ -84,10 +84,6 @@ export default function OverviewPage() {
   })
   const returnedCases = assignments.reduce(
     (total, assignment) => total + (assignment.returned_cases?.length ?? 0),
-    0,
-  )
-  const pendingReview = assignments.reduce(
-    (total, assignment) => total + (assignment.case_counts?.IN_REVIEW ?? 0),
     0,
   )
 
@@ -125,11 +121,11 @@ export default function OverviewPage() {
         <section aria-label={t("qaSection")} className="grid gap-4 md:grid-cols-2">
           <MetricCard
             title={t("pendingReview")}
-            value={pendingReview}
+            value={overview?.pending_review ?? 0}
             description={t("pendingReviewDescription")}
             icon={ClipboardCheck}
           />
-          <LatestResultCard result={results[0]} emptyText={t("noResults")} />
+          <LatestResultCard result={overview?.latest_result ?? undefined} emptyText={t("noResults")} />
         </section>
       )}
 
@@ -141,7 +137,7 @@ export default function OverviewPage() {
             description={projects.length ? t("projectCountDescription") : t("noProjects")}
             icon={FolderKanban}
           />
-          <LatestResultCard result={results[0]} emptyText={t("noResults")} />
+          <LatestResultCard result={overview?.latest_result ?? undefined} emptyText={t("noResults")} />
         </section>
       )}
 

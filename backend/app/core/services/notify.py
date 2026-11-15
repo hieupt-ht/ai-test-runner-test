@@ -47,6 +47,15 @@ class Notifier:
             link=f"/projects/{project_id}/test-cases/{case_id}",
         )
 
+    def case_submitted(self, *, emails: list[str], project_id: str, case_id: str) -> None:
+        for email in dict.fromkeys(emails):
+            self._send(
+                email,
+                type="case_submitted",
+                title=f"Case {case_id} đang chờ duyệt",
+                link=f"/projects/{project_id}/test-cases/{case_id}",
+            )
+
     def results_recorded(
         self, *, emails: list[str], project_id: str, run_id: str, failed: int, total: int
     ) -> None:

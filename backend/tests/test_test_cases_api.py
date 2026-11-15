@@ -84,6 +84,25 @@ def url(project: Project, suffix: str = "") -> str:
     return f"/api/projects/{project.id}/test-cases{suffix}"
 
 
+def test_submit_notifies_project_reviewers(
+    app: FastAPI,
+    an: TestClient,
+    project: Project,
+    redis: fakeredis.FakeRedis,
+    client_as_admin: TestClient,
+) -> None:
+    case = create(an, project).json()
+
+    response = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+
+    assert response.status_code == 200
+    store = NotificationStore(redis)
+    assert [item.type for item in store.list("lead@x.com")] == ["case_submitted"]
+    assert [item.type for item in store.list("admin@x.com")] == ["case_submitted"]
+    assert not any(item.type == "case_submitted" for item in store.list("an@x.com"))
+    assert not any(item.type == "case_submitted" for item in store.list("viewer@x.com"))
+
+
 @pytest.mark.parametrize("action", ["approve", "return"])
 def test_review_succeeds_when_notification_fails(
     app: FastAPI,
@@ -134,7 +153,7 @@ def test_review_notifies_case_creator_only(
     assert [item.type for item in store.list("an@x.com") if item.type.startswith("case_")] == [
         expected_type
     ]
-    assert not any(item.type.startswith("case_") for item in store.list("lead@x.com"))
+    assert expected_type not in [item.type for item in store.list("lead@x.com")]
 
 
 class RecordingIssueSink:

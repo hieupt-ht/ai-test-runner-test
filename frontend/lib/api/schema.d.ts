@@ -518,6 +518,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Overview
+         * @description Số case chờ duyệt và kết quả mới nhất trên mọi dự án người dùng được xem.
+         */
+        get: operations["my_overview_api_me_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/assignments": {
         parameters: {
             query?: never;
@@ -930,6 +950,15 @@ export interface components {
             items: components["schemas"]["Notification"][];
             /** Unread */
             unread: number;
+        };
+        /** OverviewSummary */
+        OverviewSummary: {
+            /**
+             * Pending Review
+             * @default 0
+             */
+            pending_review: number;
+            latest_result?: components["schemas"]["ResultItem"] | null;
         };
         /**
          * Priority
@@ -2537,6 +2566,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_overview_api_me_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewSummary"];
                 };
             };
         };

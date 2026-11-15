@@ -27,6 +27,7 @@ from app.core.repositories.test_cases import (
     TestCaseRepository,
     VersionConflictError,
 )
+from app.core.repositories.users import UserRepository
 from app.core.services.issue_sync import IssueSink, IssueSyncer
 from app.core.services.notify import Notifier
 from app.core.sheets.gateway import SheetAccessDeniedError
@@ -130,6 +131,7 @@ class TestCaseService:
         project: Project | None = None,
         issue_syncer: IssueSyncer | None = None,
         notifier: Notifier | None = None,
+        users: UserRepository | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -142,6 +144,7 @@ class TestCaseService:
         self._project = project
         self._issue_syncer = issue_syncer
         self._notifier = notifier
+        self._users = users
         self._screen_names: dict[str, str] | None = None
 
     # --- Đọc ---
@@ -340,6 +343,8 @@ class TestCaseService:
         saved = self._save(
             user, case, {"status": target}, version, action.value, diff, refresh=refresh
         )
+        if action == CaseAction.SUBMIT:
+            self._notify_submitted(user, saved)
         if self._notifier is not None and case.created_by != normalize_email(user.email):
             if action == CaseAction.RETURN:
                 self._notifier.case_returned(
@@ -351,6 +356,35 @@ class TestCaseService:
                     email=case.created_by, project_id=self._project_id, case_id=case.id
                 )
         return saved
+
+    def _notify_submitted(self, actor: User, case: TestCase) -> None:
+        """Báo cho người có quyền duyệt; lỗi đọc người nhận không làm hỏng việc gửi duyệt."""
+        if self._notifier is None or self._users is None:
+            return
+        try:
+            member_emails = {
+                member.email for member in self._members.list_for_project(self._project_id)
+            }
+            actor_email = normalize_email(actor.email)
+            recipients = [
+                user.email
+                for user in self._users.list_all()
+                if user.active
+                and user.email != actor_email
+                and (
+                    user.role == Role.ADMIN
+                    or (user.role == Role.QA_LEAD and user.email in member_emails)
+                )
+            ]
+            self._notifier.case_submitted(
+                emails=recipients, project_id=self._project_id, case_id=case.id
+            )
+        except Exception:
+            logger.warning(
+                "Không xác định được người nhận khi case %s được gửi duyệt",
+                case.id,
+                exc_info=True,
+            )
 
     def _require_edit(self, user: User, case: TestCase) -> None:
         if not self.can_edit(user, case):

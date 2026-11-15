@@ -12,10 +12,11 @@ export function projectKey(projectId: string) {
   return ["projects", projectId] as const
 }
 
-export function useProjects() {
+export function useProjects(enabled = true) {
   return useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: async (): Promise<Project[]> => unwrap(await api.GET("/api/projects")),
+    enabled,
   })
 }
 

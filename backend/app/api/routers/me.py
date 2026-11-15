@@ -1,19 +1,67 @@
 import logging
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.project_scope import ProjectScope, scope_for
+from app.api.routers.results import ResultItem, results_for_project
 from app.api.services import Services
 from app.core.models.assignment import MyAssignment, ReturnedCase
 from app.core.models.project import Project
 from app.core.models.test_case import TestCase, TestCaseStatus
+from app.core.models.user import Role
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/me", tags=["me"])
+
+
+class OverviewSummary(BaseModel):
+    pending_review: int = 0
+    latest_result: ResultItem | None = None
+
+
+@router.get("/overview")
+def my_overview(user: CurrentUser, services: ServicesDep) -> OverviewSummary:
+    """Số case chờ duyệt và kết quả mới nhất trên mọi dự án người dùng được xem."""
+    if user.role not in {Role.QA_LEAD, Role.ADMIN}:
+        return OverviewSummary()
+
+    if user.role == Role.ADMIN:
+        visible_projects = services.projects.list_all()
+    else:
+        my_project_ids = set(services.members.projects_of(user.email))
+        visible_projects = [
+            project
+            for project in services.projects.list_all()
+            if project.id in my_project_ids and not project.archived
+        ]
+
+    pending_review = 0
+    latest_result: ResultItem | None = None
+    for project in visible_projects:
+        try:
+            scope = scope_for(services, project)
+            cases = scope.test_cases.list_all()
+            if not project.archived:
+                pending_review += sum(
+                    case.status == TestCaseStatus.IN_REVIEW for case in cases
+                )
+            project_results = results_for_project(services, project, user, cases=cases)
+            if project_results:
+                candidate = max(project_results, key=lambda item: item.finished_at)
+                if latest_result is None or candidate.finished_at > latest_result.finished_at:
+                    latest_result = candidate
+        except (SheetAccessDeniedError, MissingColumnsError):
+            logger.warning(
+                "Bỏ qua dữ liệu Tổng quan của dự án %s vì không đọc được Sheet",
+                project.id,
+                exc_info=True,
+            )
+    return OverviewSummary(pending_review=pending_review, latest_result=latest_result)
 
 
 @router.get("/assignments")

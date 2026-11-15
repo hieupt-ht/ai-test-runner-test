@@ -13,6 +13,7 @@ export type Screen = Schemas["Screen"]
 export type Assignment = Schemas["Assignment"]
 export type AssignmentStatus = Schemas["AssignmentStatus"]
 export type MyAssignment = Schemas["MyAssignment"]
+export type OverviewSummary = Schemas["OverviewSummary"]
 export type MemberView = Schemas["MemberView"]
 
 export type TestCase = Schemas["TestCase"]

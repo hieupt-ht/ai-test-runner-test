@@ -39,6 +39,12 @@ from app.core.services.notify import Notifier
             "/projects/P1/test-cases/C1",
         ),
         (
+            "case_submitted",
+            {"emails": ["lead@x.com"], "project_id": "P1", "case_id": "C1"},
+            "lead@x.com",
+            "/projects/P1/test-cases/C1",
+        ),
+        (
             "results_recorded",
             {"emails": ["an@x.com"], "project_id": "P1", "run_id": "R1", "failed": 1, "total": 2},
             "an@x.com",

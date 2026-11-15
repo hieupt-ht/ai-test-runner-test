@@ -106,6 +106,7 @@ def _service_for(services: Services, project: Project) -> TestCaseService:
             else None
         ),
         notifier=Notifier(services.notifications),
+        users=services.users,
     )
 
 

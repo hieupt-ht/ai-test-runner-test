@@ -8,7 +8,9 @@ from pydantic import BaseModel
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.project_access import load_project
 from app.api.project_scope import scope_for
+from app.core.models.project import Project
 from app.core.models.run import Result, ResultStatus, RunStatus
+from app.core.models.test_case import TestCase
 from app.core.models.user import Role, normalize_email
 from app.core.permissions import Action
 
@@ -34,6 +36,18 @@ def list_results(
     status: ResultStatus | None = None,
 ) -> list[ResultItem]:
     project = load_project(services, user, project_id, Action.VIEW_PROJECT, allow_archived=True)
+    return results_for_project(services, project, user, status=status)
+
+
+def results_for_project(
+    services: ServicesDep,
+    project: Project,
+    user: CurrentUser,
+    *,
+    status: ResultStatus | None = None,
+    cases: list[TestCase] | None = None,
+) -> list[ResultItem]:
+    """Đọc kết quả một dự án; `cases` giúp Tổng quan không đọc lại tab TestCases."""
     scope = scope_for(services, project)
     runs = [
         run
@@ -47,7 +61,8 @@ def list_results(
     results_by_run: dict[str, list[Result]] = {}
     for result in scope.results.list_all():
         results_by_run.setdefault(result.run_id, []).append(result)
-    cases = {case.id: case for case in scope.test_cases.list_all()}
+    case_list = scope.test_cases.list_all() if cases is None else cases
+    cases_by_id = {case.id: case for case in case_list}
     latest: dict[str, ResultItem] = {}
     for run in sorted(
         runs, key=lambda item: (item.finished_at or item.started_at, item.id), reverse=True
@@ -55,7 +70,7 @@ def list_results(
         if run.finished_at is None:
             continue
         for result in results_by_run.get(run.id, []):
-            case = cases.get(result.test_case_id)
+            case = cases_by_id.get(result.test_case_id)
             if case is None or case.id in latest:
                 continue
             if user.role == Role.TESTER and case.created_by != normalize_email(user.email):

@@ -10,8 +10,7 @@ const mocks = vi.hoisted(() => ({
   role: "TESTER" as Role,
   assignments: [] as MyAssignment[],
   projects: [] as Project[],
-  results: [] as ResultItem[],
-  useResults: vi.fn(),
+  overview: { pending_review: 0, latest_result: null as ResultItem | null },
 }))
 
 vi.mock("@/lib/use-me", () => ({
@@ -32,8 +31,8 @@ vi.mock("@/lib/use-project-data", () => ({
 vi.mock("@/lib/use-projects", () => ({
   useProjects: () => ({ data: mocks.projects, isLoading: false }),
 }))
-vi.mock("@/lib/use-results", () => ({
-  useResults: (...args: unknown[]) => mocks.useResults(...args),
+vi.mock("@/lib/use-overview", () => ({
+  useOverview: () => ({ data: mocks.overview, isLoading: false }),
 }))
 
 const activeAssignment: MyAssignment = {
@@ -86,8 +85,7 @@ describe("OverviewPage", () => {
     vi.setSystemTime(new Date("2026-11-14T00:00:00+07:00"))
     mocks.assignments = []
     mocks.projects = []
-    mocks.results = []
-    mocks.useResults.mockImplementation(() => ({ data: mocks.results, isLoading: false }))
+    mocks.overview = { pending_review: 0, latest_result: null }
   })
 
   afterEach(() => {
@@ -111,9 +109,9 @@ describe("OverviewPage", () => {
 
   it("QA Lead chỉ thấy việc chờ duyệt và kết quả gần nhất", () => {
     mocks.role = "QA_LEAD"
-    mocks.assignments = [activeAssignment]
+    mocks.assignments = []
     mocks.projects = [project]
-    mocks.results = [result]
+    mocks.overview = { pending_review: 2, latest_result: result }
     renderPage()
 
     expect(screen.getByText("Chờ duyệt")).toBeInTheDocument()
@@ -127,7 +125,7 @@ describe("OverviewPage", () => {
   it("Admin chỉ thấy tổng số dự án và kết quả gần nhất", () => {
     mocks.role = "ADMIN"
     mocks.projects = [project]
-    mocks.results = [result]
+    mocks.overview = { pending_review: 0, latest_result: result }
     renderPage()
 
     expect(screen.getByText("Tổng số dự án")).toBeInTheDocument()
