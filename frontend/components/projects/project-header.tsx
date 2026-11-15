@@ -1,22 +1,17 @@
 "use client"
 
 import { Archive, ExternalLink, GitBranch } from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { visibleProjectTabs } from "@/lib/project-tabs"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
-import { cn } from "@/lib/utils"
 
 export function ProjectHeader() {
   const t = useTranslations()
   const projectId = useProjectId()
-  const pathname = usePathname()
   const { data: project, isLoading, isError } = useProject(projectId)
 
   if (isLoading) return <Skeleton className="h-24 w-full" />
@@ -64,26 +59,6 @@ export function ProjectHeader() {
         <p className="rounded-lg border bg-muted/50 p-3 text-sm">{t("projects.archivedBanner")}</p>
       )}
 
-      <nav className="flex gap-1 overflow-x-auto border-b">
-        {visibleProjectTabs(project.permissions).map((tab) => {
-          const href = `/projects/${project.id}/${tab.segment}`
-          const isActive = pathname.startsWith(href)
-          return (
-            <Link
-              key={tab.segment}
-              href={href}
-              className={cn(
-                "-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors",
-                isActive
-                  ? "border-primary font-medium text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t(`projectTabs.${tab.labelKey}`)}
-            </Link>
-          )
-        })}
-      </nav>
     </div>
   )
 }
