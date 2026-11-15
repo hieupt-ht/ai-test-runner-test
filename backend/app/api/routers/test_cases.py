@@ -7,10 +7,12 @@ from pydantic import BaseModel, Field
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.project_access import load_project
 from app.api.project_scope import scope_for
+from app.api.routers.results import results_for_project
 from app.api.services import Services
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
+from app.core.models.run import ResultStatus
 from app.core.models.test_case import TestCase, TestCaseContent
 from app.core.models.user import User
 from app.core.permissions import Action
@@ -18,6 +20,7 @@ from app.core.repositories.audit_log import AuditEntry
 from app.core.repositories.test_cases import TestCaseNotFoundError, VersionConflictError
 from app.core.services.issue_sync import IssueSyncer
 from app.core.services.notify import Notifier
+from app.core.services.rerun_request import request_rerun_on_issue
 from app.core.services.test_cases import (
     CaseAction,
     InvalidTestCaseError,
@@ -26,6 +29,7 @@ from app.core.services.test_cases import (
     TestCasePermissionError,
     TestCaseService,
 )
+from app.core.time import utc_now
 
 router = APIRouter(prefix="/api/projects/{project_id}/test-cases", tags=["test-cases"])
 
@@ -307,6 +311,40 @@ def sync_test_case_issues(
         return service.sync_issues(user)
     except TestCasePermissionError:
         raise HTTPException(status.HTTP_403_FORBIDDEN, NO_PERMISSION) from None
+
+
+@router.post(
+    "/{case_id}/request-rerun",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+def request_rerun(
+    project_id: str, case_id: str, user: CurrentUser, services: ServicesDep
+) -> Response:
+    """Báo lên GitHub issue rằng case FAIL/BLOCKED cần được chạy lại (Codex chạy ngoài app)."""
+    project = load_project(services, user, project_id, Action.REVIEW_TEST_CASE)
+    latest = next(
+        (
+            item
+            for item in results_for_project(services, project, user)
+            if item.case_id == case_id
+        ),
+        None,
+    )
+    if latest is None or latest.status not in (ResultStatus.FAIL, ResultStatus.BLOCKED):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Case này không có kết quả FAIL hoặc BLOCKED"
+        )
+    if services.github is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Chưa cấu hình GitHub")
+    request_rerun_on_issue(
+        services.github,
+        repo=project.repo_full_name,
+        case_id=case_id,
+        user_name=user.name,
+        requested_at=utc_now(),
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{case_id}/history")
