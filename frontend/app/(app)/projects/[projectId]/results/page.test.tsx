@@ -10,10 +10,20 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   searchParams: "screen=SC-login",
   useResults: vi.fn(),
+  useRequestRerun: vi.fn(),
+  useMe: vi.fn(),
+  mutate: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
 }))
 
 vi.mock("@/lib/use-project-id", () => ({ useProjectId: () => "p1" }))
-vi.mock("@/lib/use-results", () => ({ useResults: mocks.useResults }))
+vi.mock("@/lib/use-results", () => ({
+  useResults: mocks.useResults,
+  useRequestRerun: mocks.useRequestRerun,
+}))
+vi.mock("@/lib/use-me", () => ({ useMe: mocks.useMe }))
+vi.mock("sonner", () => ({ toast: { success: mocks.toastSuccess, error: mocks.toastError } }))
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
   useSearchParams: () => new URLSearchParams(mocks.searchParams),
@@ -72,6 +82,8 @@ function renderPage() {
 describe("ResultsPage", () => {
   beforeEach(() => {
     mocks.searchParams = "screen=SC-login"
+    mocks.useMe.mockReturnValue({ user: { role: "QA_LEAD" }, isLoading: false })
+    mocks.useRequestRerun.mockReturnValue({ mutate: mocks.mutate, isPending: false, variables: undefined })
   })
 
   afterEach(() => {
@@ -208,5 +220,98 @@ describe("ResultsPage", () => {
     renderPage()
 
     expect(screen.getByText("Chưa có kết quả test")).toBeInTheDocument()
+  })
+
+  describe("nút Chạy lại", () => {
+    it("hiện ở dòng FAIL và ẩn ở dòng PASS", () => {
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      expect(screen.getAllByRole("button", { name: "Chạy lại" })).toHaveLength(1)
+      fireEvent.click(screen.getByRole("button", { name: /PASS: 1/ })) // mở nhóm PASS
+      expect(screen.getAllByRole("button", { name: "Chạy lại" })).toHaveLength(1)
+    })
+
+    it("hiện ở dòng BLOCKED", () => {
+      mocks.useResults.mockReturnValue({
+        data: [{ ...blockedResult, screen_id: "SC-login" }],
+        isLoading: false,
+        isError: false,
+      })
+      renderPage()
+
+      expect(screen.getByRole("button", { name: "Chạy lại" })).toBeInTheDocument()
+    })
+
+    it("ẩn với Tester", () => {
+      mocks.useMe.mockReturnValue({ user: { role: "TESTER" }, isLoading: false })
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      expect(screen.queryByRole("button", { name: "Chạy lại" })).not.toBeInTheDocument()
+    })
+
+    it("hiện với Admin", () => {
+      mocks.useMe.mockReturnValue({ user: { role: "ADMIN" }, isLoading: false })
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      expect(screen.getByRole("button", { name: "Chạy lại" })).toBeInTheDocument()
+    })
+
+    it("bấm thì gửi đúng mã case", () => {
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      fireEvent.click(screen.getByRole("button", { name: "Chạy lại" }))
+
+      expect(mocks.useRequestRerun).toHaveBeenCalledWith("p1")
+      expect(mocks.mutate).toHaveBeenCalledWith("TC-1", expect.any(Object))
+    })
+
+    it("bị khóa và báo đang gửi khi đang tải", () => {
+      mocks.useRequestRerun.mockReturnValue({ mutate: mocks.mutate, isPending: true, variables: "TC-1" })
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      const button = screen.getByRole("button", { name: "Đang gửi..." })
+      expect(button).toBeDisabled()
+    })
+
+    it("toast thành công khi gửi xong", () => {
+      mocks.mutate.mockImplementation((_id: string, options: { onSuccess: () => void }) =>
+        options.onSuccess(),
+      )
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      fireEvent.click(screen.getByRole("button", { name: "Chạy lại" }))
+
+      expect(mocks.toastSuccess).toHaveBeenCalledWith("Đã yêu cầu chạy lại. Mở Codex để thực hiện.")
+    })
+
+    it("toast lỗi kèm câu báo của API", () => {
+      mocks.mutate.mockImplementation((_id: string, options: { onError: (e: Error) => void }) =>
+        options.onError(new Error("Chưa cấu hình GitHub")),
+      )
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      fireEvent.click(screen.getByRole("button", { name: "Chạy lại" }))
+
+      expect(mocks.toastError).toHaveBeenCalledWith("Chưa cấu hình GitHub")
+    })
+
+    it("toast lỗi dùng câu mặc định khi lỗi không có nội dung", () => {
+      mocks.mutate.mockImplementation((_id: string, options: { onError: (e: unknown) => void }) =>
+        options.onError(undefined),
+      )
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      fireEvent.click(screen.getByRole("button", { name: "Chạy lại" }))
+
+      expect(mocks.toastError).toHaveBeenCalledWith("Không yêu cầu được. Thử lại sau.")
+    })
   })
 })

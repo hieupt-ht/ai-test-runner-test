@@ -4,11 +4,14 @@ import { Suspense, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 import { useRouter, useSearchParams } from "next/navigation"
 
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronRight, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useProjectId } from "@/lib/use-project-id"
-import { useResults } from "@/lib/use-results"
+import { useMe } from "@/lib/use-me"
+import { useRequestRerun, useResults } from "@/lib/use-results"
 import type { ResultItem, ResultStatus } from "@/lib/api/types"
 
 const STATUSES: ResultStatus[] = ["PASS", "FAIL", "BLOCKED", "INCONCLUSIVE"]
@@ -61,6 +64,10 @@ function ResultsContent() {
   const [status, setStatus] = useState<ResultStatus | undefined>()
   const [collapsed, setCollapsed] = useState<ResultStatus[]>(["PASS"])
   const { data = [], isLoading, isError } = useResults(projectId, undefined, screenId)
+  const { user } = useMe()
+  const rerun = useRequestRerun(projectId)
+  // Chỉ QA Lead/Admin được yêu cầu chạy lại
+  const canRerun = user?.role === "QA_LEAD" || user?.role === "ADMIN"
   const screenSummaries = useMemo(() => summarizeScreens(data), [data])
   const groups = useMemo(() => {
     const rows = status ? data.filter((item) => item.status === status) : data
@@ -77,6 +84,13 @@ function ResultsContent() {
   }
   const resultsPath = `/projects/${projectId}/results`
   const screenName = data[0]?.screen_name ?? screenId
+
+  function requestRerun(caseId: string) {
+    rerun.mutate(caseId, {
+      onSuccess: () => toast.success(t("rerunSuccess")),
+      onError: (error) => toast.error(error instanceof Error && error.message ? error.message : t("rerunError")),
+    })
+  }
 
   function openScreen(id: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -204,6 +218,7 @@ function ResultsContent() {
                           <th className="px-4 py-2">{t("reasonColumn")}</th>
                           <th className="px-4 py-2">{t("failedStepColumn")}</th>
                           <th className="px-4 py-2">{t("evidence")}</th>
+                          {canRerun && <th className="px-4 py-2">{t("actionsColumn")}</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -224,6 +239,28 @@ function ResultsContent() {
                                   </a>
                                 )}
                               </td>
+                              {canRerun && (
+                                <td className="px-4 py-3">
+                                  {result.status !== "PASS" && (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={rerun.isPending}
+                                      onClick={() => requestRerun(result.case_id)}
+                                    >
+                                      {rerun.isPending && rerun.variables === result.case_id ? (
+                                        <>
+                                          <Loader2 className="size-4 animate-spin" aria-hidden />
+                                          {t("rerunPending")}
+                                        </>
+                                      ) : (
+                                        t("rerun")
+                                      )}
+                                    </Button>
+                                  )}
+                                </td>
+                              )}
                             </tr>
                           )
                         })}

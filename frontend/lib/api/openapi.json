@@ -1718,6 +1718,51 @@
         }
       }
     },
+    "/api/projects/{project_id}/test-cases/{case_id}/request-rerun": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Request Rerun",
+        "description": "Báo lên GitHub issue rằng case FAIL/BLOCKED cần được chạy lại (Codex chạy ngoài app).",
+        "operationId": "request_rerun_api_projects__project_id__test_cases__case_id__request_rerun_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/test-cases/{case_id}/history": {
       "get": {
         "tags": [

@@ -50,6 +50,11 @@
     "caseTitle": "Tiêu đề",
     "reasonColumn": "Lý do",
     "failedStepColumn": "Bước lỗi",
+    "actionsColumn": "Thao tác",
+    "rerun": "Chạy lại",
+    "rerunPending": "Đang gửi...",
+    "rerunSuccess": "Đã yêu cầu chạy lại. Mở Codex để thực hiện.",
+    "rerunError": "Không yêu cầu được. Thử lại sau.",
     "empty": "Chưa có kết quả test",
     "loading": "Đang tải kết quả...",
     "error": "Không tải được kết quả test. Vui lòng thử lại."
