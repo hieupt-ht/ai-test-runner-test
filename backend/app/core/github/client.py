@@ -36,6 +36,11 @@ class IssueInfo(BaseModel):
     labels: list[str]
 
 
+class IssueComment(BaseModel):
+    id: int
+    body: str
+
+
 class GitHubNotConfiguredError(Exception):
     pass
 
@@ -66,7 +71,24 @@ class GitHubClient(Protocol):
         state: Literal["open", "closed"],
     ) -> IssueInfo: ...
 
-    def ensure_label(self, repo_full_name: str, name: str) -> None: ...
+    def ensure_label(
+        self, repo_full_name: str, name: str, *, color: str | None = None
+    ) -> None: ...
+
+    def list_issue_comments(self, repo_full_name: str, issue_number: int) -> list[IssueComment]: ...
+
+    def create_issue_comment(self, repo_full_name: str, issue_number: int, body: str) -> None: ...
+
+    def update_issue_comment(self, repo_full_name: str, comment_id: int, body: str) -> None: ...
+
+    def update_issue_state_and_labels(
+        self,
+        repo_full_name: str,
+        issue_number: int,
+        *,
+        state: Literal["open", "closed"],
+        labels: list[str],
+    ) -> None: ...
 
 
 def normalize_private_key(value: str) -> str:
@@ -159,14 +181,56 @@ class GitHubAppClient:
         )
         return self._issue(response.json())
 
-    def ensure_label(self, repo_full_name: str, name: str) -> None:
+    def ensure_label(self, repo_full_name: str, name: str, *, color: str | None = None) -> None:
         token = self._repo_token(repo_full_name)
         url = f"/repos/{repo_full_name}/labels"
         try:
-            self._request("POST", token, url, json={"name": name})
+            payload: dict[str, str] = {"name": name}
+            if color:
+                payload["color"] = color
+            self._request("POST", token, url, json=payload)
         except GitHubError as error:
             if "already_exists" not in str(error):
                 raise
+
+    def list_issue_comments(self, repo_full_name: str, issue_number: int) -> list[IssueComment]:
+        token = self._repo_token(repo_full_name)
+        url = f"/repos/{repo_full_name}/issues/{issue_number}/comments?per_page=100"
+        comments: list[IssueComment] = []
+        for page in self._get_pages(token, url):
+            comments.extend(IssueComment(id=item["id"], body=item.get("body", "")) for item in page)
+        return comments
+
+    def create_issue_comment(self, repo_full_name: str, issue_number: int, body: str) -> None:
+        self._request(
+            "POST",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues/{issue_number}/comments",
+            json={"body": body},
+        )
+
+    def update_issue_comment(self, repo_full_name: str, comment_id: int, body: str) -> None:
+        self._request(
+            "PATCH",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues/comments/{comment_id}",
+            json={"body": body},
+        )
+
+    def update_issue_state_and_labels(
+        self,
+        repo_full_name: str,
+        issue_number: int,
+        *,
+        state: Literal["open", "closed"],
+        labels: list[str],
+    ) -> None:
+        self._request(
+            "PATCH",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues/{issue_number}",
+            json={"state": state, "labels": labels},
+        )
 
     # ----- Xác thực -----
 

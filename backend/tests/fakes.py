@@ -15,7 +15,7 @@ from fastapi.responses import RedirectResponse, Response
 from googleapiclient.errors import HttpError
 
 from app.api.oauth import GoogleIdentity
-from app.core.github.client import GitHubError, IssueInfo, RepoInfo
+from app.core.github.client import GitHubError, IssueComment, IssueInfo, RepoInfo
 from app.core.sheets.gateway import SheetAccessDeniedError
 
 _ROW_RANGE = re.compile(r"^(?P<start>\d+):(?P<end>\d+)$")
@@ -134,6 +134,8 @@ class FakeGitHub:
         self.issues: dict[str, list[tuple[IssueInfo, str]]] = {}
         self.calls: list[str] = []
         self.fail_with: Exception | None = None
+        self.issue_comments: dict[str, dict[int, list[IssueComment]]] = {}
+        self.labels: dict[str, dict[str, str]] = {}
 
     def _check(self) -> None:
         if self.fail_with is not None:
@@ -195,6 +197,46 @@ class FakeGitHub:
                 return issue
         raise GitHubError("Không tìm thấy issue")
 
-    def ensure_label(self, repo_full_name: str, name: str) -> None:
+    def ensure_label(self, repo_full_name: str, name: str, *, color: str | None = None) -> None:
         self._check()
         self.calls.append(f"label:{name}")
+        self.labels.setdefault(repo_full_name, {})[name] = color or ""
+
+    def list_issue_comments(self, repo_full_name: str, issue_number: int) -> list[IssueComment]:
+        self._check()
+        self.calls.append("comments:list")
+        return self.issue_comments.get(repo_full_name, {}).get(issue_number, [])
+
+    def create_issue_comment(self, repo_full_name: str, issue_number: int, body: str) -> None:
+        self._check()
+        self.calls.append("comments:create")
+        comments = self.issue_comments.setdefault(repo_full_name, {}).setdefault(issue_number, [])
+        next_id = max((comment.id for comment in comments), default=0) + 1
+        comments.append(IssueComment(id=next_id, body=body))
+
+    def update_issue_comment(self, repo_full_name: str, comment_id: int, body: str) -> None:
+        self._check()
+        self.calls.append("comments:update")
+        for comments in self.issue_comments.get(repo_full_name, {}).values():
+            for index, comment in enumerate(comments):
+                if comment.id == comment_id:
+                    comments[index] = IssueComment(id=comment.id, body=body)
+                    return
+        raise GitHubError("Không tìm thấy comment")
+
+    def update_issue_state_and_labels(
+        self,
+        repo_full_name: str,
+        issue_number: int,
+        *,
+        state: Literal["open", "closed"],
+        labels: list[str],
+    ) -> None:
+        self._check()
+        self.calls.append("issue:state")
+        items = self.issues[repo_full_name]
+        for index, (old, body) in enumerate(items):
+            if old.number == issue_number:
+                items[index] = (old.model_copy(update={"state": state, "labels": labels}), body)
+                return
+        raise GitHubError("Không tìm thấy issue")

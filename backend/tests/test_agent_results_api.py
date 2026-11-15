@@ -11,7 +11,7 @@ from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from tests.conftest import SHEET_B, client_for, make_project, make_user
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
 from tests.test_test_cases_api import NEXT_WEEK, create
 
 RESULT = {"test_case_id": "TC-000001", "status": "PASS", "reason": "Đạt"}
@@ -176,6 +176,86 @@ def test_unknown_and_draft_cases_are_ignored(
     assert response.json()["written"] == 0
     assert len(response.json()["ignored"]) == 2
     assert len(gateway.data[project.spreadsheet_id]["Results"]) == 1
+
+
+def test_result_comment_is_updated_and_issue_state_follows_pass_fail(
+    app: FastAPI,
+    client: TestClient,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    github: FakeGitHub,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    case = create(an, project, test_data="email=secret@example.com,password=supersecret").json()
+    an.post(f"/api/projects/{project.id}/test-cases/{case['id']}/submit", json={"version": 1})
+    lead.post(f"/api/projects/{project.id}/test-cases/{case['id']}/approve", json={"version": 2})
+    github.create_issue(
+        project.repo_full_name,
+        title="Test case",
+        body="",
+        labels=[f"tc:{case['id']}", "test-case"],
+    )
+
+    for result_status in ("PASS", "FAIL"):
+        response = client.post(
+            path(project),
+            json={
+                "results": [{
+                    **RESULT,
+                    "test_case_id": case["id"],
+                    "status": result_status,
+                    "reason": "email=secret@example.com; password=supersecret",
+                    "evidence": "javascript:alert(1)",
+                    "failed_step": 1 if result_status == "FAIL" else None,
+                }]
+            },
+            headers={"Authorization": "Bearer test-token"},
+        )
+        assert response.status_code == 200
+        issue_after_run = github.issues[project.repo_full_name][0][0]
+        if result_status == "PASS":
+            assert issue_after_run.state == "closed"
+            assert "test: pass" in issue_after_run.labels
+            assert "test: fail" not in issue_after_run.labels
+
+    issue = github.issues[project.repo_full_name][0][0]
+    comments = github.issue_comments[project.repo_full_name][issue.number]
+    assert len(comments) == 1
+    body = comments[0].body
+    assert body.count("<!-- ai-test-runner-result -->") == 1
+    assert "secret@example.com" not in body
+    assert "supersecret" not in body
+    assert "javascript:" not in body
+    assert issue.state == "open"
+    assert "test: fail" in issue.labels
+    assert "test: pass" not in issue.labels
+    assert github.calls.count("comments:create") == 1
+    assert github.calls.count("comments:update") == 1
+    assert github.labels[project.repo_full_name]["test: pass"] == "2da44e"
+    assert github.labels[project.repo_full_name]["test: fail"] == "d73a4a"
+
+
+def test_github_result_sync_failure_does_not_fail_app_write(
+    app: FastAPI,
+    client: TestClient,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    github: FakeGitHub,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    approve_case(an, lead, project)
+    github.fail_with = RuntimeError("GitHub không khả dụng")
+
+    response = client.post(
+        path(project), json={"results": [RESULT]}, headers={"Authorization": "Bearer test-token"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["written"] == 1
+    assert len(gateway.data[project.spreadsheet_id]["Results"]) == 2
 
 
 def test_over_200_results_is_422(app: FastAPI, client: TestClient, project: Project) -> None:

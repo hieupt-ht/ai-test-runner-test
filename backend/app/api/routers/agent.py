@@ -14,6 +14,7 @@ from app.core.models.test_case import TestCaseStatus
 from app.core.models.user import Role
 from app.core.repositories.runs import RunInProgressError
 from app.core.services.notify import Notifier
+from app.core.services.result_issue_sync import sync_result_issue
 from app.core.time import utc_now
 from app.settings import Settings
 
@@ -31,6 +32,7 @@ class AgentResult(BaseModel):
 
 class AgentResultsRequest(BaseModel):
     results: list[AgentResult] = Field(max_length=200)
+    duration_seconds: float = Field(default=0, ge=0, le=86400)
 
 
 class IgnoredResult(BaseModel):
@@ -155,4 +157,28 @@ def write_agent_results(
         )
     except Exception:
         logger.warning("Không xác định được người nhận kết quả run %s", run.id, exc_info=True)
+    if services.github is not None:
+        result_by_case = {result.test_case_id: result for result in results}
+        for item in accepted:
+            result = result_by_case.get(item.test_case_id)
+            if result is None:
+                continue
+            try:
+                sync_result_issue(
+                    services.github,
+                    repo=project.repo_full_name,
+                    project_id=project.id,
+                    app_url=services.app_base_url,
+                    run=run,
+                    result=result,
+                    case=approved[item.test_case_id],
+                    duration=body.duration_seconds,
+                )
+            except Exception:
+                logger.warning(
+                    "Không đồng bộ được issue GitHub cho case %s của dự án %s",
+                    item.test_case_id,
+                    project.id,
+                    exc_info=True,
+                )
     return AgentResultsResponse(run_id=run.id, written=len(results), ignored=ignored)

@@ -2152,6 +2152,13 @@
             "type": "array",
             "maxItems": 200,
             "title": "Results"
+          },
+          "duration_seconds": {
+            "type": "number",
+            "maximum": 86400.0,
+            "minimum": 0.0,
+            "title": "Duration Seconds",
+            "default": 0
           }
         },
         "type": "object",

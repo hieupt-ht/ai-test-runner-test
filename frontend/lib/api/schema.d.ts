@@ -677,6 +677,11 @@ export interface components {
         AgentResultsRequest: {
             /** Results */
             results: components["schemas"]["AgentResult"][];
+            /**
+             * Duration Seconds
+             * @default 0
+             */
+            duration_seconds: number;
         };
         /** AgentResultsResponse */
         AgentResultsResponse: {

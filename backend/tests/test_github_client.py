@@ -30,10 +30,15 @@ class FakeGitHubServer:
     def __init__(self) -> None:
         self.token_requests: list[str] = []
         self.auth_headers: list[str] = []
+        self.requests: list[tuple[str, str, dict[str, object] | None]] = []
+        self.comments = [{"id": 55, "body": "<!-- ai-test-runner-result --> old"}]
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.auth_headers.append(request.headers.get("Authorization", ""))
         path, query = request.url.path, request.url.query.decode()
+        payload = request.read().decode()
+        body = json.loads(payload) if payload else None
+        self.requests.append((request.method, path, body))
 
         if path == "/app/installations":
             return httpx.Response(200, json=[{"id": 1}, {"id": 2}])
@@ -50,6 +55,19 @@ class FakeGitHubServer:
             return httpx.Response(200, json={"id": 1})
         if path == "/repos/org/web/branches":
             return httpx.Response(200, json=[{"name": "main"}, {"name": "develop"}])
+        if path == "/repos/org/web/issues/12/comments":
+            if request.method == "GET":
+                return httpx.Response(200, json=self.comments)
+            if request.method == "POST":
+                self.comments.append({"id": 56, **(body or {})})
+                return httpx.Response(201, json=self.comments[-1])
+        if path == "/repos/org/web/issues/comments/55" and request.method == "PATCH":
+            self.comments[0]["body"] = (body or {}).get("body", "")
+            return httpx.Response(200, json=self.comments[0])
+        if path == "/repos/org/web/labels" and request.method == "POST":
+            return httpx.Response(201, json=body or {})
+        if path == "/repos/org/web/issues/12" and request.method == "PATCH":
+            return httpx.Response(200, json=body or {})
         return httpx.Response(404, json={"message": "Not Found"})
 
     @staticmethod
@@ -132,3 +150,27 @@ def test_http_error_becomes_github_error() -> None:
 
     with pytest.raises(GitHubError, match="401"):
         client.list_repositories()
+
+
+def test_result_sync_github_endpoints_upsert_comments_state_and_labels() -> None:
+    server = FakeGitHubServer()
+    client = make_client(server)
+
+    comments = client.list_issue_comments("org/web", 12)
+    client.update_issue_comment("org/web", comments[0].id, "updated")
+    client.ensure_label("org/web", "test: pass", color="2da44e")
+    client.update_issue_state_and_labels(
+        "org/web", 12, state="closed", labels=["test: pass"]
+    )
+
+    assert server.comments[0]["body"] == "updated"
+    assert (
+        "POST",
+        "/repos/org/web/labels",
+        {"name": "test: pass", "color": "2da44e"},
+    ) in server.requests
+    assert (
+        "PATCH",
+        "/repos/org/web/issues/12",
+        {"state": "closed", "labels": ["test: pass"]},
+    ) in server.requests
