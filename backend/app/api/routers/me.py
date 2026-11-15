@@ -65,9 +65,15 @@ def _count_by_status(
     cases: list[TestCase], screen_id: str, email: str
 ) -> dict[TestCaseStatus, int]:
     """Đếm case do `email` tạo trên màn hình, đủ 4 trạng thái (không có thì 0)."""
-    counts = {status: 0 for status in TestCaseStatus}
+    counts: dict[TestCaseStatus, int] = {
+        status: 0 for status in TestCaseStatus if status != TestCaseStatus.ARCHIVED
+    }
     for case in cases:
-        if case.screen_id == screen_id and case.created_by == email:
+        if (
+            case.status != TestCaseStatus.ARCHIVED
+            and case.screen_id == screen_id
+            and case.created_by == email
+        ):
             counts[case.status] += 1
     return counts
 

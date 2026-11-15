@@ -333,6 +333,7 @@ def test_my_assignments_include_case_counts(
         "DRAFT": 2,
         "IN_REVIEW": 1,
         "APPROVED": 0,
+        "TESTED": 0,
         "DEPRECATED": 0,
     }
 

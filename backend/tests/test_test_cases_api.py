@@ -298,6 +298,43 @@ def test_tester_creates_lists_and_reads_case(an: TestClient, project: Project) -
     assert an.get(url(project, "/TC-999999")).json() == {"detail": "Không tìm thấy test case"}
 
 
+def test_archived_cases_are_hidden_by_default_and_can_be_restored(
+    an: TestClient, lead: TestClient, project: Project
+) -> None:
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    lead.post(url(project, f"/{case['id']}/approve"), json={"version": 2})
+
+    archived = an.post(url(project, f"/{case['id']}/archive"), json={"version": 3})
+    assert archived.status_code == 204
+    assert an.get(url(project)).json() == []
+    assert an.get(url(project) + "?include_archived=true").json()[0]["status"] == "ARCHIVED"
+
+    restored = an.post(url(project, f"/{case['id']}/unarchive"), json={"version": 4})
+    assert restored.status_code == 204
+    assert an.get(url(project)).json()[0]["status"] == "TESTED"
+
+
+def test_only_creator_or_lead_can_archive_case(
+    an: TestClient, binh: TestClient, lead: TestClient, project: Project
+) -> None:
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    lead.post(url(project, f"/{case['id']}/approve"), json={"version": 2})
+
+    denied = binh.post(url(project, f"/{case['id']}/archive"), json={"version": 3})
+    assert denied.status_code == 403
+    assert lead.post(url(project, f"/{case['id']}/archive"), json={"version": 3}).status_code == 204
+
+
+def test_archive_rejects_wrong_status(an: TestClient, project: Project) -> None:
+    case = create(an, project).json()
+    response = an.post(url(project, f"/{case['id']}/archive"), json={"version": 1})
+
+    assert response.status_code == 400
+    assert response.json()["detail"]
+
+
 def test_two_people_save_same_version_second_gets_409(
     an: TestClient, binh: TestClient, project: Project
 ) -> None:

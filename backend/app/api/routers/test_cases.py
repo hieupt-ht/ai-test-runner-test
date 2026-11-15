@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -42,6 +42,7 @@ class TestCaseDetail(TestCase):
 
     can_edit: bool
     can_review: bool
+    can_archive: bool
 
 
 class ConflictResponse(BaseModel):
@@ -125,7 +126,12 @@ def _conflict_response(services: Services, error: VersionConflictError) -> JSONR
     return JSONResponse(status_code=status.HTTP_409_CONFLICT, content=body.model_dump(mode="json"))
 
 
-def _write(services: Services, action: Callable[[], TestCase]) -> TestCase | JSONResponse:
+def _write(
+    services: Services,
+    action: Callable[[], TestCase],
+    *,
+    transition_status: int = status.HTTP_409_CONFLICT,
+) -> TestCase | JSONResponse:
     """Chạy một thao tác ghi và đổi các lỗi nghiệp vụ thành phản hồi HTTP."""
     try:
         return action()
@@ -136,7 +142,7 @@ def _write(services: Services, action: Callable[[], TestCase]) -> TestCase | JSO
     except TestCasePermissionError:
         raise HTTPException(status.HTTP_403_FORBIDDEN, NO_PERMISSION) from None
     except InvalidTransitionError as error:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from None
+        raise HTTPException(transition_status, str(error)) from None
     except TestCaseNotFoundError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
     except LockTimeout:
@@ -144,8 +150,16 @@ def _write(services: Services, action: Callable[[], TestCase]) -> TestCase | JSO
 
 
 @router.get("")
-def list_test_cases(project_id: str, user: CurrentUser, services: ServicesDep) -> list[TestCase]:
-    return _service(services, user, project_id, Action.VIEW_PROJECT).list_cases()
+def list_test_cases(
+    project_id: str,
+    user: CurrentUser,
+    services: ServicesDep,
+    include_archived: bool = Query(default=False),
+) -> list[TestCase]:
+    cases = _service(services, user, project_id, Action.VIEW_PROJECT).list_cases()
+    if include_archived:
+        return cases
+    return [case for case in cases if case.status.value != "ARCHIVED"]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=TestCase)
@@ -174,6 +188,7 @@ def get_test_case(
         # Dự án đã lưu trữ chỉ để xem, nên không ai được sửa hay duyệt
         can_edit=not project.archived and service.can_edit(user, case),
         can_review=not project.archived and service.can_review(user),
+        can_archive=not project.archived and service.can_archive(user, case),
     )
 
 
@@ -227,6 +242,39 @@ _transition_route("/{case_id}/approve", CaseAction.APPROVE, Action.REVIEW_TEST_C
 _transition_route("/{case_id}/return", CaseAction.RETURN, Action.REVIEW_TEST_CASE)
 _transition_route("/{case_id}/deprecate", CaseAction.DEPRECATE, Action.EDIT_TEST_CASE)
 _transition_route("/{case_id}/restore", CaseAction.RESTORE, Action.REVIEW_TEST_CASE)
+
+
+def _archive_route(path: str, action: CaseAction) -> None:
+    def endpoint(
+        project_id: str,
+        case_id: str,
+        body: TransitionRequest,
+        user: CurrentUser,
+        services: ServicesDep,
+    ) -> Response | JSONResponse:
+        result = _write(
+            services,
+            lambda: _service(services, user, project_id, Action.EDIT_TEST_CASE).transition(
+                user, case_id, action, version=body.version
+            ),
+            transition_status=status.HTTP_400_BAD_REQUEST,
+        )
+        if isinstance(result, TestCase):
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        return result
+
+    router.add_api_route(
+        path,
+        endpoint,
+        methods=["POST"],
+        status_code=status.HTTP_204_NO_CONTENT,
+        response_model=None,
+        name=f"{action.value.lower()}_test_case",
+    )
+
+
+_archive_route("/{case_id}/archive", CaseAction.ARCHIVE)
+_archive_route("/{case_id}/unarchive", CaseAction.UNARCHIVE)
 
 
 @router.post("/approve-batch", response_model=BatchApproveResponse)

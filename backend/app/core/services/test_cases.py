@@ -16,7 +16,7 @@ from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
 from app.core.models.test_case import TestCase, TestCaseContent, TestCaseStatus
-from app.core.models.user import User, normalize_email
+from app.core.models.user import Role, User, normalize_email
 from app.core.permissions import Action, can
 from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditEntry, AuditLogRepository
@@ -45,6 +45,8 @@ class CaseAction(StrEnum):
     RETURN = "RETURN"
     DEPRECATE = "DEPRECATE"
     RESTORE = "RESTORE"
+    ARCHIVE = "ARCHIVE"
+    UNARCHIVE = "UNARCHIVE"
 
 
 class InvalidTestCaseError(Exception):
@@ -71,6 +73,11 @@ _TRANSITIONS: dict[CaseAction, tuple[set[TestCaseStatus], TestCaseStatus]] = {
         TestCaseStatus.DEPRECATED,
     ),
     CaseAction.RESTORE: ({TestCaseStatus.DEPRECATED}, TestCaseStatus.DRAFT),
+    CaseAction.ARCHIVE: (
+        {TestCaseStatus.APPROVED, TestCaseStatus.TESTED},
+        TestCaseStatus.ARCHIVED,
+    ),
+    CaseAction.UNARCHIVE: ({TestCaseStatus.ARCHIVED}, TestCaseStatus.TESTED),
 }
 # Người duyệt (QA Lead/Admin) mới được làm; còn lại cần quyền sửa case.
 _REVIEW_ACTIONS = {CaseAction.APPROVE, CaseAction.RETURN, CaseAction.RESTORE}
@@ -177,6 +184,13 @@ class TestCaseService:
     def can_review(self, user: User) -> bool:
         return can(user, Action.REVIEW_TEST_CASE, is_member=self._is_member(user))
 
+    def can_archive(self, user: User, case: TestCase) -> bool:
+        return self.can_review(user) or (
+            user.role == Role.TESTER
+            and case.created_by == normalize_email(user.email)
+            and self.can_edit(user, case)
+        )
+
     # --- Ghi ---
 
     def create(self, user: User, *, screen_id: str, content: TestCaseContent) -> TestCase:
@@ -208,8 +222,10 @@ class TestCaseService:
         case = self.get_case(case_id)
         self._require_edit(user, case)
         self._require_version(case, version)
-        if case.status == TestCaseStatus.DEPRECATED:
-            raise InvalidTransitionError("Case đã ngừng dùng, hãy khôi phục trước khi sửa")
+        if case.status in (TestCaseStatus.DEPRECATED, TestCaseStatus.ARCHIVED):
+            raise InvalidTransitionError(
+                "Case đã lưu trữ hoặc ngừng dùng, hãy khôi phục trước khi sửa"
+            )
 
         old_content = _content_of(case)
         new_content = content.model_dump(mode="json")
@@ -299,7 +315,10 @@ class TestCaseService:
         *,
         refresh: bool = False,
     ) -> TestCase:
-        if action in _REVIEW_ACTIONS:
+        if action in {CaseAction.ARCHIVE, CaseAction.UNARCHIVE}:
+            if not self.can_archive(user, case):
+                raise TestCasePermissionError("Bạn không có quyền lưu trữ test case này")
+        elif action in _REVIEW_ACTIONS:
             if not self.can_review(user):
                 raise TestCasePermissionError("Bạn không có quyền duyệt test case")
         else:
