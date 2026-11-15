@@ -1,6 +1,6 @@
 # HANDOFF — đọc file này đầu tiên
 
-Cập nhật: 2026-11-14. Nhánh hiện tại: `feature/ai-agent-runner` (từ `develop`). **Không push, không tạo PR khi chưa được chủ dự án đồng ý.**
+Cập nhật: 2026-11-15. Nhánh hiện tại: `feature/ai-agent-runner` (từ `develop`). **Không push, không tạo PR khi chưa được chủ dự án đồng ý.**
 
 ## Dự án đang ở đâu
 
@@ -8,12 +8,12 @@ AI Test Runner là web app nội bộ cho QA: Tester viết case, QA Lead duyệ
 
 M1–M3 đã nằm ở `develop`. Kế hoạch mới ở `docs/superpowers/plans/2026-11-14-case-to-issue-and-codex-agent.md`, thiết kế ở `docs/superpowers/specs/2026-11-14-case-to-issue-and-codex-agent-design.md`. Hướng worker Playwright cũ được giữ ở nhánh `feature/m4-playwright-worker` và tag `m4-playwright-v1`; **không** có worker hay tab Chạy test trên nhánh hiện tại. Chỉ mô hình và repository `Runs`/`Results` được lấy lại từ tag để phục vụ API agent.
 
-Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026-11-14-notifications-results-dashboard.md` đã hoàn thành đủ 10 task. Ứng dụng hiện có chuông thông báo, trang Kết quả, hai tab "Đang làm"/"Đã xong", trang Tổng quan theo vai trò và hộp thoại dùng tốt hơn trên màn hình hẹp. Thông báo lưu trong Redis 30 ngày, tối đa 100 cái mỗi người; mất thông báo không làm mất dữ liệu chính. Cách cấu hình Codex và prompt mẫu ở `docs/codex-agent.md`. Kiểm tra cuối: backend **367 test**, frontend **77 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
+Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026-11-14-notifications-results-dashboard.md` đã hoàn thành đủ 10 task. Ứng dụng hiện có chuông thông báo, trang Kết quả, hai tab "Đang làm"/"Đã xong", trang Tổng quan theo vai trò và hộp thoại dùng tốt hơn trên màn hình hẹp. Thông báo lưu trong Redis 30 ngày, tối đa 100 cái mỗi người; mất thông báo không làm mất dữ liệu chính. Cách cấu hình Codex và prompt mẫu ở `docs/codex-agent.md`. Tính năng **Chạy lại** đã xong: nút ở trang Kết quả (QA Lead/Admin) gọi `POST /api/projects/{project_id}/test-cases/{case_id}/request-rerun`, app comment + mở lại issue + gắn nhãn `needs-rerun`; khi có kết quả mới app tự bỏ nhãn này. Đã chạy thử trên repo thật `hieupt-ht/ShopHub` (RUN-0005). Codex **không** tự comment lên issue, app làm việc đó bằng GitHub App. Kiểm tra cuối: backend **388 test**, frontend **105 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
 
 ## Việc còn dở
 
-1. **Chạy thử với repo thật** `hieupt-ht/126CQH01-NHOM-14`: đã xác nhận GitHub App đọc được repo và Issues; quyền ghi Issues chưa thử. Cần tạo/duyệt một case trong dự án thật rồi kiểm tra issue. Docker Desktop hiện chưa chạy trên máy này.
-2. Mở Codex theo `docs/codex-agent.md`, dùng tài khoản test riêng của app, chạy kịch bản Playwright thật và đối chiếu comment trên issue với tab `Results` và thông báo hoàn tất. `AGENT_API_TOKEN` hiện chưa được cấu hình; chưa có bằng chứng chạy end-to-end trên app thật.
+1. Luồng end-to-end (duyệt case → issue → Codex chạy → API → app comment, đổi nhãn) và luồng Chạy lại đã chạy được trên `hieupt-ht/ShopHub`. Còn cần đối chiếu thêm tab `Results` và thông báo hoàn tất, và thử trường hợp PASS.
+2. Ảnh bằng chứng: app chỉ nhận link `https://`. Codex hiện lưu ảnh trên máy nên phải để trống `evidence`; cần cách đưa ảnh lên một địa chỉ https nếu muốn hiện trong app.
 3. Kiểm tra giao diện bằng mắt ở trình duyệt thật, đặc biệt hộp thoại, chuông thông báo, các tab "Việc của tôi", trang Kết quả và Tổng quan trên màn hình hẹp. Test tự động frontend đã qua nhưng chưa thay thế kiểm tra này.
 
 ## Công nghệ và lệnh kiểm tra

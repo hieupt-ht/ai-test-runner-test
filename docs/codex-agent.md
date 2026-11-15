@@ -1,6 +1,6 @@
 # Dùng Codex chạy test case từ GitHub issue
 
-Luồng hiện tại: QA Lead duyệt case trên AI Test Runner → app tạo issue trong repo của dự án → bạn tự mở Codex để chạy test → Codex comment kết quả lên issue và gọi API để ghi vào tab `Results` của Google Sheet. App không tự mở Codex.
+Luồng hiện tại: QA Lead duyệt case trên AI Test Runner → app tạo issue trong repo của dự án → bạn tự mở Codex để chạy test → Codex gọi API để ghi kết quả vào tab `Results` của Google Sheet → **app tự comment kết quả lên issue**, đóng/mở issue và đổi nhãn bằng GitHub App của nó. App không tự mở Codex.
 
 ## 1. Cấu hình GitHub MCP cho Codex
 
@@ -21,7 +21,7 @@ url = "https://api.githubcopilot.com/mcp/"
 bearer_token_env_var = "GITHUB_PAT_TOKEN"
 ```
 
-Mở lại Codex, dùng `/mcp` để kiểm tra các công cụ GitHub đã hiện. Token này dành cho **Codex đọc/comment issue**; GitHub App trong AI Test Runner có cấu hình riêng.
+Mở lại Codex, dùng `/mcp` để kiểm tra các công cụ GitHub đã hiện. Token này dành cho **Codex đọc issue**; GitHub App trong AI Test Runner có cấu hình riêng và là bên comment kết quả. Nếu token của Codex không có quyền ghi (lỗi 403), luồng vẫn chạy được vì Codex không cần comment.
 
 ## 2. Chuẩn bị nơi chạy test
 
@@ -34,9 +34,17 @@ Mở lại Codex, dùng `/mcp` để kiểm tra các công cụ GitHub đã hi�
 
 Chỉ cần thay `<owner/repo>` bằng repo của dự án. Mã dự án và endpoint đã có trong issue:
 
-> Trong repo `<owner/repo>`, dùng GitHub MCP liệt kê issue có cả hai label `test-case` và `status:APPROVED`. Đọc từng issue và README/source của app để hiểu cách chạy. Viết kịch bản Playwright cho các bước trong issue, chạy bằng `npx playwright test --reporter=json` và lưu báo cáo JSON. Lấy PASS/FAIL từ **báo cáo JSON và mã thoát của lệnh**, không tự đoán từ lời giải thích. Nếu không chạy được, dùng `BLOCKED` hoặc `INCONCLUSIVE` kèm lý do. Comment kết quả lên đúng issue: trạng thái, bước lỗi nếu có, và đường dẫn bằng chứng không chứa bí mật. Sau đó đọc mục **Báo cáo cho AI Test Runner** trong issue và gọi đúng endpoint ở đó bằng `Authorization: Bearer` lấy từ biến môi trường `AGENT_API_TOKEN`; gửi một phần tử kết quả cho mỗi case. Báo lại mã run và các case bị API bỏ qua. Không đọc `.env` và không đưa mật khẩu/token vào issue hay comment.
+> Trong repo `<owner/repo>`, dùng GitHub MCP liệt kê issue có cả hai label `test-case` và `status:APPROVED`. Đọc từng issue và README/source của app để hiểu cách chạy. Viết kịch bản Playwright cho các bước trong issue, chạy bằng `npx playwright test --reporter=json` và lưu báo cáo JSON. Lấy PASS/FAIL từ **báo cáo JSON và mã thoát của lệnh**, không tự đoán từ lời giải thích. Nếu không chạy được, dùng `BLOCKED` hoặc `INCONCLUSIVE` kèm lý do. **Không tự comment lên issue.** Đọc mục **Báo cáo cho AI Test Runner** trong issue và gọi đúng endpoint ở đó bằng `Authorization: Bearer` lấy từ biến môi trường `AGENT_API_TOKEN`; gửi một phần tử kết quả cho mỗi case. Báo lại mã run và các case bị API bỏ qua. Không đọc `.env` và không đưa mật khẩu/token vào issue hay comment.
 
-**Lưu ý:** API ghi Sheet không tự comment lên GitHub; Codex phải làm cả hai thao tác. Nếu issue đã cũ so với case trong Sheet, QA Lead bấm **Đồng bộ lại issue** trước khi chạy.
+**Lưu ý:** sau khi nhận kết quả, app tự comment lên issue, đóng/mở issue và đổi nhãn `test: pass`/`test: fail`. Nếu issue đã cũ so với case trong Sheet, QA Lead bấm **Đồng bộ lại issue** trước khi chạy. Ảnh bằng chứng chỉ được nhận khi là link `https://`; đường dẫn file trên máy sẽ bị bỏ qua, nên để trống `evidence`.
+
+### Chạy lại case FAIL/BLOCKED
+
+QA Lead hoặc Admin bấm **Chạy lại** ở trang Kết quả. App không gọi được Codex, nên chỉ để lại tín hiệu trên issue: comment "🔄 Yêu cầu chạy lại" (giờ Việt Nam), mở lại issue nếu đang đóng, gắn nhãn `needs-rerun` và bỏ nhãn `test: pass`/`test: fail`. Sau đó bạn mở Codex với prompt:
+
+> Trong repo `<owner/repo>`, dùng GitHub MCP liệt kê issue **đang mở** có label `needs-rerun` và `test-case`. Với mỗi issue, đọc comment "Yêu cầu chạy lại" và comment kết quả lần trước để biết lần trước lỗi ở đâu. Viết lại kịch bản Playwright nếu cần, chạy thật bằng `npx playwright test --reporter=json` và lấy kết quả từ báo cáo JSON và mã thoát. **Không comment lên issue và không đổi nhãn.** Gọi đúng endpoint trong mục **Báo cáo cho AI Test Runner** của issue bằng `Authorization: Bearer` từ biến `AGENT_API_TOKEN`, một phần tử cho mỗi case. Báo lại mã run và các case bị API bỏ qua.
+
+Khi API ghi kết quả xong, app tự comment kết quả mới và bỏ nhãn `needs-rerun`. Chỉ chạy lại một case thì thêm vào cuối prompt "Chỉ chạy issue của case `TC-000001`".
 
 ## 4. Ví dụ gọi API
 
