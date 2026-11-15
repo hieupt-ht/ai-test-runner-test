@@ -18,10 +18,12 @@ RERUN_LABEL_COLOR = "e6a817"
 
 
 def format_rerun_comment(user_name: str, requested_at: datetime) -> str:
+    # Ghi giờ Việt Nam cho người dùng dễ đọc
+    local_time = requested_at.astimezone(VIETNAM)
     return "\n".join(
         [
             RERUN_MARKER,
-            f"🔄 **Yêu cầu chạy lại** — {user_name} · {requested_at.astimezone(VIETNAM):%Y-%m-%d %H:%M}",
+            f"🔄 **Yêu cầu chạy lại** — {user_name} · {local_time:%Y-%m-%d %H:%M}",
             "Mở Codex và chạy lại case này.",
         ]
     )
