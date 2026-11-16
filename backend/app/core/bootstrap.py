@@ -1,17 +1,22 @@
 """Chuẩn bị file Sheet hệ thống khi app khởi động.
 
 - Tab nào còn thiếu thì tạo, kèm hàng tiêu đề.
-- Tab đã có thì kiểm tra đủ cột.
+- Tab đã có thì tự thêm các cột còn thiếu vào cuối tiêu đề.
 - Tab Users còn trống thì thêm Admin đầu tiên (từ BOOTSTRAP_ADMIN_EMAIL).
 Chạy nhiều lần vẫn cho cùng kết quả.
 """
 
+import logging
+
 from app.core.models.user import Role, User, normalize_email
+from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.sheets.gateway import SheetsGateway
 from app.core.sheets.schema import PROJECT_TABS, SYSTEM_TABS
 from app.core.sheets.table import SheetTable
 from app.core.time import utc_now
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigError(Exception):
@@ -21,12 +26,12 @@ class ConfigError(Exception):
 def _ensure_tabs(
     gateway: SheetsGateway, spreadsheet_id: str, tabs: dict[str, list[str]]
 ) -> list[str]:
-    """Tạo các tab còn thiếu (kèm tiêu đề); tab đã có thì kiểm tra đủ cột."""
+    """Tạo các tab còn thiếu (kèm tiêu đề); tab đã có thì thêm cột còn thiếu vào cuối."""
     existing_tabs = set(gateway.list_tabs(spreadsheet_id))
     created_tabs: list[str] = []
     for tab, columns in tabs.items():
         if tab in existing_tabs:
-            SheetTable(gateway, spreadsheet_id, tab, columns).check_columns()
+            SheetTable(gateway, spreadsheet_id, tab, columns).ensure_columns()
         else:
             gateway.add_tab(spreadsheet_id, tab, columns)
             created_tabs.append(tab)
@@ -59,3 +64,17 @@ def bootstrap_project_spreadsheet(gateway: SheetsGateway, spreadsheet_id: str) -
     App chưa được share quyền thì gateway báo SheetAccessDeniedError.
     """
     return _ensure_tabs(gateway, spreadsheet_id, PROJECT_TABS)
+
+
+def upgrade_project_spreadsheets(projects: ProjectRepository, gateway: SheetsGateway) -> None:
+    """Nâng cấp Sheet của mọi dự án chưa lưu trữ (thêm cột mới ở cuối nếu thiếu).
+
+    Một dự án lỗi (mất quyền, Sheet bị xoá...) chỉ ghi log, không chặn các dự án còn lại.
+    """
+    for project in projects.list_all():
+        if project.archived:
+            continue
+        try:
+            bootstrap_project_spreadsheet(gateway, project.spreadsheet_id)
+        except Exception:
+            logger.warning("Không nâng cấp được Sheet của dự án %s", project.id, exc_info=True)

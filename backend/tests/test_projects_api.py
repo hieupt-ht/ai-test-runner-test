@@ -227,14 +227,15 @@ def test_admin_can_clear_staging_url(
     assert response.json()["staging_url"] == ""
 
 
-def test_create_with_existing_tab_missing_columns_is_422(
+def test_create_with_existing_tab_missing_columns_appends_them(
     client_as_admin: TestClient, gateway: FakeSheetsGateway
 ) -> None:
-    # Sheet đã có sẵn tab Screens nhưng cột không đúng (ví dụ file cũ của nhóm khác)
+    # Sheet đã có sẵn tab Screens nhưng thiếu cột: app thêm cột còn thiếu vào cuối, giữ cột lạ
     gateway.data[SHEET_A] = {"Screens": [["Tên màn hình", "Ghi chú"]]}
 
     response = client_as_admin.post("/api/projects", json=create_body())
 
-    assert response.status_code == 422
-    assert response.json()["detail"].startswith("Sheet này đã có tab nhưng sai cột: ")
-    assert "Tab 'Screens' thiếu cột: id" in response.json()["detail"]
+    assert response.status_code == 201
+    header = gateway.data[SHEET_A]["Screens"][0]
+    assert header[:2] == ["Tên màn hình", "Ghi chú"]
+    assert "id" in header

@@ -23,7 +23,11 @@ from app.api.routers import (
     users,
 )
 from app.api.services import Services, build_gateway, build_services, is_configured
-from app.core.bootstrap import ConfigError, bootstrap_system_spreadsheet
+from app.core.bootstrap import (
+    ConfigError,
+    bootstrap_system_spreadsheet,
+    upgrade_project_spreadsheets,
+)
 from app.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
@@ -47,6 +51,7 @@ def start_real_services(settings: Settings) -> Services | None:
     )
     if created_tabs:
         logger.info("Đã tạo các tab: %s", ", ".join(created_tabs))
+    upgrade_project_spreadsheets(services.projects, gateway)
     return services
 
 

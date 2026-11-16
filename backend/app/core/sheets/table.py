@@ -71,6 +71,18 @@ class SheetTable:
         """Báo MissingColumnsError nếu tab thiếu cột cần dùng."""
         self._read_header()
 
+    def ensure_columns(self) -> list[str]:
+        """Thêm các cột còn thiếu vào CUỐI hàng tiêu đề; trả tên các cột vừa thêm.
+
+        Cột lạ do người dùng tự thêm được giữ nguyên. Tốn 1 lượt đọc và tối đa 1 lượt ghi.
+        """
+        rows = self._gateway.get_values(self._spreadsheet_id, f"{self._tab}!1:1")
+        header = rows[0] if rows else []
+        added = [column for column in self._columns if column not in header]
+        if added:
+            self._gateway.update_row(self._spreadsheet_id, self._tab, 1, header + added)
+        return added
+
     def _read_raw_row(self, row_number: int, header: list[str]) -> list[str]:
         rows = self._gateway.get_values(
             self._spreadsheet_id, f"{self._tab}!{row_number}:{row_number}"

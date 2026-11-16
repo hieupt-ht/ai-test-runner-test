@@ -160,3 +160,15 @@ def test_update_found_writes_without_rereading_header_or_row() -> None:
     assert gateway.data["sys"]["Users"][1] == [
         "TESTER", "a@x.com", "giữ nguyên", "An Nguyễn", "TRUE", CREATED
     ]
+
+
+def test_ensure_columns_appends_missing_at_end_and_keeps_unknown() -> None:
+    gateway = FakeSheetsGateway({"S": {"T": [["id", "la", "name"]]}})
+    table = SheetTable(gateway, "S", "T", ["id", "name", "platform", "regression"])
+
+    assert table.ensure_columns() == ["platform", "regression"]
+    assert gateway.data["S"]["T"][0] == ["id", "la", "name", "platform", "regression"]
+    # Chạy lần hai không đổi gì và không ghi thêm
+    gateway.calls.clear()
+    assert table.ensure_columns() == []
+    assert not [call for call in gateway.calls if call.startswith("update:")]
