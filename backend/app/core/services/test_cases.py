@@ -10,10 +10,13 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
+from app.core.models.project import Project
 from app.core.models.test_case import TestCase, TestCaseContent, TestCaseStatus
-from app.core.models.user import User, normalize_email
+from app.core.models.user import Role, User, normalize_email
 from app.core.permissions import Action, can
 from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditEntry, AuditLogRepository
@@ -24,6 +27,9 @@ from app.core.repositories.test_cases import (
     TestCaseRepository,
     VersionConflictError,
 )
+from app.core.repositories.users import UserRepository
+from app.core.services.issue_sync import IssueSink, IssueSyncer
+from app.core.services.notify import Notifier
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
 
@@ -31,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 AUDIT_ENTITY = "test_case"
 MAX_COMMENT_LENGTH = 1000
+MAX_SYNC_BATCH_SIZE = 200
 
 
 class CaseAction(StrEnum):
@@ -39,6 +46,8 @@ class CaseAction(StrEnum):
     RETURN = "RETURN"
     DEPRECATE = "DEPRECATE"
     RESTORE = "RESTORE"
+    ARCHIVE = "ARCHIVE"
+    UNARCHIVE = "UNARCHIVE"
 
 
 class InvalidTestCaseError(Exception):
@@ -65,6 +74,11 @@ _TRANSITIONS: dict[CaseAction, tuple[set[TestCaseStatus], TestCaseStatus]] = {
         TestCaseStatus.DEPRECATED,
     ),
     CaseAction.RESTORE: ({TestCaseStatus.DEPRECATED}, TestCaseStatus.DRAFT),
+    CaseAction.ARCHIVE: (
+        {TestCaseStatus.APPROVED, TestCaseStatus.TESTED},
+        TestCaseStatus.ARCHIVED,
+    ),
+    CaseAction.UNARCHIVE: ({TestCaseStatus.ARCHIVED}, TestCaseStatus.TESTED),
 }
 # Người duyệt (QA Lead/Admin) mới được làm; còn lại cần quyền sửa case.
 _REVIEW_ACTIONS = {CaseAction.APPROVE, CaseAction.RETURN, CaseAction.RESTORE}
@@ -91,6 +105,15 @@ class BatchApproveResult:
     skipped: list[SkippedCase] = field(default_factory=list)
 
 
+class SyncIssuesResult(BaseModel):
+    created: int = 0
+    updated: int = 0
+    closed: int = 0
+    reopened: int = 0
+    skipped: int = 0
+    failed: list[SkippedCase] = Field(default_factory=list)
+
+
 class TestCaseService:
     __test__ = False  # pytest đừng tưởng đây là lớp test
 
@@ -104,6 +127,11 @@ class TestCaseService:
         members: ProjectMemberRepository,
         status_updater: AssignmentStatusUpdater,
         audit_log: AuditLogRepository,
+        issue_sync: IssueSink | None = None,
+        project: Project | None = None,
+        issue_syncer: IssueSyncer | None = None,
+        notifier: Notifier | None = None,
+        users: UserRepository | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -112,6 +140,12 @@ class TestCaseService:
         self._members = members
         self._status_updater = status_updater
         self._audit_log = audit_log
+        self._issue_sync = issue_sync
+        self._project = project
+        self._issue_syncer = issue_syncer
+        self._notifier = notifier
+        self._users = users
+        self._screen_names: dict[str, str] | None = None
 
     # --- Đọc ---
 
@@ -153,6 +187,13 @@ class TestCaseService:
     def can_review(self, user: User) -> bool:
         return can(user, Action.REVIEW_TEST_CASE, is_member=self._is_member(user))
 
+    def can_archive(self, user: User, case: TestCase) -> bool:
+        return self.can_review(user) or (
+            user.role == Role.TESTER
+            and case.created_by == normalize_email(user.email)
+            and self.can_edit(user, case)
+        )
+
     # --- Ghi ---
 
     def create(self, user: User, *, screen_id: str, content: TestCaseContent) -> TestCase:
@@ -174,6 +215,7 @@ class TestCaseService:
             )
 
         self._audit(user, "CREATE", case.id, case.model_dump(mode="json"))
+        self._sync_issue(case)
         self._refresh_status(case.screen_id)
         return case
 
@@ -183,8 +225,10 @@ class TestCaseService:
         case = self.get_case(case_id)
         self._require_edit(user, case)
         self._require_version(case, version)
-        if case.status == TestCaseStatus.DEPRECATED:
-            raise InvalidTransitionError("Case đã ngừng dùng, hãy khôi phục trước khi sửa")
+        if case.status in (TestCaseStatus.DEPRECATED, TestCaseStatus.ARCHIVED):
+            raise InvalidTransitionError(
+                "Case đã lưu trữ hoặc ngừng dùng, hãy khôi phục trước khi sửa"
+            )
 
         old_content = _content_of(case)
         new_content = content.model_dump(mode="json")
@@ -242,6 +286,26 @@ class TestCaseService:
             self._refresh_status(screen_id)
         return result
 
+    def sync_issues(self, user: User) -> SyncIssuesResult:
+        if not self.can_review(user):
+            raise TestCasePermissionError("Bạn không có quyền đồng bộ issue")
+        if self._issue_syncer is None or self._project is None:
+            raise RuntimeError("GitHub chưa được cấu hình")
+
+        result = SyncIssuesResult()
+        screen_names = {screen.id: screen.name for screen in self._screens.list_all()}
+        for case in self._test_cases.list_all()[:MAX_SYNC_BATCH_SIZE]:
+            try:
+                outcome = self._issue_syncer.sync_case(
+                    self._project, case, screen_name=screen_names.get(case.screen_id, "")
+                )
+                setattr(result, outcome, getattr(result, outcome) + 1)
+            except Exception as error:
+                result.failed.append(SkippedCase(case.id, str(error)))
+                if "giới hạn" in str(error):
+                    break
+        return result
+
     # --- Nội bộ ---
 
     def _transition_case(
@@ -254,7 +318,10 @@ class TestCaseService:
         *,
         refresh: bool = False,
     ) -> TestCase:
-        if action in _REVIEW_ACTIONS:
+        if action in {CaseAction.ARCHIVE, CaseAction.UNARCHIVE}:
+            if not self.can_archive(user, case):
+                raise TestCasePermissionError("Bạn không có quyền lưu trữ test case này")
+        elif action in _REVIEW_ACTIONS:
             if not self.can_review(user):
                 raise TestCasePermissionError("Bạn không có quyền duyệt test case")
         else:
@@ -273,9 +340,51 @@ class TestCaseService:
             if not 1 <= len(comment) <= MAX_COMMENT_LENGTH:
                 raise InvalidTestCaseError("Trả lại phải kèm nhận xét")
             diff["comment"] = comment
-        return self._save(
+        saved = self._save(
             user, case, {"status": target}, version, action.value, diff, refresh=refresh
         )
+        if action == CaseAction.SUBMIT:
+            self._notify_submitted(user, saved)
+        if self._notifier is not None and case.created_by != normalize_email(user.email):
+            if action == CaseAction.RETURN:
+                self._notifier.case_returned(
+                    email=case.created_by, project_id=self._project_id,
+                    case_id=case.id, comment=comment,
+                )
+            elif action == CaseAction.APPROVE:
+                self._notifier.case_approved(
+                    email=case.created_by, project_id=self._project_id, case_id=case.id
+                )
+        return saved
+
+    def _notify_submitted(self, actor: User, case: TestCase) -> None:
+        """Báo cho người có quyền duyệt; lỗi đọc người nhận không làm hỏng việc gửi duyệt."""
+        if self._notifier is None or self._users is None:
+            return
+        try:
+            member_emails = {
+                member.email for member in self._members.list_for_project(self._project_id)
+            }
+            actor_email = normalize_email(actor.email)
+            recipients = [
+                user.email
+                for user in self._users.list_all()
+                if user.active
+                and user.email != actor_email
+                and (
+                    user.role == Role.ADMIN
+                    or (user.role == Role.QA_LEAD and user.email in member_emails)
+                )
+            ]
+            self._notifier.case_submitted(
+                emails=recipients, project_id=self._project_id, case_id=case.id
+            )
+        except Exception:
+            logger.warning(
+                "Không xác định được người nhận khi case %s được gửi duyệt",
+                case.id,
+                exc_info=True,
+            )
 
     def _require_edit(self, user: User, case: TestCase) -> None:
         if not self.can_edit(user, case):
@@ -305,11 +414,25 @@ class TestCaseService:
             actor=normalize_email(user.email),
         )
         self._audit(user, audit_action, saved.id, diff)
+        self._sync_issue(saved)
         # Trạng thái việc chỉ phụ thuộc trạng thái của các case. Case không đổi trạng thái
         # (ví dụ sửa chữ trong case Nháp) thì khỏi tính lại, đỡ vài lượt gọi Google.
         if refresh and "status" in changes:
             self._refresh_status(saved.screen_id)
         return saved
+
+    def _sync_issue(self, case: TestCase) -> None:
+        if self._issue_sync is None or self._project is None:
+            return
+        try:
+            if self._screen_names is None:
+                self._screen_names = {screen.id: screen.name for screen in self._screens.list_all()}
+            self._issue_sync.sync_case(
+                self._project, case, screen_name=self._screen_names.get(case.screen_id, "")
+            )
+        except Exception:
+            # Case đã được ghi vào Sheet; lỗi GitHub không được khiến người dùng tạo lại.
+            logger.warning("Không gửi được đồng bộ issue cho case %s", case.id, exc_info=True)
 
     def _refresh_status(self, screen_id: str) -> None:
         """Tính lại trạng thái việc, cố gắng hết sức: case đã ghi rồi thì không được báo lỗi.

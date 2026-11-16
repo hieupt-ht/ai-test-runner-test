@@ -6,6 +6,10 @@ from pydantic import BaseModel, Field
 from app.core.models.test_case import TestCaseStatus
 
 
+def _empty_case_counts() -> dict[TestCaseStatus, int]:
+    return {status: 0 for status in TestCaseStatus if status != TestCaseStatus.ARCHIVED}
+
+
 class AssignmentStatus(StrEnum):
     # Ở M2 luôn là TODO. Từ M3, trạng thái tự suy ra từ các test case của màn hình.
     TODO = "TODO"
@@ -44,8 +48,6 @@ class MyAssignment(BaseModel):
     deadline: date
     status: AssignmentStatus
     # Số case của chính user trên màn hình này, theo từng trạng thái (đủ 4 khoá).
-    case_counts: dict[TestCaseStatus, int] = Field(
-        default_factory=lambda: {status: 0 for status in TestCaseStatus}
-    )
+    case_counts: dict[TestCaseStatus, int] = Field(default_factory=_empty_case_counts)
     # Case đang là Nháp vì bị QA trả lại (kèm lý do), chưa được sửa/gửi duyệt lại.
     returned_cases: list[ReturnedCase] = Field(default_factory=list)

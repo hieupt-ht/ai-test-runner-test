@@ -13,10 +13,12 @@ from redis import Redis
 from app.api.oauth import GoogleOAuth, OAuthClient
 from app.api.sessions import SessionStore
 from app.core.github.client import GitHubAppClient, GitHubClient
+from app.core.notifications import NotificationStore
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
+from app.core.services.issue_sync import BackgroundIssueSync, IssueSink, IssueSyncer
 from app.core.sheets.gateway import GoogleSheetsGateway, SheetsGateway
 from app.settings import Settings
 
@@ -24,6 +26,7 @@ from app.settings import Settings
 @dataclass
 class Services:
     redis: Redis
+    notifications: NotificationStore
     users: UserRepository
     audit_log: AuditLogRepository
     sessions: SessionStore
@@ -34,6 +37,8 @@ class Services:
     projects: ProjectRepository
     members: ProjectMemberRepository
     github: GitHubClient | None  # None khi chưa cấu hình GitHub App
+    issue_sync: IssueSink | None = None
+    app_base_url: str = "http://localhost:3000"
     lock_wait_seconds: float = 5.0
     sheet_cache_ttl_seconds: int = 60
 
@@ -64,8 +69,10 @@ def build_github(settings: Settings) -> GitHubClient | None:
 def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services:
     redis = Redis.from_url(settings.redis_url)
     system_sheet = settings.system_spreadsheet_id
+    github = build_github(settings)
     return Services(
         redis=redis,
+        notifications=NotificationStore(redis),
         users=UserRepository(
             gateway, system_sheet, redis, cache_ttl_seconds=settings.user_cache_ttl_seconds
         ),
@@ -81,6 +88,12 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         members=ProjectMemberRepository(
             gateway, system_sheet, redis, cache_ttl_seconds=settings.user_cache_ttl_seconds
         ),
-        github=build_github(settings),
+        github=github,
+        issue_sync=(
+            BackgroundIssueSync(IssueSyncer(github, app_base_url=settings.app_base_url))
+            if github
+            else None
+        ),
+        app_base_url=settings.app_base_url,
         sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,
     )

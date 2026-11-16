@@ -9,6 +9,7 @@
     "adminProjects": "Quản lý dự án",
     "users": "Người dùng",
     "projects": "Dự án",
+    "menu": "Mở điều hướng",
     "noProjects": "Bạn chưa tham gia dự án nào"
   },
   "login": {
@@ -25,11 +26,60 @@
     "themeSystem": "Theo hệ thống",
     "logout": "Đăng xuất"
   },
+  "notifications": {
+    "title": "Thông báo",
+    "empty": "Chưa có thông báo",
+    "readAll": "Đọc hết",
+    "readError": "Không đánh dấu được thông báo. Vui lòng thử lại."
+  },
+  "results": {
+    "title": "Kết quả test",
+    "allScreens": "Tất cả màn hình",
+    "filterStatus": "Lọc trạng thái",
+    "all": "Tất cả",
+    "status": {
+      "PASS": "PASS",
+      "FAIL": "FAIL",
+      "BLOCKED": "BLOCKED",
+      "INCONCLUSIVE": "INCONCLUSIVE"
+    },
+    "failedStep": "Bước lỗi: {step}",
+    "evidence": "Bằng chứng",
+    "summary": "PASS: {PASS} · FAIL: {FAIL} · BLOCKED: {BLOCKED}",
+    "caseId": "Mã case",
+    "caseTitle": "Tiêu đề",
+    "reasonColumn": "Lý do",
+    "failedStepColumn": "Bước lỗi",
+    "actionsColumn": "Thao tác",
+    "rerun": "Chạy lại",
+    "rerunPending": "Đang gửi...",
+    "rerunSuccess": "Đã yêu cầu chạy lại. Mở Codex để thực hiện.",
+    "rerunError": "Không yêu cầu được. Thử lại sau.",
+    "empty": "Chưa có kết quả test",
+    "loading": "Đang tải kết quả...",
+    "error": "Không tải được kết quả test. Vui lòng thử lại."
+  },
   "overview": {
     "title": "Tổng quan",
     "greeting": "Xin chào, {name}!",
-    "emptyTitle": "Chưa có dự án nào",
-    "emptyDescription": "Phần dự án sẽ có ở mốc M2. Hiện bạn có thể quản lý người dùng (nếu là Admin)."
+    "description": "Các thông tin cần chú ý theo vai trò của bạn.",
+    "testerSection": "Tổng quan công việc của Tester",
+    "qaSection": "Tổng quan công việc của QA Lead",
+    "adminSection": "Tổng quan dành cho Admin",
+    "activeWork": "Việc đang làm",
+    "activeWorkDescription": "Các màn hình đang cần bạn xử lý.",
+    "dueSoon": "Sắp hết hạn",
+    "dueSoonDescription": "Công việc hết hạn trong 3 ngày tới.",
+    "returnedCases": "Case bị trả lại",
+    "returnedCasesDescription": "Các case cần sửa theo góp ý của QA.",
+    "pendingReview": "Chờ duyệt",
+    "pendingReviewDescription": "Các case đang chờ QA kiểm tra.",
+    "projectCount": "Tổng số dự án",
+    "projectCountDescription": "Các dự án đang có trong hệ thống.",
+    "latestResult": "Kết quả gần nhất",
+    "noProjects": "Chưa có dự án nào.",
+    "noResults": "Chưa có kết quả test.",
+    "viewerEmpty": "Bạn chưa có công việc cần xử lý."
   },
   "roles": {
     "ADMIN": "Admin",
@@ -67,6 +117,7 @@
   "projectTabs": {
     "screens": "Màn hình",
     "testCases": "Test case",
+    "results": "Kết quả",
     "assignments": "Chia việc",
     "members": "Thành viên",
     "settings": "Cài đặt"
@@ -173,6 +224,10 @@
   },
   "testCases": {
     "add": "Tạo test case",
+    "sync": {
+      "action": "Đồng bộ lại issue",
+      "result": "Tạo {created}, cập nhật {updated}, lỗi {failed}."
+    },
     "empty": "Dự án chưa có test case nào.",
     "emptyCanCreate": "Dự án chưa có test case nào. Bấm nút Tạo test case, hoặc vào tab Màn hình để chọn màn hình cần viết case.",
     "emptyFiltered": "Không có test case nào khớp bộ lọc.",
@@ -191,6 +246,9 @@
       "skippedItem": "{id}: {reason}"
     },
     "searchPlaceholder": "Tìm theo mã hoặc tiêu đề",
+    "includeArchived": "Hiện case đã lưu trữ",
+    "archive": "Lưu trữ",
+    "unarchive": "Khôi phục",
     "filterScreen": "Tất cả màn hình",
     "filterStatus": "Mọi trạng thái (ẩn ngừng dùng)",
     "filterSeverity": "Mọi mức độ",
@@ -211,6 +269,8 @@
       "DRAFT": "Nháp",
       "IN_REVIEW": "Chờ duyệt",
       "APPROVED": "Đã duyệt",
+      "TESTED": "Đã kiểm thử",
+      "ARCHIVED": "Đã lưu trữ",
       "DEPRECATED": "Ngừng dùng"
     },
     "severity": {
@@ -358,6 +418,10 @@
   },
   "myWork": {
     "title": "Việc của tôi",
+    "activeTab": "Đang làm",
+    "doneTab": "Đã xong",
+    "emptyActive": "Không có việc đang làm.",
+    "emptyDone": "Chưa có việc nào đã xong.",
     "empty": "Bạn chưa được giao màn hình nào.",
     "emptyHint": "Khi QA Lead giao việc, các màn hình sẽ hiện ở đây.",
     "deadline": "Deadline {date}",

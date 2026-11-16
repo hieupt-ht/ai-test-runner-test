@@ -4,10 +4,10 @@ import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { api } from "@/lib/api/client"
-import { useApproveTestCases, useTransitionTestCase } from "@/lib/use-test-cases"
+import { useApproveTestCases, useArchiveTestCase, useSyncIssues, useTestCases, useTransitionTestCase } from "@/lib/use-test-cases"
 
 vi.mock("@/lib/api/client", () => ({
-  api: { POST: vi.fn() },
+  api: { POST: vi.fn(), GET: vi.fn() },
   ApiError: class extends Error {},
   errorMessage: () => "",
 }))
@@ -35,6 +35,39 @@ describe("useTransitionTestCase", () => {
   })
 })
 
+describe("useTestCases", () => {
+  it("gửi include_archived=true khi người dùng bật bộ lọc", async () => {
+    vi.mocked(api.GET).mockResolvedValue({ data: [], response: { ok: true, status: 200 } } as never)
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useTestCases("P1", true), { wrapper })
+
+    await act(async () => result.current.refetch())
+
+    expect(api.GET).toHaveBeenCalledWith("/api/projects/{project_id}/test-cases", {
+      params: { path: { project_id: "P1" }, query: { include_archived: true } },
+    })
+  })
+})
+
+describe("useArchiveTestCase", () => {
+  it("gọi đúng endpoint và version khi lưu trữ", async () => {
+    vi.mocked(api.POST).mockResolvedValue({ data: undefined, response: { ok: true, status: 204 } } as never)
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useArchiveTestCase("P1", "archive"), { wrapper })
+
+    await act(() => result.current.mutateAsync({ caseId: "TC-1", version: 4 }))
+
+    expect(api.POST).toHaveBeenCalledWith(
+      "/api/projects/{project_id}/test-cases/{case_id}/archive",
+      { params: { path: { project_id: "P1", case_id: "TC-1" } }, body: { version: 4, comment: "" } },
+    )
+  })
+})
+
 describe("useApproveTestCases", () => {
   it("gửi cả lượt lên một endpoint và trả kết quả duyệt/bỏ qua", async () => {
     const data = { approved: [{ id: "TC-000001" }], skipped: [{ case_id: "TC-000002", reason: "x" }] }
@@ -52,5 +85,25 @@ describe("useApproveTestCases", () => {
       "/api/projects/{project_id}/test-cases/approve-batch",
       { params: { path: { project_id: "P1" } }, body: { items } },
     )
+  })
+})
+
+describe("useSyncIssues", () => {
+  it("gọi endpoint đồng bộ và làm mới danh sách case", async () => {
+    const data = { created: 1, updated: 0, closed: 0, reopened: 0, skipped: 2, failed: [] }
+    vi.mocked(api.POST).mockResolvedValue({ data, response: { ok: true, status: 200 } } as never)
+    const client = new QueryClient()
+    const invalidate = vi.spyOn(client, "invalidateQueries")
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useSyncIssues("P1"), { wrapper })
+
+    expect(await act(() => result.current.mutateAsync())).toEqual(data)
+    expect(api.POST).toHaveBeenLastCalledWith(
+      "/api/projects/{project_id}/test-cases/sync-issues",
+      { params: { path: { project_id: "P1" } } },
+    )
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "P1"] })
   })
 })

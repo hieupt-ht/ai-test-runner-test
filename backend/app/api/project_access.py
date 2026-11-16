@@ -30,7 +30,9 @@ def load_project(
     is_admin = user.role == Role.ADMIN
     is_member = services.members.is_member(project_id, user.email)
 
-    can_see = project is not None and (is_admin or (is_member and not project.archived))
+    can_see = project is not None and (
+        is_admin or (is_member and (not project.archived or allow_archived))
+    )
     if project is None or not can_see:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
 

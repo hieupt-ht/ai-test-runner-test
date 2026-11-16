@@ -138,9 +138,10 @@ export function useRemoveMember(projectId: string) {
 
 // ----- Việc của tôi -----
 
-export function useMyAssignments() {
+export function useMyAssignments(enabled = true) {
   return useQuery({
     queryKey: MY_WORK_KEY,
     queryFn: async (): Promise<MyAssignment[]> => unwrap(await api.GET("/api/me/assignments")),
+    enabled,
   })
 }

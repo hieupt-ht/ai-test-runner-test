@@ -9,6 +9,7 @@ from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.users import UserRepository
+from app.core.services.notify import Notifier
 
 
 class MemberView(BaseModel):
@@ -38,12 +39,16 @@ class MemberService:
         users: UserRepository,
         assignments: AssignmentRepository,
         audit_log: AuditLogRepository,  # nhật ký của Sheet hệ thống
+        project_name: str = "",
+        notifier: Notifier | None = None,
     ) -> None:
         self._project_id = project_id
         self._members = members
         self._users = users
         self._assignments = assignments
         self._audit_log = audit_log
+        self._project_name = project_name
+        self._notifier = notifier
 
     def list_members(self) -> list[MemberView]:
         views: list[MemberView] = []
@@ -67,6 +72,10 @@ class MemberService:
             raise InvalidMemberError
         member = self._members.add(self._project_id, user.email)
         self._record(actor, "CREATE", user.email)
+        if self._notifier is not None and user.email != normalize_email(actor.email):
+            self._notifier.member_added(
+                email=user.email, project_id=self._project_id, project_name=self._project_name
+            )
         return MemberView(
             email=user.email,
             name=user.name,

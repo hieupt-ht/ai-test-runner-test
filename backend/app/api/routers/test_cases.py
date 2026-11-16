@@ -1,28 +1,35 @@
 from collections.abc import Callable
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.project_access import load_project
 from app.api.project_scope import scope_for
+from app.api.routers.results import results_for_project
 from app.api.services import Services
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
+from app.core.models.run import ResultStatus
 from app.core.models.test_case import TestCase, TestCaseContent
 from app.core.models.user import User
 from app.core.permissions import Action
 from app.core.repositories.audit_log import AuditEntry
 from app.core.repositories.test_cases import TestCaseNotFoundError, VersionConflictError
+from app.core.services.issue_sync import IssueSyncer
+from app.core.services.notify import Notifier
+from app.core.services.rerun_request import request_rerun_on_issue
 from app.core.services.test_cases import (
     CaseAction,
     InvalidTestCaseError,
     InvalidTransitionError,
+    SyncIssuesResult,
     TestCasePermissionError,
     TestCaseService,
 )
+from app.core.time import utc_now
 
 router = APIRouter(prefix="/api/projects/{project_id}/test-cases", tags=["test-cases"])
 
@@ -39,6 +46,7 @@ class TestCaseDetail(TestCase):
 
     can_edit: bool
     can_review: bool
+    can_archive: bool
 
 
 class ConflictResponse(BaseModel):
@@ -94,6 +102,15 @@ def _service_for(services: Services, project: Project) -> TestCaseService:
         members=services.members,
         status_updater=AssignmentStatusUpdater(scope.assignments, scope.test_cases),
         audit_log=scope.audit_log,
+        issue_sync=services.issue_sync,
+        project=project,
+        issue_syncer=(
+            IssueSyncer(services.github, app_base_url=services.app_base_url)
+            if services.github
+            else None
+        ),
+        notifier=Notifier(services.notifications),
+        users=services.users,
     )
 
 
@@ -114,7 +131,12 @@ def _conflict_response(services: Services, error: VersionConflictError) -> JSONR
     return JSONResponse(status_code=status.HTTP_409_CONFLICT, content=body.model_dump(mode="json"))
 
 
-def _write(services: Services, action: Callable[[], TestCase]) -> TestCase | JSONResponse:
+def _write(
+    services: Services,
+    action: Callable[[], TestCase],
+    *,
+    transition_status: int = status.HTTP_409_CONFLICT,
+) -> TestCase | JSONResponse:
     """Chạy một thao tác ghi và đổi các lỗi nghiệp vụ thành phản hồi HTTP."""
     try:
         return action()
@@ -125,7 +147,7 @@ def _write(services: Services, action: Callable[[], TestCase]) -> TestCase | JSO
     except TestCasePermissionError:
         raise HTTPException(status.HTTP_403_FORBIDDEN, NO_PERMISSION) from None
     except InvalidTransitionError as error:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from None
+        raise HTTPException(transition_status, str(error)) from None
     except TestCaseNotFoundError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
     except LockTimeout:
@@ -133,8 +155,16 @@ def _write(services: Services, action: Callable[[], TestCase]) -> TestCase | JSO
 
 
 @router.get("")
-def list_test_cases(project_id: str, user: CurrentUser, services: ServicesDep) -> list[TestCase]:
-    return _service(services, user, project_id, Action.VIEW_PROJECT).list_cases()
+def list_test_cases(
+    project_id: str,
+    user: CurrentUser,
+    services: ServicesDep,
+    include_archived: bool = Query(default=False),
+) -> list[TestCase]:
+    cases = _service(services, user, project_id, Action.VIEW_PROJECT).list_cases()
+    if include_archived:
+        return cases
+    return [case for case in cases if case.status.value != "ARCHIVED"]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=TestCase)
@@ -163,6 +193,7 @@ def get_test_case(
         # Dự án đã lưu trữ chỉ để xem, nên không ai được sửa hay duyệt
         can_edit=not project.archived and service.can_edit(user, case),
         can_review=not project.archived and service.can_review(user),
+        can_archive=not project.archived and service.can_archive(user, case),
     )
 
 
@@ -218,6 +249,39 @@ _transition_route("/{case_id}/deprecate", CaseAction.DEPRECATE, Action.EDIT_TEST
 _transition_route("/{case_id}/restore", CaseAction.RESTORE, Action.REVIEW_TEST_CASE)
 
 
+def _archive_route(path: str, action: CaseAction) -> None:
+    def endpoint(
+        project_id: str,
+        case_id: str,
+        body: TransitionRequest,
+        user: CurrentUser,
+        services: ServicesDep,
+    ) -> Response | JSONResponse:
+        result = _write(
+            services,
+            lambda: _service(services, user, project_id, Action.EDIT_TEST_CASE).transition(
+                user, case_id, action, version=body.version
+            ),
+            transition_status=status.HTTP_400_BAD_REQUEST,
+        )
+        if isinstance(result, TestCase):
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        return result
+
+    router.add_api_route(
+        path,
+        endpoint,
+        methods=["POST"],
+        status_code=status.HTTP_204_NO_CONTENT,
+        response_model=None,
+        name=f"{action.value.lower()}_test_case",
+    )
+
+
+_archive_route("/{case_id}/archive", CaseAction.ARCHIVE)
+_archive_route("/{case_id}/unarchive", CaseAction.UNARCHIVE)
+
+
 @router.post("/approve-batch", response_model=BatchApproveResponse)
 def approve_test_cases(
     project_id: str, body: BatchApproveRequest, user: CurrentUser, services: ServicesDep
@@ -234,6 +298,53 @@ def approve_test_cases(
         approved=result.approved,
         skipped=[SkippedItem(case_id=i.case_id, reason=i.reason) for i in result.skipped],
     )
+
+
+@router.post("/sync-issues", response_model=SyncIssuesResult)
+def sync_test_case_issues(
+    project_id: str, user: CurrentUser, services: ServicesDep
+) -> SyncIssuesResult:
+    service = _service(services, user, project_id, Action.REVIEW_TEST_CASE)
+    if services.github is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "GitHub chưa được cấu hình")
+    try:
+        return service.sync_issues(user)
+    except TestCasePermissionError:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, NO_PERMISSION) from None
+
+
+@router.post(
+    "/{case_id}/request-rerun",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+def request_rerun(
+    project_id: str, case_id: str, user: CurrentUser, services: ServicesDep
+) -> Response:
+    """Báo lên GitHub issue rằng case FAIL/BLOCKED cần được chạy lại (Codex chạy ngoài app)."""
+    project = load_project(services, user, project_id, Action.REVIEW_TEST_CASE)
+    latest = next(
+        (
+            item
+            for item in results_for_project(services, project, user)
+            if item.case_id == case_id
+        ),
+        None,
+    )
+    if latest is None or latest.status not in (ResultStatus.FAIL, ResultStatus.BLOCKED):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Case này không có kết quả FAIL hoặc BLOCKED"
+        )
+    if services.github is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Chưa cấu hình GitHub")
+    request_rerun_on_issue(
+        services.github,
+        repo=project.repo_full_name,
+        case_id=case_id,
+        user_name=user.name,
+        requested_at=utc_now(),
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{case_id}/history")

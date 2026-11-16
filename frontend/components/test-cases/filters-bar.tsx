@@ -13,7 +13,7 @@ import {
 import type { Priority, Screen, Severity, TestCaseStatus } from "@/lib/api/types"
 import type { CaseFilters } from "@/lib/test-cases/filter"
 
-const STATUSES: TestCaseStatus[] = ["DRAFT", "IN_REVIEW", "APPROVED", "DEPRECATED"]
+const STATUSES: TestCaseStatus[] = ["DRAFT", "IN_REVIEW", "APPROVED", "TESTED", "ARCHIVED", "DEPRECATED"]
 const SEVERITIES: Severity[] = ["LOW", "MEDIUM", "HIGH"]
 const PRIORITIES: Priority[] = ["P1", "P2", "P3"]
 const ALL = "__all__"

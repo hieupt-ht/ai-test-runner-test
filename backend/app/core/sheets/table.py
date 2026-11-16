@@ -139,6 +139,14 @@ class SheetTable:
         row = [record.get(column, "") for column in header]
         self._gateway.append_rows(self._spreadsheet_id, self._tab, [row])
 
+    def append_many(self, records: list[Record]) -> None:
+        """Thêm nhiều dòng bằng đúng một lời gọi Google (danh sách rỗng thì không gọi)."""
+        if not records:
+            return
+        header = self._read_header()
+        rows = [[record.get(column, "") for column in header] for record in records]
+        self._gateway.append_rows(self._spreadsheet_id, self._tab, rows)
+
     def update(self, row_number: int, record: Record) -> None:
         """Ghi đè các cột mình quản lý; các cột lạ trong Sheet được giữ nguyên."""
         header = self._read_header()

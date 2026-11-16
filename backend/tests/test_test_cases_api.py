@@ -2,19 +2,23 @@ import threading
 from datetime import timedelta
 from typing import Any
 
+import fakeredis
 import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.github.client import GitHubError
 from app.core.models.project import Project
+from app.core.models.test_case import TestCase
 from app.core.models.user import Role
+from app.core.notifications import NotificationStore
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import today_in_vietnam
 from tests.conftest import client_for, make_project, make_user
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
 
 NEXT_WEEK = (today_in_vietnam() + timedelta(days=7)).isoformat()
 
@@ -80,6 +84,217 @@ def url(project: Project, suffix: str = "") -> str:
     return f"/api/projects/{project.id}/test-cases{suffix}"
 
 
+def test_submit_notifies_project_reviewers(
+    app: FastAPI,
+    an: TestClient,
+    project: Project,
+    redis: fakeredis.FakeRedis,
+    client_as_admin: TestClient,
+) -> None:
+    case = create(an, project).json()
+
+    response = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+
+    assert response.status_code == 200
+    store = NotificationStore(redis)
+    assert [item.type for item in store.list("lead@x.com")] == ["case_submitted"]
+    assert [item.type for item in store.list("admin@x.com")] == ["case_submitted"]
+    assert not any(item.type == "case_submitted" for item in store.list("an@x.com"))
+    assert not any(item.type == "case_submitted" for item in store.list("viewer@x.com"))
+
+
+@pytest.mark.parametrize("action", ["approve", "return"])
+def test_review_succeeds_when_notification_fails(
+    app: FastAPI,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    monkeypatch: pytest.MonkeyPatch,
+    action: str,
+) -> None:
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    calls = 0
+
+    def fail(*args: object, **kwargs: object) -> None:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("Redis lỗi")
+
+    monkeypatch.setattr(NotificationStore, "add", fail)
+    body: dict[str, object] = {"version": 2}
+    if action == "return":
+        body["comment"] = "Sửa lại"
+    response = lead.post(url(project, f"/{case['id']}/{action}"), json=body)
+
+    assert response.status_code == 200
+    assert calls == 1
+    assert response.json()["status"] == ("APPROVED" if action == "approve" else "DRAFT")
+
+
+@pytest.mark.parametrize(
+    ("action", "expected_type"),
+    [("approve", "case_approved"), ("return", "case_returned")],
+)
+def test_review_notifies_case_creator_only(
+    an: TestClient, lead: TestClient, project: Project, redis: fakeredis.FakeRedis,
+    action: str, expected_type: str,
+) -> None:
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    body: dict[str, object] = {"version": 2}
+    if action == "return":
+        body["comment"] = "Sửa lại"
+
+    response = lead.post(url(project, f"/{case['id']}/{action}"), json=body)
+
+    assert response.status_code == 200
+    store = NotificationStore(redis)
+    assert [item.type for item in store.list("an@x.com") if item.type.startswith("case_")] == [
+        expected_type
+    ]
+    assert expected_type not in [item.type for item in store.list("lead@x.com")]
+
+
+class RecordingIssueSink:
+    def __init__(self, fail: bool = False) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+        self.fail = fail
+
+    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None:
+        self.calls.append((case.id, case.status.value, screen_name))
+        if self.fail:
+            raise RuntimeError("GitHub giả bị lỗi")
+
+
+def test_approve_syncs_issue_for_saved_case(
+    app: FastAPI, an: TestClient, lead: TestClient, project: Project
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    response = lead.post(url(project, f"/{case['id']}/approve"), json={"version": 2})
+    assert response.status_code == 200
+    assert sink.calls[-1] == (case["id"], "APPROVED", "Đăng nhập")
+
+
+def test_batch_approve_syncs_only_approved_cases(
+    app: FastAPI, an: TestClient, lead: TestClient, project: Project
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    first = create(an, project).json()
+    skipped = create(an, project).json()
+    an.post(url(project, f"/{first['id']}/submit"), json={"version": 1})
+    sink.calls.clear()
+    response = lead.post(
+        url(project, "/approve-batch"),
+        json={
+            "items": [
+                {"case_id": first["id"], "version": 2},
+                {"case_id": skipped["id"], "version": 1},
+            ]
+        },
+    )
+    assert response.status_code == 200
+    assert sink.calls == [(first["id"], "APPROVED", "Đăng nhập")]
+
+
+def test_sync_failure_does_not_fail_save_or_duplicate_case(
+    app: FastAPI, an: TestClient, project: Project
+) -> None:
+    sink = RecordingIssueSink(fail=True)
+    app.state.services.issue_sync = sink
+    created = create(an, project)
+    assert created.status_code == 201
+    assert len(an.get(url(project)).json()) == 1
+    assert len(sink.calls) == 1
+
+
+def test_edit_return_deprecate_and_restore_each_sync(
+    app: FastAPI, an: TestClient, lead: TestClient, project: Project
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    case = create(an, project).json()
+    path = url(project, f"/{case['id']}")
+    an.post(f"{path}/submit", json={"version": 1})
+    lead.post(f"{path}/approve", json={"version": 2})
+    sink.calls.clear()
+
+    edit = {key: value for key, value in BODY.items() if key != "screen_id"}
+    assert an.put(path, json={**edit, "title": "Nội dung mới", "version": 3}).status_code == 200
+    an.post(f"{path}/submit", json={"version": 4})
+    lead.post(f"{path}/return", json={"version": 5, "comment": "Sửa lại"})
+    an.post(f"{path}/deprecate", json={"version": 6})
+    lead.post(f"{path}/restore", json={"version": 7})
+
+    assert [status for _, status, _ in sink.calls] == [
+        "DRAFT",
+        "IN_REVIEW",
+        "DRAFT",
+        "DEPRECATED",
+        "DRAFT",
+    ]
+
+
+def test_sync_issues_requires_review_permission(an: TestClient, project: Project) -> None:
+    assert an.post(url(project, "/sync-issues")).status_code == 403
+
+
+def test_sync_issues_creates_approved_only_and_second_call_updates(
+    an: TestClient, lead: TestClient, project: Project, github: FakeGitHub
+) -> None:
+    first = create(an, project).json()
+    create(an, project)
+    an.post(url(project, f"/{first['id']}/submit"), json={"version": 1})
+    lead.post(url(project, f"/{first['id']}/approve"), json={"version": 2})
+
+    first_result = lead.post(url(project, "/sync-issues"))
+    second_result = lead.post(url(project, "/sync-issues"))
+
+    assert first_result.status_code == second_result.status_code == 200
+    assert first_result.json()["created"] == 1
+    assert first_result.json()["skipped"] == 1
+    assert second_result.json()["updated"] == 1
+    assert len(github.issues["org/web"]) == 1
+
+
+def test_sync_issues_without_github_is_503(
+    app: FastAPI, lead: TestClient, project: Project
+) -> None:
+    app.state.services.github = None
+    response = lead.post(url(project, "/sync-issues"))
+    assert response.status_code == 503
+    assert "GitHub" in response.json()["detail"]
+
+
+def test_sync_issues_reports_failure_and_continues(
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    github: FakeGitHub,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cases = [create(an, project).json() for _ in range(2)]
+    for case in cases:
+        an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+        lead.post(url(project, f"/{case['id']}/approve"), json={"version": 2})
+    original = github.find_issue_by_label
+
+    def fail_first(repo: str, label: str):
+        if label == f"tc:{cases[0]['id']}":
+            raise GitHubError("GitHub tạm lỗi")
+        return original(repo, label)
+
+    monkeypatch.setattr(github, "find_issue_by_label", fail_first)
+    response = lead.post(url(project, "/sync-issues"))
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+    assert response.json()["failed"] == [{"case_id": cases[0]["id"], "reason": "GitHub tạm lỗi"}]
+
+
 def create(browser: TestClient, project: Project, **changes: Any) -> httpx.Response:
     response: httpx.Response = browser.post(url(project), json={**BODY, **changes})
     return response
@@ -100,6 +315,43 @@ def test_tester_creates_lists_and_reads_case(an: TestClient, project: Project) -
     assert detail.json()["can_edit"] is True
     assert detail.json()["can_review"] is False
     assert an.get(url(project, "/TC-999999")).json() == {"detail": "Không tìm thấy test case"}
+
+
+def test_archived_cases_are_hidden_by_default_and_can_be_restored(
+    an: TestClient, lead: TestClient, project: Project
+) -> None:
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    lead.post(url(project, f"/{case['id']}/approve"), json={"version": 2})
+
+    archived = an.post(url(project, f"/{case['id']}/archive"), json={"version": 3})
+    assert archived.status_code == 204
+    assert an.get(url(project)).json() == []
+    assert an.get(url(project) + "?include_archived=true").json()[0]["status"] == "ARCHIVED"
+
+    restored = an.post(url(project, f"/{case['id']}/unarchive"), json={"version": 4})
+    assert restored.status_code == 204
+    assert an.get(url(project)).json()[0]["status"] == "TESTED"
+
+
+def test_only_creator_or_lead_can_archive_case(
+    an: TestClient, binh: TestClient, lead: TestClient, project: Project
+) -> None:
+    case = create(an, project).json()
+    an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    lead.post(url(project, f"/{case['id']}/approve"), json={"version": 2})
+
+    denied = binh.post(url(project, f"/{case['id']}/archive"), json={"version": 3})
+    assert denied.status_code == 403
+    assert lead.post(url(project, f"/{case['id']}/archive"), json={"version": 3}).status_code == 204
+
+
+def test_archive_rejects_wrong_status(an: TestClient, project: Project) -> None:
+    case = create(an, project).json()
+    response = an.post(url(project, f"/{case['id']}/archive"), json={"version": 1})
+
+    assert response.status_code == 400
+    assert response.json()["detail"]
 
 
 def test_two_people_save_same_version_second_gets_409(

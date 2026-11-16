@@ -8,7 +8,7 @@ describe("visibleProjectTabs", () => {
     const lead = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_SCREENS"]).map((tab) => tab.segment)
     const admin = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_PROJECTS"]).map((tab) => tab.segment)
 
-    expect(lead).toEqual(["screens", "test-cases", "assignments", "members"])
+    expect(lead).toEqual(["screens", "test-cases", "results", "assignments", "members"])
     expect(admin).toContain("settings")
   })
 

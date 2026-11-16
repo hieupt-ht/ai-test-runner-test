@@ -11,7 +11,7 @@ Cách GitHub App xác thực, theo 2 bước:
 import time
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 import httpx
 import jwt
@@ -28,6 +28,19 @@ class RepoInfo(BaseModel):
     private: bool
 
 
+class IssueInfo(BaseModel):
+    number: int
+    url: str
+    state: Literal["open", "closed"]
+    title: str
+    labels: list[str]
+
+
+class IssueComment(BaseModel):
+    id: int
+    body: str
+
+
 class GitHubNotConfiguredError(Exception):
     pass
 
@@ -40,6 +53,42 @@ class GitHubClient(Protocol):
     def list_repositories(self) -> list[RepoInfo]: ...
 
     def list_branches(self, repo_full_name: str) -> list[str]: ...
+
+    def find_issue_by_label(self, repo_full_name: str, label: str) -> IssueInfo | None: ...
+
+    def create_issue(
+        self, repo_full_name: str, *, title: str, body: str, labels: list[str]
+    ) -> IssueInfo: ...
+
+    def update_issue(
+        self,
+        repo_full_name: str,
+        number: int,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        state: Literal["open", "closed"],
+    ) -> IssueInfo: ...
+
+    def ensure_label(
+        self, repo_full_name: str, name: str, *, color: str | None = None
+    ) -> None: ...
+
+    def list_issue_comments(self, repo_full_name: str, issue_number: int) -> list[IssueComment]: ...
+
+    def create_issue_comment(self, repo_full_name: str, issue_number: int, body: str) -> None: ...
+
+    def update_issue_comment(self, repo_full_name: str, comment_id: int, body: str) -> None: ...
+
+    def update_issue_state_and_labels(
+        self,
+        repo_full_name: str,
+        issue_number: int,
+        *,
+        state: Literal["open", "closed"],
+        labels: list[str],
+    ) -> None: ...
 
 
 def normalize_private_key(value: str) -> str:
@@ -81,6 +130,108 @@ class GitHubAppClient:
             names.extend(branch["name"] for branch in page)
         return sorted(names)
 
+    def _repo_token(self, repo_full_name: str) -> str:
+        installation = self._get(self._app_jwt(), f"/repos/{repo_full_name}/installation")
+        return self._installation_token(int(installation["id"]))
+
+    @staticmethod
+    def _issue(data: dict[str, Any]) -> IssueInfo:
+        return IssueInfo(
+            number=data["number"],
+            url=data["html_url"],
+            state=data["state"],
+            title=data["title"],
+            labels=[label["name"] for label in data["labels"]],
+        )
+
+    def find_issue_by_label(self, repo_full_name: str, label: str) -> IssueInfo | None:
+        token = self._repo_token(repo_full_name)
+        url = f"/repos/{repo_full_name}/issues"
+        issues: list[IssueInfo] = []
+        for page in self._get_pages(token, f"{url}?labels={label}&state=all&per_page=100"):
+            issues.extend(self._issue(item) for item in page if "pull_request" not in item)
+        return min(issues, key=lambda issue: issue.number) if issues else None
+
+    def create_issue(
+        self, repo_full_name: str, *, title: str, body: str, labels: list[str]
+    ) -> IssueInfo:
+        response = self._request(
+            "POST",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues",
+            json={"title": title, "body": body, "labels": labels},
+        )
+        return self._issue(response.json())
+
+    def update_issue(
+        self,
+        repo_full_name: str,
+        number: int,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        state: Literal["open", "closed"],
+    ) -> IssueInfo:
+        response = self._request(
+            "PATCH",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues/{number}",
+            json={"title": title, "body": body, "labels": labels, "state": state},
+        )
+        return self._issue(response.json())
+
+    def ensure_label(self, repo_full_name: str, name: str, *, color: str | None = None) -> None:
+        token = self._repo_token(repo_full_name)
+        url = f"/repos/{repo_full_name}/labels"
+        try:
+            payload: dict[str, str] = {"name": name}
+            if color:
+                payload["color"] = color
+            self._request("POST", token, url, json=payload)
+        except GitHubError as error:
+            if "already_exists" not in str(error):
+                raise
+
+    def list_issue_comments(self, repo_full_name: str, issue_number: int) -> list[IssueComment]:
+        token = self._repo_token(repo_full_name)
+        url = f"/repos/{repo_full_name}/issues/{issue_number}/comments?per_page=100"
+        comments: list[IssueComment] = []
+        for page in self._get_pages(token, url):
+            comments.extend(IssueComment(id=item["id"], body=item.get("body", "")) for item in page)
+        return comments
+
+    def create_issue_comment(self, repo_full_name: str, issue_number: int, body: str) -> None:
+        self._request(
+            "POST",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues/{issue_number}/comments",
+            json={"body": body},
+        )
+
+    def update_issue_comment(self, repo_full_name: str, comment_id: int, body: str) -> None:
+        self._request(
+            "PATCH",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues/comments/{comment_id}",
+            json={"body": body},
+        )
+
+    def update_issue_state_and_labels(
+        self,
+        repo_full_name: str,
+        issue_number: int,
+        *,
+        state: Literal["open", "closed"],
+        labels: list[str],
+    ) -> None:
+        self._request(
+            "PATCH",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues/{issue_number}",
+            json={"state": state, "labels": labels},
+        )
+
     # ----- Xác thực -----
 
     def _app_jwt(self) -> str:
@@ -103,13 +254,21 @@ class GitHubAppClient:
 
     # ----- Gửi request -----
 
-    def _request(self, method: str, bearer: str, url: str) -> httpx.Response:
+    def _request(
+        self, method: str, bearer: str, url: str, *, json: dict[str, Any] | None = None
+    ) -> httpx.Response:
         headers = {**HEADERS, "Authorization": f"Bearer {bearer}"}
         try:
-            response = self._http.request(method, url, headers=headers)
+            response = self._http.request(method, url, headers=headers, json=json)
         except httpx.HTTPError as error:
             raise GitHubError(f"Không kết nối được GitHub: {error}") from error
         if response.status_code >= 400:
+            if response.status_code in (403, 429):
+                raise GitHubError(f"GitHub bị giới hạn lượt gọi ({response.status_code})")
+            if response.status_code == 422:
+                errors = response.json().get("errors", [])
+                if any(item.get("code") == "already_exists" for item in errors):
+                    raise GitHubError("GitHub trả lỗi 422: already_exists")
             raise GitHubError(f"GitHub trả lỗi {response.status_code} khi gọi {url}")
         return response
 

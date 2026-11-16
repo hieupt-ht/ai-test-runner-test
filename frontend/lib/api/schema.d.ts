@@ -292,6 +292,23 @@ export interface paths {
         patch: operations["change_deadline_api_projects__project_id__assignments__assignment_id__patch"];
         trace?: never;
     };
+    "/api/agent/projects/{project_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Write Agent Results */
+        post: operations["write_agent_results_api_agent_projects__project_id__results_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases": {
         parameters: {
             query?: never;
@@ -413,6 +430,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/{case_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Test Case */
+        post: operations["archive_test_case_api_projects__project_id__test_cases__case_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/test-cases/{case_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Test Case */
+        post: operations["unarchive_test_case_api_projects__project_id__test_cases__case_id__unarchive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases/approve-batch": {
         parameters: {
             query?: never;
@@ -433,6 +484,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/sync-issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Test Case Issues */
+        post: operations["sync_test_case_issues_api_projects__project_id__test_cases_sync_issues_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/test-cases/{case_id}/request-rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Rerun
+         * @description Báo lên GitHub issue rằng case FAIL/BLOCKED cần được chạy lại (Codex chạy ngoài app).
+         */
+        post: operations["request_rerun_api_projects__project_id__test_cases__case_id__request_rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases/{case_id}/history": {
         parameters: {
             query?: never;
@@ -442,6 +530,26 @@ export interface paths {
         };
         /** Test Case History */
         get: operations["test_case_history_api_projects__project_id__test_cases__case_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Overview
+         * @description Số case chờ duyệt và kết quả mới nhất trên mọi dự án người dùng được xem.
+         */
+        get: operations["my_overview_api_me_overview_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -505,6 +613,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notifications */
+        get: operations["list_notifications_api_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark All Read */
+        post: operations["mark_all_read_api_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Read */
+        post: operations["mark_read_api_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Results */
+        get: operations["list_results_api_projects__project_id__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -518,6 +694,43 @@ export interface components {
         AddMemberRequest: {
             /** Email */
             email: string;
+        };
+        /** AgentResult */
+        AgentResult: {
+            /** Test Case Id */
+            test_case_id: string;
+            status: components["schemas"]["ResultStatus"];
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Failed Step */
+            failed_step?: number | null;
+            /**
+             * Evidence
+             * @default
+             */
+            evidence: string;
+        };
+        /** AgentResultsRequest */
+        AgentResultsRequest: {
+            /** Results */
+            results: components["schemas"]["AgentResult"][];
+            /**
+             * Duration Seconds
+             * @default 0
+             */
+            duration_seconds: number;
+        };
+        /** AgentResultsResponse */
+        AgentResultsResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Written */
+            written: number;
+            /** Ignored */
+            ignored: components["schemas"]["IgnoredResult"][];
         };
         /** ApproveItem */
         ApproveItem: {
@@ -683,6 +896,13 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** IgnoredResult */
+        IgnoredResult: {
+            /** Test Case Id */
+            test_case_id: string;
+            /** Reason */
+            reason: string;
+        };
         /** MemberView */
         MemberView: {
             /** Email */
@@ -725,6 +945,40 @@ export interface components {
             };
             /** Returned Cases */
             returned_cases?: components["schemas"]["ReturnedCase"][];
+        };
+        /** Notification */
+        Notification: {
+            /** Id */
+            id: string;
+            /** Type */
+            type: string;
+            /** Title */
+            title: string;
+            /** Link */
+            link: string;
+            /** Created At */
+            created_at: string;
+            /**
+             * Read
+             * @default false
+             */
+            read: boolean;
+        };
+        /** NotificationList */
+        NotificationList: {
+            /** Items */
+            items: components["schemas"]["Notification"][];
+            /** Unread */
+            unread: number;
+        };
+        /** OverviewSummary */
+        OverviewSummary: {
+            /**
+             * Pending Review
+             * @default 0
+             */
+            pending_review: number;
+            latest_result?: components["schemas"]["ResultItem"] | null;
         };
         /**
          * Priority
@@ -786,6 +1040,36 @@ export interface components {
             /** Private */
             private: boolean;
         };
+        /** ResultItem */
+        ResultItem: {
+            /** Case Id */
+            case_id: string;
+            /** Case Title */
+            case_title: string;
+            /** Screen Id */
+            screen_id: string;
+            /** Screen Name */
+            screen_name: string;
+            status: components["schemas"]["ResultStatus"];
+            /** Reason */
+            reason: string;
+            /** Failed Step */
+            failed_step: number | null;
+            /** Evidence */
+            evidence: string;
+            /** Run Id */
+            run_id: string;
+            /**
+             * Finished At
+             * Format: date-time
+             */
+            finished_at: string;
+        };
+        /**
+         * ResultStatus
+         * @enum {string}
+         */
+        ResultStatus: "PASS" | "FAIL" | "BLOCKED" | "INCONCLUSIVE";
         /**
          * ReturnedCase
          * @description Một case bị QA trả lại: tester cần biết case nào, lý do gì để sửa.
@@ -833,12 +1117,52 @@ export interface components {
          * @enum {string}
          */
         Severity: "LOW" | "MEDIUM" | "HIGH";
+        /**
+         * SkippedCase
+         * @description Một case bị bỏ qua khi duyệt hàng loạt, kèm lý do để hiện cho người duyệt.
+         */
+        SkippedCase: {
+            /** Case Id */
+            case_id: string;
+            /** Reason */
+            reason: string;
+        };
         /** SkippedItem */
         SkippedItem: {
             /** Case Id */
             case_id: string;
             /** Reason */
             reason: string;
+        };
+        /** SyncIssuesResult */
+        SyncIssuesResult: {
+            /**
+             * Created
+             * @default 0
+             */
+            created: number;
+            /**
+             * Updated
+             * @default 0
+             */
+            updated: number;
+            /**
+             * Closed
+             * @default 0
+             */
+            closed: number;
+            /**
+             * Reopened
+             * @default 0
+             */
+            reopened: number;
+            /**
+             * Skipped
+             * @default 0
+             */
+            skipped: number;
+            /** Failed */
+            failed?: components["schemas"]["SkippedCase"][];
         };
         /**
          * TestCase
@@ -933,12 +1257,14 @@ export interface components {
             can_edit: boolean;
             /** Can Review */
             can_review: boolean;
+            /** Can Archive */
+            can_archive: boolean;
         };
         /**
          * TestCaseStatus
          * @enum {string}
          */
-        TestCaseStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "DEPRECATED";
+        TestCaseStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "TESTED" | "ARCHIVED" | "DEPRECATED";
         /**
          * TestStep
          * @description Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống).
@@ -1697,9 +2023,46 @@ export interface operations {
             };
         };
     };
-    list_test_cases_api_projects__project_id__test_cases_get: {
+    write_agent_results_api_agent_projects__project_id__results_post: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentResultsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResultsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_test_cases_api_projects__project_id__test_cases_get: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
             header?: never;
             path: {
                 project_id: string;
@@ -2065,6 +2428,74 @@ export interface operations {
             };
         };
     };
+    archive_test_case_api_projects__project_id__test_cases__case_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchive_test_case_api_projects__project_id__test_cases__case_id__unarchive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     approve_test_cases_api_projects__project_id__test_cases_approve_batch_post: {
         parameters: {
             query?: never;
@@ -2088,6 +2519,67 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["BatchApproveResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_test_case_issues_api_projects__project_id__test_cases_sync_issues_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncIssuesResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_rerun_api_projects__project_id__test_cases__case_id__request_rerun_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2128,6 +2620,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_overview_api_me_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewSummary"];
                 };
             };
         };
@@ -2236,6 +2748,107 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_api_notifications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+        };
+    };
+    mark_all_read_api_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    mark_read_api_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_results_api_projects__project_id__results_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["ResultStatus"] | null;
+                screen_id?: string | null;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultItem"][];
+                };
             };
             /** @description Validation Error */
             422: {

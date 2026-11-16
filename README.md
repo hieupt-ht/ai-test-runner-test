@@ -1,17 +1,17 @@
 # AI Test Runner
 
-Web app nội bộ giúp đội QA **viết test case theo chuẩn chung** và **để AI chạy test giúp**: AI đọc source code của app cần test, đối chiếu với từng test case, ghi kết quả vào Google Sheets. Những case FAIL được QA Lead duyệt trước khi tạo thành GitHub Issue.
+Web app nội bộ giúp đội QA viết và duyệt test case. Case đã duyệt được đồng bộ sang GitHub issue trong repo của dự án. Codex đọc issue, chạy test ngoài ứng dụng, rồi ghi kết quả lên issue và vào Google Sheets.
 
-> Trạng thái: **M1 — Nền tảng**, **M2 — Quản trị dự án** (dự án gắn repo GitHub và Google Sheet riêng, thành viên, màn hình, chia việc, trang Việc của tôi) và **M3 — Test case** (viết, duyệt, báo xung đột khi lưu).
+> Trạng thái: M1–M3, luồng case → issue → Codex agent, thông báo và bảng kết quả đã có trên nhánh `feature/ai-agent-runner`. Hướng worker Playwright cũ được lưu ở tag `m4-playwright-v1`.
 > Các mốc tiếp theo xem ở [tài liệu thiết kế](docs/superpowers/specs/2026-11-12-ai-test-runner-design.md), mục 15.
 
 ## Ai dùng
 
 | Vai trò | Làm gì |
 |---|---|
-| Admin | Quản lý người dùng, tạo dự án, gắn repo GitHub và Google Sheet |
-| QA Lead | Chia việc, duyệt test case, chạy test, duyệt kết quả và tạo issue |
-| Tester | Viết test case cho màn hình được giao |
+| Admin | Quản lý người dùng, dự án, repo GitHub và Google Sheet; xem kết quả |
+| QA Lead | Chia việc, duyệt test case, đồng bộ issue và xem kết quả |
+| Tester | Viết test case cho màn hình được giao và theo dõi việc của mình |
 | Viewer | Chỉ xem |
 
 ## Kiến trúc
@@ -23,7 +23,7 @@ Trình duyệt
     │
 [api: FastAPI]  ── REST API, đăng nhập, phân quyền, nghiệp vụ
     │        │
-    │      Redis  ── phiên đăng nhập, khoá khi ghi, cache (sau này: hàng đợi)
+    │      Redis  ── phiên đăng nhập, khoá khi ghi, cache và thông báo
     │
 Google Sheets  ── nơi lưu dữ liệu (chỉ backend được ghi)
 ```
@@ -47,6 +47,10 @@ Google Sheets  ── nơi lưu dữ liệu (chỉ backend được ghi)
 - **Báo xung đột (409)**: nếu thấy "Case này vừa được … cập nhật. Vui lòng tải lại." nghĩa là có người khác đã lưu case trước bạn. Bấm **Tải lại** để xem nội dung mới; phần bạn đang sửa sẽ mất, nên chép lại trước nếu cần. Việc duyệt, trả lại, ngừng dùng cũng bị kiểm tra như vậy.
 
 ## Chuẩn bị (làm một lần)
+
+> **Tiếp nhận dự án hoặc muốn setup dưới tài khoản của bạn?** Xem [SETUP.md](SETUP.md) — có giải thích tại sao từng bước cần làm.
+
+
 
 Cần: **Docker Desktop**. Nếu muốn chạy từng phần để phát triển thì cần thêm **Python 3.12+**, **[uv](https://docs.astral.sh/uv/)** và **Node 24**.
 
@@ -111,6 +115,11 @@ cp .env.example .env
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Nội dung file key JSON (viết trên một dòng), hoặc đường dẫn tới file key |
 | `SYSTEM_SPREADSHEET_ID` | Ở bước 3 |
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` | Ở bước 4 |
+| `AGENT_API_TOKEN` | Chuỗi ngẫu nhiên dài để Codex ghi kết quả; để trống thì tắt API agent |
+
+## Codex chạy test
+
+Sau khi QA Lead duyệt case, xem issue trong repo của dự án. Nếu đồng bộ GitHub từng bị lỗi, QA Lead/Admin dùng nút **Đồng bộ lại issue** trên trang Test case. Cách nối GitHub MCP, chạy Playwright và ghi kết quả được hướng dẫn tại [docs/codex-agent.md](docs/codex-agent.md).
 
 > Khi chạy bằng Docker, nên dán **nội dung** JSON (một dòng) vào `GOOGLE_SERVICE_ACCOUNT_JSON`, vì container không thấy file trên máy bạn.
 
