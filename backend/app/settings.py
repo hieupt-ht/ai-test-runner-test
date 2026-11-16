@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     # Agent bên ngoài chỉ được phép ghi kết quả; để trống thì tắt API.
     agent_api_token: str = ""
 
+    # Cloudinary: nơi lưu ảnh/video. Secret chỉ ở backend, không bao giờ trả ra ngoài.
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
+
     # AI (từ M4)
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-5-5"
