@@ -3,6 +3,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.models.media import Media, MediaList
+
 
 class Severity(StrEnum):
     LOW = "LOW"
@@ -25,6 +27,17 @@ class TestCaseStatus(StrEnum):
     DEPRECATED = "DEPRECATED"
 
 
+class Platform(StrEnum):
+    WEB = "WEB"
+    ANDROID = "ANDROID"
+    IOS = "IOS"
+
+
+class TestType(StrEnum):
+    FUNCTIONAL = "FUNCTIONAL"  # kiểm tra chức năng
+    UI = "UI"  # kiểm tra giao diện
+
+
 class TestStep(BaseModel):
     """Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống)."""
 
@@ -32,6 +45,7 @@ class TestStep(BaseModel):
 
     action: str = Field(min_length=1, max_length=500)
     expected: str = Field(default="", max_length=500)
+    guide_media: MediaList = Field(default_factory=list)  # ảnh/video chỉ đường cho bước này
 
 
 class TestCaseContent(BaseModel):
@@ -46,6 +60,18 @@ class TestCaseContent(BaseModel):
     expected_result: str = Field(min_length=1, max_length=2000)
     severity: Severity
     priority: Priority
+    platform: Platform = Platform.WEB
+    test_type: TestType = TestType.FUNCTIONAL
+    regression: bool = False  # True: thuộc bộ regression
+    start_point: str = Field(default="", max_length=500)  # điểm bắt đầu (màn hình/đường dẫn)
+    guide_media: MediaList = Field(default_factory=list)  # ảnh/video chỉ đường cho cả case
+    postcondition: str = Field(default="", max_length=2000)
+    requirement_ref: str = Field(default="", max_length=200)
+
+
+def media_of(case: TestCaseContent) -> list[Media]:
+    """Mọi ảnh/video của case (cả case và từng bước), dùng để kiểm tra cloud và dọn file."""
+    return [*case.guide_media, *(media for step in case.steps for media in step.guide_media)]
 
 
 class TestCase(TestCaseContent):

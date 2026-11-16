@@ -3,14 +3,19 @@ from collections.abc import Callable
 
 import fakeredis
 import pytest
+from pydantic import ValidationError
 
 from app.core.bootstrap import bootstrap_project_spreadsheet
+from app.core.models.media import Media, MediaKind
 from app.core.models.test_case import (
+    Platform,
     Priority,
     Severity,
     TestCaseContent,
     TestCaseStatus,
     TestStep,
+    TestType,
+    media_of,
 )
 from app.core.repositories.test_cases import (
     TestCaseNotFoundError,
@@ -75,7 +80,10 @@ def test_create_starts_as_draft_version_1(
     assert case.version == 1
     assert case.created_by == case.updated_by == AN
     header, row = gateway.data[SHEET]["TestCases"][:2]
-    assert row[header.index("steps")] == '[{"action": "Mở trang", "expected": "Thấy form"}]'
+    # Mỗi bước có thêm khoá guide_media (rỗng khi chưa có ảnh/video)
+    assert row[header.index("steps")] == (
+        '[{"action": "Mở trang", "expected": "Thấy form", "guide_media": []}]'
+    )
 
 
 def test_round_trip_keeps_vietnamese_and_step_order(repo: TestCaseRepository) -> None:
@@ -166,3 +174,57 @@ def test_get_reads_only_id_column_and_one_row(
     assert found is not None and found.title == "Case 1"
     assert "TestCases" not in gateway.calls  # không đọc cả tab
     assert repo.get("TC-009999") is None
+
+
+IMG = Media(
+    kind=MediaKind.IMAGE, url="https://res.cloudinary.com/c/image/upload/a.png", public_id="a"
+)
+VIDEO = Media(
+    kind=MediaKind.VIDEO, url="https://res.cloudinary.com/c/video/upload/b.mp4", public_id="b"
+)
+
+
+def test_old_row_reads_defaults(repo: TestCaseRepository, gateway: FakeSheetsGateway) -> None:
+    case = repo.create(screen_id="SC-0001", content=make_content(), actor=AN)
+    # Giả lập dòng cũ: các ô mới trống, bước chưa có khoá guide_media
+    row = gateway.data[SHEET]["TestCases"][1]
+    gateway.data[SHEET]["TestCases"][1] = row[:15]
+
+    loaded = repo.get(case.id)
+
+    assert loaded is not None
+    assert (loaded.platform, loaded.test_type, loaded.regression) == (
+        Platform.WEB,
+        TestType.FUNCTIONAL,
+        False,
+    )
+    assert loaded.guide_media == [] and loaded.steps[0].guide_media == []
+    assert loaded.start_point == "" and loaded.postcondition == "" and loaded.requirement_ref == ""
+
+
+def test_round_trip_new_fields(repo: TestCaseRepository) -> None:
+    content = make_content().model_copy(
+        update={
+            "platform": Platform.ANDROID,
+            "test_type": TestType.UI,
+            "regression": True,
+            "start_point": "Màn hình chính",
+            "postcondition": "Đã đăng xuất",
+            "requirement_ref": "REQ-12",
+            "guide_media": [VIDEO],
+            "steps": [TestStep(action="Mở app", guide_media=[IMG])],
+        }
+    )
+    created = repo.create(screen_id="SC-0001", content=content, actor=AN)
+
+    loaded = repo.get(created.id)
+
+    assert loaded == created
+    assert loaded.platform == Platform.ANDROID and loaded.regression is True
+    assert loaded.guide_media == [VIDEO] and loaded.steps[0].guide_media == [IMG]
+    assert media_of(loaded) == [VIDEO, IMG]
+
+
+def test_step_media_limit() -> None:
+    with pytest.raises(ValidationError):
+        TestStep(action="a", guide_media=[IMG] * 6)

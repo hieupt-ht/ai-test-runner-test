@@ -6,10 +6,17 @@ const valid = {
   title: "Đăng nhập đúng",
   precondition: "",
   test_data: "",
-  steps: [{ action: "Mở trang", expected: "" }],
+  steps: [{ action: "Mở trang", expected: "", guide_media: [] }],
   expected_result: "Vào được trang chủ",
   severity: "MEDIUM",
   priority: "P2",
+  platform: "WEB",
+  test_type: "FUNCTIONAL",
+  regression: false,
+  start_point: "",
+  guide_media: [],
+  postcondition: "",
+  requirement_ref: "",
 }
 
 describe("testCaseFormSchema", () => {
@@ -22,7 +29,7 @@ describe("testCaseFormSchema", () => {
   })
 
   it("báo lỗi khi action của bước rỗng (kể cả toàn khoảng trắng)", () => {
-    const steps = [{ action: "   ", expected: "" }]
+    const steps = [{ action: "   ", expected: "", guide_media: [] }]
     expect(testCaseFormSchema.safeParse({ ...valid, steps }).success).toBe(false)
   })
 

@@ -58,6 +58,9 @@ const project: Project = {
   spreadsheet_id: "sheet-1",
   archived: false,
   created_at: "2026-11-01T00:00:00Z",
+  android_app_id: "",
+  ios_bundle_id: "",
+  require_review: false,
 }
 
 const result: ResultItem = {

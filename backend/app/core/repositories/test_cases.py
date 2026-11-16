@@ -15,13 +15,16 @@ from redis import Redis
 from app.core.cache import CachedList
 from app.core.ids import IdGenerator
 from app.core.locks.redis_lock import redis_lock
+from app.core.models.media import Media
 from app.core.models.test_case import (
+    Platform,
     Priority,
     Severity,
     TestCase,
     TestCaseContent,
     TestCaseStatus,
     TestStep,
+    TestType,
 )
 from app.core.sheets.gateway import SheetsGateway
 from app.core.sheets.schema import TEST_CASE_COLUMNS, TEST_CASES_TAB
@@ -47,7 +50,14 @@ def _now_like_sheet() -> datetime:
 
 
 def _to_record(case: TestCase) -> Record:
-    steps = [{"action": step.action, "expected": step.expected} for step in case.steps]
+    steps = [
+        {
+            "action": step.action,
+            "expected": step.expected,
+            "guide_media": [media.model_dump(mode="json") for media in step.guide_media],
+        }
+        for step in case.steps
+    ]
     return {
         "id": case.id,
         "screen_id": case.screen_id,
@@ -64,6 +74,15 @@ def _to_record(case: TestCase) -> Record:
         "created_at": to_iso(case.created_at),
         "updated_at": to_iso(case.updated_at),
         "version": str(case.version),
+        "platform": case.platform.value,
+        "test_type": case.test_type.value,
+        "regression": "TRUE" if case.regression else "FALSE",
+        "start_point": case.start_point,
+        "guide_media_json": json.dumps(
+            [media.model_dump(mode="json") for media in case.guide_media], ensure_ascii=False
+        ),
+        "postcondition": case.postcondition,
+        "requirement_ref": case.requirement_ref,
     }
 
 
@@ -84,6 +103,14 @@ def _from_record(record: Record) -> TestCase:
         created_at=from_iso(record["created_at"]),
         updated_at=from_iso(record["updated_at"]),
         version=int(record["version"]),
+        # Dòng cũ có các ô mới trống: dùng giá trị mặc định
+        platform=Platform(record["platform"] or Platform.WEB),
+        test_type=TestType(record["test_type"] or TestType.FUNCTIONAL),
+        regression=record["regression"].strip().upper() == "TRUE",
+        start_point=record["start_point"],
+        guide_media=[Media(**item) for item in json.loads(record["guide_media_json"] or "[]")],
+        postcondition=record["postcondition"],
+        requirement_ref=record["requirement_ref"],
     )
 
 

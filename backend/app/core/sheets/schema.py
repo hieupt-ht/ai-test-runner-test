@@ -58,6 +58,14 @@ TEST_CASE_COLUMNS = [
     "created_at",
     "updated_at",
     "version",
+    # Cột thêm sau: luôn nối vào CUỐI
+    "platform",
+    "test_type",
+    "regression",
+    "start_point",
+    "guide_media_json",
+    "postcondition",
+    "requirement_ref",
 ]
 RUN_COLUMNS = [
     "id",

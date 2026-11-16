@@ -20,6 +20,13 @@ function makeCase(overrides: Partial<TestCase>): TestCase {
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     version: 1,
+    platform: "WEB",
+    test_type: "FUNCTIONAL",
+    regression: false,
+    start_point: "",
+    guide_media: [],
+    postcondition: "",
+    requirement_ref: "",
     ...overrides,
   }
 }

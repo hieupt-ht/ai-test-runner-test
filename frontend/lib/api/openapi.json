@@ -2603,6 +2603,45 @@
           "priority": {
             "$ref": "#/components/schemas/Priority"
           },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
           "screen_id": {
             "type": "string",
             "title": "Screen Id"
@@ -2674,6 +2713,44 @@
           "reason"
         ],
         "title": "IgnoredResult"
+      },
+      "Media": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MediaKind"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Url"
+          },
+          "public_id": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Public Id"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "url",
+          "public_id"
+        ],
+        "title": "Media"
+      },
+      "MediaKind": {
+        "type": "string",
+        "enum": [
+          "image",
+          "video"
+        ],
+        "title": "MediaKind"
       },
       "MemberView": {
         "properties": {
@@ -2849,6 +2926,15 @@
         "type": "object",
         "title": "OverviewSummary"
       },
+      "Platform": {
+        "type": "string",
+        "enum": [
+          "WEB",
+          "ANDROID",
+          "IOS"
+        ],
+        "title": "Platform"
+      },
       "Priority": {
         "type": "string",
         "enum": [
@@ -2892,6 +2978,21 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "android_app_id": {
+            "type": "string",
+            "title": "Android App Id",
+            "default": ""
+          },
+          "ios_bundle_id": {
+            "type": "string",
+            "title": "Ios Bundle Id",
+            "default": ""
+          },
+          "require_review": {
+            "type": "boolean",
+            "title": "Require Review",
+            "default": false
           }
         },
         "type": "object",
@@ -2941,6 +3042,21 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "android_app_id": {
+            "type": "string",
+            "title": "Android App Id",
+            "default": ""
+          },
+          "ios_bundle_id": {
+            "type": "string",
+            "title": "Ios Bundle Id",
+            "default": ""
+          },
+          "require_review": {
+            "type": "boolean",
+            "title": "Require Review",
+            "default": false
           },
           "permissions": {
             "items": {
@@ -3130,6 +3246,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "dev_owner": {
+            "type": "string",
+            "title": "Dev Owner",
+            "default": ""
           }
         },
         "type": "object",
@@ -3281,6 +3402,45 @@
           "priority": {
             "$ref": "#/components/schemas/Priority"
           },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -3375,6 +3535,45 @@
           "priority": {
             "$ref": "#/components/schemas/Priority"
           },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -3468,6 +3667,14 @@
             "maxLength": 500,
             "title": "Expected",
             "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
           }
         },
         "type": "object",
@@ -3476,6 +3683,14 @@
         ],
         "title": "TestStep",
         "description": "Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống)."
+      },
+      "TestType": {
+        "type": "string",
+        "enum": [
+          "FUNCTIONAL",
+          "UI"
+        ],
+        "title": "TestType"
       },
       "TransitionRequest": {
         "properties": {
@@ -3650,6 +3865,45 @@
           },
           "priority": {
             "$ref": "#/components/schemas/Priority"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
           },
           "version": {
             "type": "integer",

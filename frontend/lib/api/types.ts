@@ -22,7 +22,20 @@ export type TestStep = Schemas["TestStep"]
 /** Phần nội dung người dùng nhập của một test case (không gồm mã, trạng thái, version...). */
 export type TestCaseContent = Pick<
   Schemas["TestCase"],
-  "title" | "precondition" | "test_data" | "steps" | "expected_result" | "severity" | "priority"
+  | "title"
+  | "precondition"
+  | "test_data"
+  | "steps"
+  | "expected_result"
+  | "severity"
+  | "priority"
+  | "platform"
+  | "test_type"
+  | "regression"
+  | "start_point"
+  | "guide_media"
+  | "postcondition"
+  | "requirement_ref"
 >
 export type TestCaseStatus = Schemas["TestCaseStatus"]
 export type Severity = Schemas["Severity"]

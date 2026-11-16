@@ -39,15 +39,37 @@ const EMPTY: TestCaseContent = {
   title: "",
   precondition: "",
   test_data: "",
-  steps: [{ action: "", expected: "" }],
+  steps: [{ action: "", expected: "", guide_media: [] }],
   expected_result: "",
   severity: "MEDIUM",
   priority: "P2",
+  platform: "WEB",
+  test_type: "FUNCTIONAL",
+  regression: false,
+  start_point: "",
+  guide_media: [],
+  postcondition: "",
+  requirement_ref: "",
 }
 
 function contentOf(testCase: TestCase): TestCaseContent {
-  const { title, precondition, test_data, steps, expected_result, severity, priority } = testCase
-  return { title, precondition, test_data, steps, expected_result, severity, priority }
+  return {
+    title: testCase.title,
+    precondition: testCase.precondition,
+    test_data: testCase.test_data,
+    // Bước cũ có thể chưa có guide_media: bù mảng rỗng để form luôn đủ trường
+    steps: testCase.steps.map((step) => ({ ...step, guide_media: step.guide_media ?? [] })),
+    expected_result: testCase.expected_result,
+    severity: testCase.severity,
+    priority: testCase.priority,
+    platform: testCase.platform ?? "WEB",
+    test_type: testCase.test_type ?? "FUNCTIONAL",
+    regression: testCase.regression ?? false,
+    start_point: testCase.start_point ?? "",
+    guide_media: testCase.guide_media ?? [],
+    postcondition: testCase.postcondition ?? "",
+    requirement_ref: testCase.requirement_ref ?? "",
+  }
 }
 
 type Props = {

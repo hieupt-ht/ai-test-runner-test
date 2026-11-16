@@ -877,6 +877,32 @@ export interface components {
             expected_result: string;
             severity: components["schemas"]["Severity"];
             priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
             /** Screen Id */
             screen_id: string;
         };
@@ -903,6 +929,24 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** Media */
+        Media: {
+            kind: components["schemas"]["MediaKind"];
+            /** Url */
+            url: string;
+            /** Public Id */
+            public_id: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /**
+         * MediaKind
+         * @enum {string}
+         */
+        MediaKind: "image" | "video";
         /** MemberView */
         MemberView: {
             /** Email */
@@ -981,6 +1025,11 @@ export interface components {
             latest_result?: components["schemas"]["ResultItem"] | null;
         };
         /**
+         * Platform
+         * @enum {string}
+         */
+        Platform: "WEB" | "ANDROID" | "IOS";
+        /**
          * Priority
          * @enum {string}
          */
@@ -1006,6 +1055,21 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Android App Id
+             * @default
+             */
+            android_app_id: string;
+            /**
+             * Ios Bundle Id
+             * @default
+             */
+            ios_bundle_id: string;
+            /**
+             * Require Review
+             * @default false
+             */
+            require_review: boolean;
         };
         /** ProjectDetail */
         ProjectDetail: {
@@ -1028,6 +1092,21 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Android App Id
+             * @default
+             */
+            android_app_id: string;
+            /**
+             * Ios Bundle Id
+             * @default
+             */
+            ios_bundle_id: string;
+            /**
+             * Require Review
+             * @default false
+             */
+            require_review: boolean;
             /** Permissions */
             permissions: components["schemas"]["Action"][];
         };
@@ -1106,6 +1185,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Dev Owner
+             * @default
+             */
+            dev_owner: string;
         };
         /** ServiceAccount */
         ServiceAccount: {
@@ -1187,6 +1271,32 @@ export interface components {
             expected_result: string;
             severity: components["schemas"]["Severity"];
             priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
             /** Id */
             id: string;
             /** Screen Id */
@@ -1232,6 +1342,32 @@ export interface components {
             expected_result: string;
             severity: components["schemas"]["Severity"];
             priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
             /** Id */
             id: string;
             /** Screen Id */
@@ -1277,7 +1413,14 @@ export interface components {
              * @default
              */
             expected: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
         };
+        /**
+         * TestType
+         * @enum {string}
+         */
+        TestType: "FUNCTIONAL" | "UI";
         /** TransitionRequest */
         TransitionRequest: {
             /** Version */
@@ -1330,6 +1473,32 @@ export interface components {
             expected_result: string;
             severity: components["schemas"]["Severity"];
             priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
             /** Version */
             version: number;
         };
