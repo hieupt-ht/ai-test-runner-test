@@ -136,3 +136,23 @@ def test_delete_screen_with_test_case_is_409(
     assert response.status_code == 409
     assert response.json() == {"detail": "Màn hình đang có test case, không xoá được"}
     assert len(client_as_qa_lead.get(screens_url(project)).json()) == 1
+
+
+def test_screen_dev_owner_defaults_empty_and_round_trips(
+    project: Project, gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis
+) -> None:
+    from app.core.repositories.screens import ScreenRepository
+
+    repo = ScreenRepository(gateway, SHEET_A, redis, project.id)
+    screen = repo.create(name="Đăng nhập", description="", route="/login", code_paths=[])
+    assert screen.dev_owner == ""
+
+    repo.update(screen.model_copy(update={"dev_owner": "nguyenvana"}))
+
+    saved = repo.get(screen.id)
+    assert saved is not None and saved.dev_owner == "nguyenvana"
+    # Dòng cũ không có ô dev_owner vẫn đọc ra ""
+    gateway.data[SHEET_A]["Screens"][1] = gateway.data[SHEET_A]["Screens"][1][:6]
+    repo._cache.invalidate()
+    old = repo.get(screen.id)
+    assert old is not None and old.dev_owner == ""

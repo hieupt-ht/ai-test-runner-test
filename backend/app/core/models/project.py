@@ -12,6 +12,9 @@ class Project(BaseModel):
     spreadsheet_id: str  # file Sheet riêng của dự án
     archived: bool
     created_at: datetime
+    android_app_id: str = ""  # ví dụ "com.shop.app", dùng khi test Android
+    ios_bundle_id: str = ""  # ví dụ "vn.shop.app", dùng khi test iOS
+    require_review: bool = False  # False: tester gửi là duyệt luôn, không qua QA Lead
 
 
 class ProjectMember(BaseModel):

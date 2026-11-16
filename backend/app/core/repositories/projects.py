@@ -44,6 +44,9 @@ def _to_record(project: Project) -> Record:
         "spreadsheet_id": project.spreadsheet_id,
         "archived": "TRUE" if project.archived else "FALSE",
         "created_at": to_iso(project.created_at),
+        "android_app_id": project.android_app_id,
+        "ios_bundle_id": project.ios_bundle_id,
+        "require_review": "TRUE" if project.require_review else "FALSE",
     }
 
 
@@ -57,6 +60,9 @@ def _from_record(record: Record) -> Project:
         spreadsheet_id=record["spreadsheet_id"],
         archived=record["archived"].strip().upper() == "TRUE",
         created_at=from_iso(record["created_at"]),
+        android_app_id=record["android_app_id"],
+        ios_bundle_id=record["ios_bundle_id"],
+        require_review=record["require_review"].strip().upper() == "TRUE",
     )
 
 

@@ -15,6 +15,10 @@ PROJECT_COLUMNS = [
     "spreadsheet_id",
     "archived",
     "created_at",
+    # Cột thêm sau: luôn nối vào CUỐI để Sheet cũ được tự nâng cấp
+    "android_app_id",
+    "ios_bundle_id",
+    "require_review",
 ]
 PROJECT_MEMBER_COLUMNS = ["project_id", "email", "added_at"]
 AUDIT_LOG_COLUMNS = ["at", "actor", "action", "entity", "entity_id", "diff_json"]
@@ -36,7 +40,7 @@ RUNS_TAB = "Runs"
 RESULTS_TAB = "Results"
 
 META_COLUMNS = ["key", "value"]
-SCREEN_COLUMNS = ["id", "name", "description", "route", "code_paths", "created_at"]
+SCREEN_COLUMNS = ["id", "name", "description", "route", "code_paths", "created_at", "dev_owner"]
 ASSIGNMENT_COLUMNS = ["id", "screen_id", "assignee_email", "deadline", "status", "updated_at"]
 TEST_CASE_COLUMNS = [
     "id",

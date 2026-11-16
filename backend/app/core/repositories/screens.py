@@ -28,6 +28,7 @@ def _to_record(screen: Screen) -> Record:
         # Danh sách đường dẫn lưu thành chuỗi JSON trong một ô
         "code_paths": json.dumps(screen.code_paths, ensure_ascii=False),
         "created_at": to_iso(screen.created_at),
+        "dev_owner": screen.dev_owner,
     }
 
 
@@ -39,6 +40,7 @@ def _from_record(record: Record) -> Screen:
         route=record["route"],
         code_paths=json.loads(record["code_paths"] or "[]"),
         created_at=from_iso(record["created_at"]),
+        dev_owner=record["dev_owner"],
     )
 
 

@@ -34,3 +34,4 @@ class Screen(BaseModel):
     route: str
     code_paths: list[str]
     created_at: datetime
+    dev_owner: str = ""  # tên GitHub của dev phụ trách, dùng để giao bug
