@@ -1,0 +1,3785 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI Test Runner API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Dùng để kiểm tra server còn sống (Docker, người vận hành).",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "get": {
+        "summary": "Login",
+        "operationId": "login_api_auth_login_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/callback": {
+      "get": {
+        "summary": "Callback",
+        "operationId": "callback_api_auth_callback_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Logout",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "summary": "Me",
+        "operationId": "me_api_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List Users",
+        "operationId": "list_users_api_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  },
+                  "type": "array",
+                  "title": "Response List Users Api Users Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create User",
+        "operationId": "create_user_api_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{email}": {
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update User",
+        "operationId": "update_user_api_users__email__patch",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Email"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Projects",
+        "operationId": "list_projects_api_projects_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  },
+                  "type": "array",
+                  "title": "Response List Projects Api Projects Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create Project",
+        "operationId": "create_project_api_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get Project",
+        "operationId": "get_project_api_projects__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Update Project",
+        "operationId": "update_project_api_projects__project_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/service-account": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Service Account",
+        "description": "Email mà Admin cần share quyền Editor trên file Sheet của dự án.",
+        "operationId": "service_account_api_settings_service_account_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceAccount"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github/repositories": {
+      "get": {
+        "tags": [
+          "github"
+        ],
+        "summary": "List Repositories",
+        "description": "Các repo mà GitHub App đang được cài, để Admin chọn khi tạo dự án.",
+        "operationId": "list_repositories_api_github_repositories_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RepoInfo"
+                  },
+                  "type": "array",
+                  "title": "Response List Repositories Api Github Repositories Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github/repositories/{owner}/{repo}/branches": {
+      "get": {
+        "tags": [
+          "github"
+        ],
+        "summary": "List Branches",
+        "operationId": "list_branches_api_github_repositories__owner___repo__branches_get",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Owner"
+            }
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response List Branches Api Github Repositories  Owner   Repo  Branches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/screens": {
+      "get": {
+        "tags": [
+          "screens"
+        ],
+        "summary": "List Screens",
+        "operationId": "list_screens_api_projects__project_id__screens_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Screen"
+                  },
+                  "title": "Response List Screens Api Projects  Project Id  Screens Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "screens"
+        ],
+        "summary": "Create Screen",
+        "operationId": "create_screen_api_projects__project_id__screens_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScreenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Screen"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/screens/{screen_id}": {
+      "patch": {
+        "tags": [
+          "screens"
+        ],
+        "summary": "Update Screen",
+        "operationId": "update_screen_api_projects__project_id__screens__screen_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "screen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Screen Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScreenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Screen"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "screens"
+        ],
+        "summary": "Delete Screen",
+        "operationId": "delete_screen_api_projects__project_id__screens__screen_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "screen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Screen Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/assignments": {
+      "get": {
+        "tags": [
+          "assignments"
+        ],
+        "summary": "List Assignments",
+        "operationId": "list_assignments_api_projects__project_id__assignments_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "screen_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Screen Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Assignment"
+                  },
+                  "title": "Response List Assignments Api Projects  Project Id  Assignments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "assignments"
+        ],
+        "summary": "Assign",
+        "operationId": "assign_api_projects__project_id__assignments_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Assignment"
+                  },
+                  "title": "Response Assign Api Projects  Project Id  Assignments Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/assignments/{assignment_id}": {
+      "patch": {
+        "tags": [
+          "assignments"
+        ],
+        "summary": "Change Deadline",
+        "operationId": "change_deadline_api_projects__project_id__assignments__assignment_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeDeadlineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Assignment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "assignments"
+        ],
+        "summary": "Unassign",
+        "operationId": "unassign_api_projects__project_id__assignments__assignment_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/projects/{project_id}/results": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Write Agent Results",
+        "operationId": "write_agent_results_api_agent_projects__project_id__results_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentResultsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResultsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases": {
+      "get": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "List Test Cases",
+        "operationId": "list_test_cases_api_projects__project_id__test_cases_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestCase"
+                  },
+                  "title": "Response List Test Cases Api Projects  Project Id  Test Cases Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Create Test Case",
+        "operationId": "create_test_case_api_projects__project_id__test_cases_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTestCaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestCase"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}": {
+      "get": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Get Test Case",
+        "operationId": "get_test_case_api_projects__project_id__test_cases__case_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestCaseDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Update Test Case",
+        "operationId": "update_test_case_api_projects__project_id__test_cases__case_id__put",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTestCaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestCase"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/submit": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Submit Test Case",
+        "operationId": "submit_test_case_api_projects__project_id__test_cases__case_id__submit_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestCase"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/approve": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Approve Test Case",
+        "operationId": "approve_test_case_api_projects__project_id__test_cases__case_id__approve_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestCase"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/return": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Return Test Case",
+        "operationId": "return_test_case_api_projects__project_id__test_cases__case_id__return_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestCase"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/deprecate": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Deprecate Test Case",
+        "operationId": "deprecate_test_case_api_projects__project_id__test_cases__case_id__deprecate_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestCase"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/restore": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Restore Test Case",
+        "operationId": "restore_test_case_api_projects__project_id__test_cases__case_id__restore_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestCase"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/archive": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Archive Test Case",
+        "operationId": "archive_test_case_api_projects__project_id__test_cases__case_id__archive_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/unarchive": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Unarchive Test Case",
+        "operationId": "unarchive_test_case_api_projects__project_id__test_cases__case_id__unarchive_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/approve-batch": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Approve Test Cases",
+        "description": "Duyệt nhiều case một lượt; case lỗi được bỏ qua và báo lại, không làm hỏng cả lượt.",
+        "operationId": "approve_test_cases_api_projects__project_id__test_cases_approve_batch_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchApproveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchApproveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/sync-issues": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Sync Test Case Issues",
+        "operationId": "sync_test_case_issues_api_projects__project_id__test_cases_sync_issues_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncIssuesResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/request-rerun": {
+      "post": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Request Rerun",
+        "description": "Báo lên GitHub issue rằng case FAIL/BLOCKED cần được chạy lại (Codex chạy ngoài app).",
+        "operationId": "request_rerun_api_projects__project_id__test_cases__case_id__request_rerun_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/{case_id}/history": {
+      "get": {
+        "tags": [
+          "test-cases"
+        ],
+        "summary": "Test Case History",
+        "operationId": "test_case_history_api_projects__project_id__test_cases__case_id__history_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntry"
+                  },
+                  "title": "Response Test Case History Api Projects  Project Id  Test Cases  Case Id  History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/overview": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "My Overview",
+        "description": "Số case chờ duyệt và kết quả mới nhất trên mọi dự án người dùng được xem.",
+        "operationId": "my_overview_api_me_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/assignments": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "My Assignments",
+        "description": "Trang \"Việc của tôi\": mọi màn hình user được giao, ở mọi dự án đang hoạt động.",
+        "operationId": "my_assignments_api_me_assignments_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MyAssignment"
+                  },
+                  "type": "array",
+                  "title": "Response My Assignments Api Me Assignments Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/members": {
+      "get": {
+        "tags": [
+          "members"
+        ],
+        "summary": "List Members",
+        "operationId": "list_members_api_projects__project_id__members_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemberView"
+                  },
+                  "title": "Response List Members Api Projects  Project Id  Members Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "members"
+        ],
+        "summary": "Add Member",
+        "operationId": "add_member_api_projects__project_id__members_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/members/{email}": {
+      "delete": {
+        "tags": [
+          "members"
+        ],
+        "summary": "Remove Member",
+        "operationId": "remove_member_api_projects__project_id__members__email__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Email"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "List Notifications",
+        "operationId": "list_notifications_api_notifications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Mark All Read",
+        "operationId": "mark_all_read_api_notifications_read_all_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/notifications/{notification_id}/read": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Mark Read",
+        "operationId": "mark_read_api_notifications__notification_id__read_post",
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Notification Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/results": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "List Results",
+        "operationId": "list_results_api_projects__project_id__results_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ResultStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "screen_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Screen Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResultItem"
+                  },
+                  "title": "Response List Results Api Projects  Project Id  Results Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Action": {
+        "type": "string",
+        "enum": [
+          "MANAGE_USERS",
+          "MANAGE_PROJECTS",
+          "MANAGE_MEMBERS",
+          "MANAGE_SCREENS",
+          "EDIT_TEST_CASE",
+          "REVIEW_TEST_CASE",
+          "TRIGGER_RUN",
+          "REVIEW_RESULTS",
+          "VIEW_PROJECT"
+        ],
+        "title": "Action"
+      },
+      "AddMemberRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "AddMemberRequest"
+      },
+      "AgentResult": {
+        "properties": {
+          "test_case_id": {
+            "type": "string",
+            "title": "Test Case Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResultStatus"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason",
+            "default": ""
+          },
+          "failed_step": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Step"
+          },
+          "evidence": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Evidence",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_case_id",
+          "status"
+        ],
+        "title": "AgentResult"
+      },
+      "AgentResultsRequest": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AgentResult"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Results"
+          },
+          "duration_seconds": {
+            "type": "number",
+            "maximum": 86400.0,
+            "minimum": 0.0,
+            "title": "Duration Seconds",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "AgentResultsRequest"
+      },
+      "AgentResultsResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "written": {
+            "type": "integer",
+            "title": "Written"
+          },
+          "ignored": {
+            "items": {
+              "$ref": "#/components/schemas/IgnoredResult"
+            },
+            "type": "array",
+            "title": "Ignored"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "written",
+          "ignored"
+        ],
+        "title": "AgentResultsResponse"
+      },
+      "ApproveItem": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "version"
+        ],
+        "title": "ApproveItem"
+      },
+      "AssignRequest": {
+        "properties": {
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "assignee_emails": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Assignee Emails"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "title": "Deadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "screen_id",
+          "assignee_emails",
+          "deadline"
+        ],
+        "title": "AssignRequest"
+      },
+      "Assignment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "assignee_email": {
+            "type": "string",
+            "title": "Assignee Email"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "title": "Deadline"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AssignmentStatus"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "screen_id",
+          "assignee_email",
+          "deadline",
+          "status",
+          "updated_at"
+        ],
+        "title": "Assignment"
+      },
+      "AssignmentStatus": {
+        "type": "string",
+        "enum": [
+          "TODO",
+          "WRITING",
+          "IN_REVIEW",
+          "APPROVED",
+          "TESTED"
+        ],
+        "title": "AssignmentStatus"
+      },
+      "AuditEntry": {
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "diff": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Diff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "actor",
+          "action",
+          "diff"
+        ],
+        "title": "AuditEntry",
+        "description": "Một dòng lịch sử: ai làm gì lúc nào và đổi những gì."
+      },
+      "BatchApproveRequest": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApproveItem"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "BatchApproveRequest"
+      },
+      "BatchApproveResponse": {
+        "properties": {
+          "approved": {
+            "items": {
+              "$ref": "#/components/schemas/TestCase"
+            },
+            "type": "array",
+            "title": "Approved"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedItem"
+            },
+            "type": "array",
+            "title": "Skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "approved",
+          "skipped"
+        ],
+        "title": "BatchApproveResponse"
+      },
+      "ChangeDeadlineRequest": {
+        "properties": {
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "title": "Deadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deadline"
+        ],
+        "title": "ChangeDeadlineRequest"
+      },
+      "ConflictResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "latest": {
+            "$ref": "#/components/schemas/TestCase"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "latest"
+        ],
+        "title": "ConflictResponse",
+        "description": "Phản hồi 409 khi version cũ: kèm bản mới nhất để giao diện cho người dùng so sánh."
+      },
+      "CreateProjectRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "repo_full_name": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Repo Full Name"
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Branch"
+          },
+          "staging_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Staging Url"
+          },
+          "spreadsheet": {
+            "type": "string",
+            "title": "Spreadsheet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "repo_full_name",
+          "branch",
+          "spreadsheet"
+        ],
+        "title": "CreateProjectRequest"
+      },
+      "CreateScreenRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Description",
+            "default": ""
+          },
+          "route": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Route",
+            "default": ""
+          },
+          "code_paths": {
+            "items": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Code Paths",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateScreenRequest"
+      },
+      "CreateTestCaseRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "precondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Precondition",
+            "default": ""
+          },
+          "test_data": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Test Data",
+            "default": ""
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TestStep"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Steps"
+          },
+          "expected_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expected Result"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "steps",
+          "expected_result",
+          "severity",
+          "priority",
+          "screen_id"
+        ],
+        "title": "CreateTestCaseRequest"
+      },
+      "CreateUserRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "name",
+          "role"
+        ],
+        "title": "CreateUserRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IgnoredResult": {
+        "properties": {
+          "test_case_id": {
+            "type": "string",
+            "title": "Test Case Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_case_id",
+          "reason"
+        ],
+        "title": "IgnoredResult"
+      },
+      "MemberView": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "added_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Added At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "name",
+          "role",
+          "active",
+          "added_at"
+        ],
+        "title": "MemberView"
+      },
+      "MyAssignment": {
+        "properties": {
+          "assignment_id": {
+            "type": "string",
+            "title": "Assignment Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "project_name": {
+            "type": "string",
+            "title": "Project Name"
+          },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "screen_name": {
+            "type": "string",
+            "title": "Screen Name"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "title": "Deadline"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AssignmentStatus"
+          },
+          "case_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/TestCaseStatus"
+            },
+            "type": "object",
+            "title": "Case Counts"
+          },
+          "returned_cases": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnedCase"
+            },
+            "type": "array",
+            "title": "Returned Cases"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignment_id",
+          "project_id",
+          "project_name",
+          "screen_id",
+          "screen_name",
+          "deadline",
+          "status"
+        ],
+        "title": "MyAssignment",
+        "description": "Một dòng trong trang \"Việc của tôi\"."
+      },
+      "Notification": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "title",
+          "link",
+          "created_at"
+        ],
+        "title": "Notification"
+      },
+      "NotificationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "unread": {
+            "type": "integer",
+            "title": "Unread"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "unread"
+        ],
+        "title": "NotificationList"
+      },
+      "OverviewSummary": {
+        "properties": {
+          "pending_review": {
+            "type": "integer",
+            "title": "Pending Review",
+            "default": 0
+          },
+          "latest_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "OverviewSummary"
+      },
+      "Priority": {
+        "type": "string",
+        "enum": [
+          "P1",
+          "P2",
+          "P3"
+        ],
+        "title": "Priority"
+      },
+      "Project": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "repo_full_name": {
+            "type": "string",
+            "title": "Repo Full Name"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "staging_url": {
+            "type": "string",
+            "title": "Staging Url"
+          },
+          "spreadsheet_id": {
+            "type": "string",
+            "title": "Spreadsheet Id"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "repo_full_name",
+          "branch",
+          "staging_url",
+          "spreadsheet_id",
+          "archived",
+          "created_at"
+        ],
+        "title": "Project"
+      },
+      "ProjectDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "repo_full_name": {
+            "type": "string",
+            "title": "Repo Full Name"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "staging_url": {
+            "type": "string",
+            "title": "Staging Url"
+          },
+          "spreadsheet_id": {
+            "type": "string",
+            "title": "Spreadsheet Id"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "type": "array",
+            "title": "Permissions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "repo_full_name",
+          "branch",
+          "staging_url",
+          "spreadsheet_id",
+          "archived",
+          "created_at",
+          "permissions"
+        ],
+        "title": "ProjectDetail"
+      },
+      "RepoInfo": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "default_branch": {
+            "type": "string",
+            "title": "Default Branch"
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name",
+          "default_branch",
+          "private"
+        ],
+        "title": "RepoInfo"
+      },
+      "ResultItem": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "case_title": {
+            "type": "string",
+            "title": "Case Title"
+          },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "screen_name": {
+            "type": "string",
+            "title": "Screen Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResultStatus"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "failed_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Step"
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "case_title",
+          "screen_id",
+          "screen_name",
+          "status",
+          "reason",
+          "failed_step",
+          "evidence",
+          "run_id",
+          "finished_at"
+        ],
+        "title": "ResultItem"
+      },
+      "ResultStatus": {
+        "type": "string",
+        "enum": [
+          "PASS",
+          "FAIL",
+          "BLOCKED",
+          "INCONCLUSIVE"
+        ],
+        "title": "ResultStatus"
+      },
+      "ReturnedCase": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment"
+          },
+          "returned_by": {
+            "type": "string",
+            "title": "Returned By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "title",
+          "comment",
+          "returned_by"
+        ],
+        "title": "ReturnedCase",
+        "description": "Một case bị QA trả lại: tester cần biết case nào, lý do gì để sửa."
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "ADMIN",
+          "QA_LEAD",
+          "TESTER",
+          "VIEWER"
+        ],
+        "title": "Role"
+      },
+      "Screen": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "route": {
+            "type": "string",
+            "title": "Route"
+          },
+          "code_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Code Paths"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "route",
+          "code_paths",
+          "created_at"
+        ],
+        "title": "Screen"
+      },
+      "ServiceAccount": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ServiceAccount"
+      },
+      "Severity": {
+        "type": "string",
+        "enum": [
+          "LOW",
+          "MEDIUM",
+          "HIGH"
+        ],
+        "title": "Severity"
+      },
+      "SkippedCase": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "reason"
+        ],
+        "title": "SkippedCase",
+        "description": "Một case bị bỏ qua khi duyệt hàng loạt, kèm lý do để hiện cho người duyệt."
+      },
+      "SkippedItem": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "reason"
+        ],
+        "title": "SkippedItem"
+      },
+      "SyncIssuesResult": {
+        "properties": {
+          "created": {
+            "type": "integer",
+            "title": "Created",
+            "default": 0
+          },
+          "updated": {
+            "type": "integer",
+            "title": "Updated",
+            "default": 0
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed",
+            "default": 0
+          },
+          "reopened": {
+            "type": "integer",
+            "title": "Reopened",
+            "default": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped",
+            "default": 0
+          },
+          "failed": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedCase"
+            },
+            "type": "array",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "title": "SyncIssuesResult"
+      },
+      "TestCase": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "precondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Precondition",
+            "default": ""
+          },
+          "test_data": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Test Data",
+            "default": ""
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TestStep"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Steps"
+          },
+          "expected_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expected Result"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TestCaseStatus"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "steps",
+          "expected_result",
+          "severity",
+          "priority",
+          "id",
+          "screen_id",
+          "status",
+          "created_by",
+          "updated_by",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "title": "TestCase",
+        "description": "Một test case đầy đủ, như lưu ở tab TestCases."
+      },
+      "TestCaseDetail": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "precondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Precondition",
+            "default": ""
+          },
+          "test_data": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Test Data",
+            "default": ""
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TestStep"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Steps"
+          },
+          "expected_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expected Result"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TestCaseStatus"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "can_edit": {
+            "type": "boolean",
+            "title": "Can Edit"
+          },
+          "can_review": {
+            "type": "boolean",
+            "title": "Can Review"
+          },
+          "can_archive": {
+            "type": "boolean",
+            "title": "Can Archive"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "steps",
+          "expected_result",
+          "severity",
+          "priority",
+          "id",
+          "screen_id",
+          "status",
+          "created_by",
+          "updated_by",
+          "created_at",
+          "updated_at",
+          "version",
+          "can_edit",
+          "can_review",
+          "can_archive"
+        ],
+        "title": "TestCaseDetail",
+        "description": "Test case kèm quyền của người đang xem, để giao diện ẩn/hiện nút."
+      },
+      "TestCaseStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "IN_REVIEW",
+          "APPROVED",
+          "TESTED",
+          "ARCHIVED",
+          "DEPRECATED"
+        ],
+        "title": "TestCaseStatus"
+      },
+      "TestStep": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Action"
+          },
+          "expected": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Expected",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "TestStep",
+        "description": "Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống)."
+      },
+      "TransitionRequest": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "TransitionRequest"
+      },
+      "UpdateProjectRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch"
+          },
+          "staging_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Staging Url"
+          },
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          }
+        },
+        "type": "object",
+        "title": "UpdateProjectRequest"
+      },
+      "UpdateScreenRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "code_paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Paths"
+          }
+        },
+        "type": "object",
+        "title": "UpdateScreenRequest"
+      },
+      "UpdateTestCaseRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "precondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Precondition",
+            "default": ""
+          },
+          "test_data": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Test Data",
+            "default": ""
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TestStep"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Steps"
+          },
+          "expected_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expected Result"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "steps",
+          "expected_result",
+          "severity",
+          "priority",
+          "version"
+        ],
+        "title": "UpdateTestCaseRequest"
+      },
+      "UpdateUserRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          }
+        },
+        "type": "object",
+        "title": "UpdateUserRequest"
+      },
+      "User": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "name",
+          "role",
+          "active",
+          "created_at"
+        ],
+        "title": "User"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
