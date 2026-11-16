@@ -50,7 +50,7 @@ Spec không nói rõ nhưng người dùng sẽ gặp; mỗi dòng đã có test
 **Interfaces:**
 - Produces: `SheetTable.ensure_columns() -> list[str]` (trả tên cột vừa thêm); `upgrade_project_spreadsheets(projects: ProjectRepository, gateway: SheetsGateway) -> None` trong `bootstrap.py`.
 
-- [ ] **Bước 1: Viết test đỏ**
+- [x] **Bước 1: Viết test đỏ**
 
 ```python
 def test_ensure_columns_appends_missing_at_end_and_keeps_unknown(gateway):
@@ -69,10 +69,10 @@ def test_upgrade_skips_archived_and_logs_errors(...):
     # dự án lưu trữ không bị đọc; một dự án lỗi quyền không chặn dự án sau
 ```
 
-- [ ] **Bước 2:** `uv run pytest tests/test_sheet_table.py tests/test_bootstrap.py -q` → FAIL (chưa có `ensure_columns`).
-- [ ] **Bước 3:** Viết `ensure_columns`: đọc hàng 1, cột thiếu nối vào cuối, ghi lại bằng `update_row(..., 1, header)` (1 lượt đọc + tối đa 1 lượt ghi). `_ensure_tabs` gọi `ensure_columns()` thay cho `check_columns()`. `upgrade_project_spreadsheets` chạy cho mọi dự án chưa lưu trữ, mỗi dự án bọc `try/except Exception` + `logger.warning`; gọi trong `lifespan` của `main.py` ngay sau `bootstrap_system_spreadsheet`.
-- [ ] **Bước 4:** Chạy lại test → PASS; chạy cả bộ backend.
-- [ ] **Bước 5:** Commit `feat(sheets): tự thêm cột mới vào cuối tiêu đề khi khởi động`.
+- [x] **Bước 2:** `uv run pytest tests/test_sheet_table.py tests/test_bootstrap.py -q` → FAIL (chưa có `ensure_columns`).
+- [x] **Bước 3:** Viết `ensure_columns`: đọc hàng 1, cột thiếu nối vào cuối, ghi lại bằng `update_row(..., 1, header)` (1 lượt đọc + tối đa 1 lượt ghi). `_ensure_tabs` gọi `ensure_columns()` thay cho `check_columns()`. `upgrade_project_spreadsheets` chạy cho mọi dự án chưa lưu trữ, mỗi dự án bọc `try/except Exception` + `logger.warning`; gọi trong `lifespan` của `main.py` ngay sau `bootstrap_system_spreadsheet`.
+- [x] **Bước 4:** Chạy lại test → PASS; chạy cả bộ backend.
+- [x] **Bước 5:** Commit `feat(sheets): tự thêm cột mới vào cuối tiêu đề khi khởi động`.
 
 ### Task 2: Kiểu `Media` và kiểm tra link Cloudinary
 
@@ -89,7 +89,7 @@ def test_upgrade_skips_archived_and_logs_errors(...):
   - `class ForeignMediaError(ValueError)`
   - `ensure_own_cloud(items: Iterable[Media], cloud_name: str) -> None` — cloud_name rỗng thì báo `ForeignMediaError("Chưa cấu hình Cloudinary")`.
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_media_rejects_non_cloudinary_and_http():
@@ -108,8 +108,8 @@ def test_ensure_own_cloud():
     ensure_own_cloud([], "")   # không có media thì không cần cấu hình
 ```
 
-- [ ] **Bước 2:** Chạy → FAIL. **Bước 3:** Viết code. **Bước 4:** PASS.
-- [ ] **Bước 5:** Commit `feat(media): thêm kiểu Media và kiểm tra link Cloudinary`.
+- [x] **Bước 2:** Chạy → FAIL. **Bước 3:** Viết code. **Bước 4:** PASS.
+- [x] **Bước 5:** Commit `feat(media): thêm kiểu Media và kiểm tra link Cloudinary`.
 
 ### Task 3: Cột mới của `Projects` và `Screens`
 
@@ -120,9 +120,9 @@ def test_ensure_own_cloud():
 **Interfaces:**
 - Produces: `Project.android_app_id: str = ""`, `Project.ios_bundle_id: str = ""`, `Project.require_review: bool = False`; `Screen.dev_owner: str = ""`. Cột thêm vào **cuối** `PROJECT_COLUMNS` / `SCREEN_COLUMNS`.
 
-- [ ] **Bước 1: Test đỏ** — dòng Sheet có ô mới để trống đọc ra `require_review is False`, `android_app_id == ""`, `dev_owner == ""`; ghi `require_review=True` rồi đọc lại ra `"TRUE"`/`True`.
-- [ ] **Bước 2–4:** FAIL → viết `_to_record`/`_from_record` (bool theo kiểu `archived`) → PASS.
-- [ ] **Bước 5:** Commit `feat(models): thêm cột app id, require_review và dev_owner`.
+- [x] **Bước 1: Test đỏ** — dòng Sheet có ô mới để trống đọc ra `require_review is False`, `android_app_id == ""`, `dev_owner == ""`; ghi `require_review=True` rồi đọc lại ra `"TRUE"`/`True`.
+- [x] **Bước 2–4:** FAIL → viết `_to_record`/`_from_record` (bool theo kiểu `archived`) → PASS.
+- [x] **Bước 5:** Commit `feat(models): thêm cột app id, require_review và dev_owner`.
 
 ### Task 4: Trường mới của test case
 
@@ -138,7 +138,7 @@ def test_ensure_own_cloud():
   - Cột Sheet thêm cuối `TEST_CASE_COLUMNS` theo thứ tự: `platform, test_type, regression, start_point, guide_media_json, postcondition, requirement_ref`. `steps` vẫn là JSON, mỗi bước thêm khoá `guide_media`.
   - `media_of(case: TestCaseContent) -> list[Media]` — mọi media của case (cả bước), dùng cho kiểm tra cloud và dọn file.
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_old_row_reads_defaults(repo_with_old_row):
@@ -154,8 +154,8 @@ def test_step_media_limit():
         TestStep(action="a", guide_media=[IMG] * 6)
 ```
 
-- [ ] **Bước 2–4:** FAIL → viết → PASS. Sửa `contentOf` phía frontend để typecheck vẫn qua (chỉ thêm trường, chưa thêm giao diện).
-- [ ] **Bước 5:** `npm run gen:api`, commit `feat(test-cases): thêm nền tảng, loại test, regression và ảnh hướng dẫn`.
+- [x] **Bước 2–4:** FAIL → viết → PASS. Sửa `contentOf` phía frontend để typecheck vẫn qua (chỉ thêm trường, chưa thêm giao diện).
+- [x] **Bước 5:** `npm run gen:api`, commit `feat(test-cases): thêm nền tảng, loại test, regression và ảnh hướng dẫn`.
 
 ### Task 5: Trường mới của `Runs` và `Results`
 
@@ -172,7 +172,7 @@ def test_step_media_limit():
   - `Result` bỏ `screenshot`, thêm: `evidence: Evidence`, `step_results: list[StepResult] = []`, `actual_result: str = ""`, `environment: str = ""`, `executed_by: str = ""`, `case_version: int | None = None`, `dev_owner: str = ""`, `defect_url: str = ""`
   - Cột Results thêm cuối: `step_results_json, actual_result, environment, executed_by, case_version, dev_owner, defect_url`
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_legacy_evidence_still_reads(results_repo_with_row('{"screenshot": "https://x/a.png"}')):
@@ -182,8 +182,8 @@ def test_round_trip_step_results_and_video(...)
 def test_empty_new_cells_default(...)   # step_results == [], case_version is None
 ```
 
-- [ ] **Bước 2–4:** FAIL → viết → PASS (cả bộ backend phải qua sau khi đổi `screenshot` → `evidence.legacy_url`).
-- [ ] **Bước 5:** Commit `feat(runs): lưu kết quả từng bước, video và môi trường chạy`.
+- [x] **Bước 2–4:** FAIL → viết → PASS (cả bộ backend phải qua sau khi đổi `screenshot` → `evidence.legacy_url`).
+- [x] **Bước 5:** Commit `feat(runs): lưu kết quả từng bước, video và môi trường chạy`.
 
 ---
 

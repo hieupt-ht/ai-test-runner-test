@@ -14,7 +14,8 @@ Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026
 
 Bằng chứng ảnh/video (Cloudinary), test Android/iOS, giao bug cho dev. Thiết kế: `docs/superpowers/specs/2026-11-16-evidence-mobile-and-bug-assignment-design.md`. Kế hoạch 27 task, 8 đợt: `docs/superpowers/plans/2026-11-16-evidence-mobile-and-bug-assignment.md`. **Làm từng đợt một**: xong đợt thì đánh dấu `[x]` trong kế hoạch, ghi tiến độ ở đây, dừng cho chủ dự án `/compact`.
 
-- Tiến độ: chưa bắt đầu. Đợt tiếp theo: **đợt 1** (Task 1–5, dữ liệu và mô hình).
+- Tiến độ: **đợt 1 xong** (Task 1–5, dữ liệu và mô hình; 2026-11-16): app tự thêm cột mới vào cuối tiêu đề Sheet lúc khởi động, có kiểu `Media`, cột mới của Projects/Screens/TestCases/Runs/Results. Backend 405 test, frontend 105 test qua. Đợt tiếp theo: **đợt 2** (Task 6–9, công tắc duyệt, sửa case đã gửi, lịch sử).
+- Lưu ý: `Sheet` thiếu cột giờ được **tự thêm** thay vì báo lỗi (hai test cũ đã đổi theo). `.venv` của backend đã được dựng lại bằng `uv sync` vì bản cũ trỏ tới miniconda không còn.
 
 ## Việc còn dở
 
