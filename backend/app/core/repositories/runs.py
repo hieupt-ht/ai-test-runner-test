@@ -17,11 +17,13 @@ from app.core.ids import IdGenerator
 from app.core.locks.redis_lock import redis_lock
 from app.core.models.run import (
     ACTIVE_RUN_STATUSES,
+    Evidence,
     Result,
     ResultStatus,
     Run,
     RunScope,
     RunStatus,
+    StepResult,
 )
 from app.core.sheets.gateway import SheetsGateway
 from app.core.sheets.schema import RESULT_COLUMNS, RESULTS_TAB, RUN_COLUMNS, RUNS_TAB
@@ -56,6 +58,7 @@ def _run_to_record(run: Run) -> Record:
         "passed": str(run.passed),
         "failed": str(run.failed),
         "tokens_used": str(run.tokens_used),
+        "build_version": run.build_version,
     }
 
 
@@ -73,6 +76,7 @@ def _run_from_record(record: Record) -> Run:
         passed=int(record["passed"] or 0),
         failed=int(record["failed"] or 0),
         tokens_used=int(record["tokens_used"] or 0),
+        build_version=record["build_version"],
     )
 
 
@@ -181,7 +185,8 @@ class RunRepository:
 
 
 def _result_to_record(result: Result) -> Record:
-    evidence = {} if result.screenshot is None else {"screenshot": result.screenshot}
+    # Bằng chứng mặc định (không có gì) thì để ô trống cho gọn
+    evidence = result.evidence.model_dump_json(exclude_defaults=True)
     return {
         "id": result.id,
         "run_id": result.run_id,
@@ -189,17 +194,38 @@ def _result_to_record(result: Result) -> Record:
         "status": result.status.value,
         "reason": result.reason,
         "failed_step": "" if result.failed_step is None else str(result.failed_step),
-        "evidence_json": json.dumps(evidence, ensure_ascii=False) if evidence else "",
+        "evidence_json": "" if evidence == "{}" else evidence,
         "tokens_used": "0",
         "issue_url": "",
         "reviewed_by": "",
         "review_note": "",
         "created_at": to_iso(result.created_at),
+        "step_results_json": json.dumps(
+            [step.model_dump(mode="json") for step in result.step_results], ensure_ascii=False
+        )
+        if result.step_results
+        else "",
+        "actual_result": result.actual_result,
+        "environment": result.environment,
+        "executed_by": result.executed_by,
+        "case_version": "" if result.case_version is None else str(result.case_version),
+        "dev_owner": result.dev_owner,
+        "defect_url": result.defect_url,
     }
 
 
+def _evidence_from_json(text: str) -> Evidence:
+    """Đọc `evidence_json`; bản cũ lưu {"screenshot": "<link>"} thì đổi thành `legacy_url`."""
+    if not text:
+        return Evidence()
+    data = json.loads(text)
+    if "screenshot" in data:
+        legacy = data.pop("screenshot")
+        data.setdefault("legacy_url", legacy)
+    return Evidence.model_validate(data)
+
+
 def _result_from_record(record: Record) -> Result:
-    evidence = json.loads(record["evidence_json"]) if record["evidence_json"] else {}
     return Result(
         id=record["id"],
         run_id=record["run_id"],
@@ -207,8 +233,18 @@ def _result_from_record(record: Record) -> Result:
         status=ResultStatus(record["status"]),
         reason=record["reason"],
         failed_step=int(record["failed_step"]) if record["failed_step"] else None,
-        screenshot=evidence.get("screenshot"),
         created_at=from_iso(record["created_at"]),
+        evidence=_evidence_from_json(record["evidence_json"]),
+        step_results=[
+            StepResult.model_validate(item)
+            for item in json.loads(record["step_results_json"] or "[]")
+        ],
+        actual_result=record["actual_result"],
+        environment=record["environment"],
+        executed_by=record["executed_by"],
+        case_version=int(record["case_version"]) if record["case_version"] else None,
+        dev_owner=record["dev_owner"],
+        defect_url=record["defect_url"],
     )
 
 

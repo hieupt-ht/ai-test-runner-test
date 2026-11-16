@@ -52,7 +52,6 @@ def _add_result(app: FastAPI, project: Project, case_id: str) -> None:
                 status=ResultStatus.PASS,
                 reason="Đạt",
                 failed_step=None,
-                screenshot=None,
                 created_at=run.finished_at,
             )
         ]

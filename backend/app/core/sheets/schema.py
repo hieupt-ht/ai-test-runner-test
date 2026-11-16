@@ -80,6 +80,7 @@ RUN_COLUMNS = [
     "passed",
     "failed",
     "tokens_used",
+    "build_version",  # cột thêm sau, luôn nối vào CUỐI
 ]
 RESULT_COLUMNS = [
     "id",
@@ -94,6 +95,14 @@ RESULT_COLUMNS = [
     "reviewed_by",
     "review_note",
     "created_at",
+    # Cột thêm sau, luôn nối vào CUỐI
+    "step_results_json",
+    "actual_result",
+    "environment",
+    "executed_by",
+    "case_version",
+    "dev_owner",
+    "defect_url",
 ]
 
 PROJECT_TABS: dict[str, list[str]] = {

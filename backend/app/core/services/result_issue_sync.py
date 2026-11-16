@@ -104,7 +104,7 @@ def format_fail_comment(
         status = "✅" if number < failed_step else "❌" if number == failed_step else "—"
         lines.append(f"| {number} | {_safe_text(step.action, case)} | {status} |")
     lines.extend(["", f"**Lý do:** {_safe_text(result.reason, case)}"])
-    evidence = _safe_evidence(result.screenshot, case)
+    evidence = _safe_evidence(result.evidence.legacy_url, case)
     if evidence:
         lines.append(f"**Bằng chứng:** [Mở bằng chứng]({evidence})")
     lines.extend(

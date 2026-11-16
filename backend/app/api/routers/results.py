@@ -91,7 +91,7 @@ def results_for_project(
                 status=result.status,
                 reason=result.reason,
                 failed_step=result.failed_step,
-                evidence=result.screenshot or "",
+                evidence=result.evidence.legacy_url or "",
                 run_id=run.id,
                 finished_at=run.finished_at,
             )

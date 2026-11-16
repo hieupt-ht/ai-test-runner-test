@@ -5,7 +5,16 @@ import fakeredis
 import pytest
 
 from app.core.bootstrap import bootstrap_project_spreadsheet
-from app.core.models.run import Result, ResultStatus, Run, RunScope, RunStatus
+from app.core.models.media import Media, MediaKind
+from app.core.models.run import (
+    Evidence,
+    Result,
+    ResultStatus,
+    Run,
+    RunScope,
+    RunStatus,
+    StepResult,
+)
 from app.core.models.test_case import Priority
 from app.core.repositories.runs import (
     ResultRepository,
@@ -157,7 +166,7 @@ def test_results_append_batch_and_list_for_run(gateway: FakeSheetsGateway) -> No
             status=status,
             reason="Không thấy Đăng nhập",
             failed_step=step,
-            screenshot=f"{run_id}/{case_id}.png" if step else None,
+            evidence=Evidence(legacy_url=f"{run_id}/{case_id}.png") if step else Evidence(),
             created_at=moment,
         )
 
@@ -171,9 +180,9 @@ def test_results_append_batch_and_list_for_run(gateway: FakeSheetsGateway) -> No
     first_run = results.list_for_run("RUN-0001")
     assert [r.test_case_id for r in first_run] == ["TC-000001", "TC-000002"]
     assert first_run[0].failed_step == 2
-    assert first_run[0].screenshot == "RUN-0001/TC-000001.png"
+    assert first_run[0].evidence.legacy_url == "RUN-0001/TC-000001.png"
     assert first_run[1].failed_step is None
-    assert first_run[1].screenshot is None
+    assert first_run[1].evidence == Evidence()
     assert [r.status for r in results.list_for_run("RUN-0002")] == [ResultStatus.BLOCKED]
 
 
@@ -187,3 +196,93 @@ def test_get_uses_a_single_sheet_read(repo: RunRepository, gateway: FakeSheetsGa
     writes = ("append", "update", "delete", "add_tab")
     reads = [call for call in gateway.calls if not call.startswith(writes)]
     assert len(reads) == 1
+
+
+def _results_repo(gateway: FakeSheetsGateway) -> ResultRepository:
+    gateway.data.setdefault(SHEET, {})
+    bootstrap_project_spreadsheet(gateway, SHEET)
+    return ResultRepository(gateway, SHEET)
+
+
+def _add_row_with_evidence(gateway: FakeSheetsGateway, evidence_json: str) -> None:
+    """Thêm một dòng Results có sẵn `evidence_json` (giả lập dữ liệu do bản cũ ghi)."""
+    header = gateway.data[SHEET]["Results"][0]
+    row = [""] * len(header)
+    for column, value in {
+        "id": "RUN-0001-TC-000001",
+        "run_id": "RUN-0001",
+        "test_case_id": "TC-000001",
+        "status": "FAIL",
+        "evidence_json": evidence_json,
+        "created_at": "2026-11-14T09:00:00Z",
+    }.items():
+        row[header.index(column)] = value
+    gateway.data[SHEET]["Results"].append(row)
+
+
+def test_legacy_evidence_still_reads(gateway: FakeSheetsGateway) -> None:
+    results = _results_repo(gateway)
+    _add_row_with_evidence(gateway, '{"screenshot": "https://x/a.png"}')
+
+    assert results.list_all()[0].evidence == Evidence(legacy_url="https://x/a.png")
+
+
+def test_empty_new_cells_default(gateway: FakeSheetsGateway) -> None:
+    results = _results_repo(gateway)
+    _add_row_with_evidence(gateway, "")
+
+    result = results.list_all()[0]
+
+    assert result.evidence == Evidence()
+    assert result.step_results == [] and result.case_version is None
+    assert (result.environment, result.executed_by, result.dev_owner) == ("", "", "")
+    assert (result.actual_result, result.defect_url) == ("", "")
+
+
+def test_round_trip_step_results_video_and_environment(gateway: FakeSheetsGateway) -> None:
+    results = _results_repo(gateway)
+    shot = Media(
+        kind=MediaKind.IMAGE, url="https://res.cloudinary.com/c/image/upload/s.png", public_id="s"
+    )
+    video = Media(
+        kind=MediaKind.VIDEO, url="https://res.cloudinary.com/c/video/upload/v.mp4", public_id="v"
+    )
+    saved = Result(
+        id="RUN-0001-TC-000001",
+        run_id="RUN-0001",
+        test_case_id="TC-000001",
+        status=ResultStatus.FAIL,
+        reason="Không thấy nút",
+        failed_step=2,
+        evidence=Evidence(video=video, screenshots=[shot]),
+        step_results=[
+            StepResult(step_no=1, status="PASS"),
+            StepResult(step_no=2, status="FAIL", actual="Màn hình trắng", screenshot=shot),
+        ],
+        actual_result="Màn hình trắng",
+        environment="Pixel 7 / Android 14",
+        executed_by="codex-windows",
+        case_version=3,
+        dev_owner="nguyenvana",
+        defect_url="https://github.com/o/r/issues/9",
+        created_at=datetime(2026, 11, 16, 9, 0, 0, tzinfo=UTC),
+    )
+
+    results.append_batch([saved])
+
+    assert results.list_all() == [saved]
+
+
+def test_run_new_fields_round_trip(repo: RunRepository) -> None:
+    run = repo.create(
+        triggered_by=LEAD,
+        scope=RunScope(regression_only=True, case_ids=["TC-000001"]),
+        branch="main",
+        total=1,
+    )
+    repo.save(run.model_copy(update={"build_version": "1.4.2"}))
+
+    saved = repo.get(run.id)
+
+    assert saved is not None and saved.build_version == "1.4.2"
+    assert saved.scope.regression_only is True and saved.scope.case_ids == ["TC-000001"]

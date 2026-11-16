@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.api.project_scope import scope_for
 from app.core.models.project import Project
-from app.core.models.run import Result, ResultStatus, RunScope, RunStatus
+from app.core.models.run import Evidence, Result, ResultStatus, RunScope, RunStatus
 from app.core.models.test_case import Priority, Severity, TestCaseContent, TestStep
 from app.core.models.user import Role
 from app.core.repositories.members import ProjectMemberRepository
@@ -83,9 +83,9 @@ def seed_results(app: FastAPI, project: Project) -> tuple[str, str]:
                     status=result_status,
                     reason="Lỗi đăng nhập" if result_status == ResultStatus.FAIL else "Đạt",
                     failed_step=2 if result_status == ResultStatus.FAIL else None,
-                    screenshot="https://example.com/evidence"
+                    evidence=Evidence(legacy_url="https://example.com/evidence")
                     if result_status == ResultStatus.FAIL
-                    else None,
+                    else Evidence(),
                     created_at=run.finished_at,
                 )
                 for case_id, result_status in rows
@@ -204,7 +204,6 @@ def test_missing_screen_uses_screen_id_as_name(
                 status=ResultStatus.PASS,
                 reason="Đạt",
                 failed_step=None,
-                screenshot=None,
                 created_at=run.finished_at,
             )
         ]

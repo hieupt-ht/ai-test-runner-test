@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from app.api.project_scope import scope_for
 from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
-from app.core.models.run import Result, ResultStatus, RunScope, RunStatus
+from app.core.models.run import Evidence, Result, ResultStatus, RunScope, RunStatus
 from app.core.models.test_case import TestCaseStatus
 from app.core.models.user import Role
 from app.core.repositories.runs import RunInProgressError
@@ -110,7 +110,7 @@ def write_agent_results(
             status=item.status,
             reason=item.reason,
             failed_step=item.failed_step,
-            screenshot=item.evidence or None,
+            evidence=Evidence(legacy_url=item.evidence or None),
             created_at=utc_now(),
         )
         for item in accepted
