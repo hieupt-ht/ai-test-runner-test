@@ -52,6 +52,48 @@ def _safe_evidence(value: str | None, case: TestCase) -> str | None:
     return value if urlparse(value).scheme == "https" else None
 
 
+STEP_ICONS = {"PASS": "✅", "FAIL": "❌", "SKIPPED": "–"}
+
+
+def _step_table(result: Result, case: TestCase) -> list[str]:
+    """Bảng từng bước dựa trên `step_results`; bước thiếu coi như chưa chạy (–)."""
+    by_no = {step.step_no: step for step in result.step_results}
+    lines = ["| Bước | Mô tả | Kết quả | Thực tế |", "|------|-------|---------|---------|"]
+    for number, step in enumerate(case.steps, start=1):
+        done = by_no.get(number)
+        icon = STEP_ICONS[done.status] if done else "–"
+        actual = _safe_text(done.actual, case) if done else ""
+        lines.append(f"| {number} | {_safe_text(step.action, case)} | {icon} | {actual} |")
+    return lines
+
+
+def _failed_step_screenshot(result: Result) -> str | None:
+    """Ảnh của bước lỗi: ưu tiên bước FAIL trong step_results, rồi bước `failed_step`."""
+    for step in result.step_results:
+        if step.screenshot is not None and (
+            step.status == "FAIL" or step.step_no == result.failed_step
+        ):
+            return step.screenshot.url
+    return None
+
+
+def _extra_lines(result: Result, case: TestCase) -> list[str]:
+    """Ảnh bước lỗi, video, môi trường và phiên bản case lúc chạy (chỉ in phần có dữ liệu)."""
+    lines: list[str] = []
+    shot = _safe_evidence(_failed_step_screenshot(result), case)
+    if shot:
+        lines.append(f"**Ảnh bước lỗi:** [Mở ảnh]({shot})")
+    video = result.evidence.video
+    video_url = _safe_evidence(video.url if video else None, case)
+    if video_url:
+        lines.append(f"**Video:** [Xem video]({video_url})")
+    if result.environment:
+        lines.append(f"**Môi trường:** {_safe_text(result.environment, case)}")
+    if result.case_version is not None:
+        lines.append(f"**Chạy với:** v{result.case_version}")
+    return lines
+
+
 def format_pass_comment(
     run: Run,
     result: Result,
@@ -63,17 +105,22 @@ def format_pass_comment(
 ) -> str:
     step_count = len(case.steps)
     finished = run.finished_at.isoformat() if run.finished_at else "Chưa hoàn tất"
-    return "\n".join(
-        [
-            RESULT_MARKER,
-            f"## Kết quả test · ✅ PASS · {case.id}",
-            "",
-            f"**Lần chạy:** #{run.id} · {finished}",
-            f"**Thời gian:** {duration:g}s · **Số bước:** {step_count}/{step_count}",
-            "",
-            f"[Xem chi tiết trong app →]({app_url.rstrip('/')}/projects/{project_id}/results)",
-        ]
+    lines = [
+        RESULT_MARKER,
+        f"## Kết quả test · ✅ PASS · {case.id}",
+        "",
+        f"**Lần chạy:** #{run.id} · {finished}",
+        f"**Thời gian:** {duration:g}s · **Số bước:** {step_count}/{step_count}",
+    ]
+    if result.step_results:
+        lines.extend(["", *_step_table(result, case)])
+    extras = _extra_lines(result, case)
+    if extras:
+        lines.extend(["", *extras])
+    lines.extend(
+        ["", f"[Xem chi tiết trong app →]({app_url.rstrip('/')}/projects/{project_id}/results)"]
     )
+    return "\n".join(lines)
 
 
 def format_fail_comment(
@@ -97,13 +144,17 @@ def format_fail_comment(
         ),
         f"**Thời gian:** {duration:g}s",
         "",
-        "| Bước | Mô tả | Kết quả |",
-        "|------|-------|---------|",
     ]
-    for number, step in enumerate(case.steps, start=1):
-        status = "✅" if number < failed_step else "❌" if number == failed_step else "—"
-        lines.append(f"| {number} | {_safe_text(step.action, case)} | {status} |")
+    if result.step_results:
+        lines.extend(_step_table(result, case))
+    else:
+        # Agent cũ chưa gửi từng bước: suy từ `failed_step` như trước
+        lines.extend(["| Bước | Mô tả | Kết quả |", "|------|-------|---------|"])
+        for number, step in enumerate(case.steps, start=1):
+            status = "✅" if number < failed_step else "❌" if number == failed_step else "—"
+            lines.append(f"| {number} | {_safe_text(step.action, case)} | {status} |")
     lines.extend(["", f"**Lý do:** {_safe_text(result.reason, case)}"])
+    lines.extend(_extra_lines(result, case))
     evidence = _safe_evidence(result.evidence.legacy_url, case)
     if evidence:
         lines.append(f"**Bằng chứng:** [Mở bằng chứng]({evidence})")
