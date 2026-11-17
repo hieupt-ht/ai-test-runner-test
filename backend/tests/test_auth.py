@@ -245,3 +245,10 @@ def test_change_password_short_new_422(client: TestClient, users: UserRepository
 
 def test_change_password_requires_login_401(client: TestClient) -> None:
     assert change(client).status_code == 401
+
+
+def test_openapi_has_no_oauth_paths(client: TestClient) -> None:
+    paths = client.get("/openapi.json").json()["paths"]
+
+    assert "/api/auth/callback" not in paths
+    assert list(paths["/api/auth/login"]) == ["post"]

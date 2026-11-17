@@ -1,11 +1,9 @@
 import logging
-import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.concurrency import run_in_threadpool
-from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.routers import (
     agent,
@@ -71,12 +69,6 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app = FastAPI(title="AI Test Runner API", lifespan=lifespan)
     app.state.settings = settings
     app.state.services = services
-
-    # Starlette dùng cookie tạm này để giữ "state" của OAuth giữa lúc đi và lúc về từ Google.
-    session_secret = settings.session_secret or secrets.token_urlsafe(32)
-    if not settings.session_secret:
-        logger.warning("Chưa đặt SESSION_SECRET, đang dùng khoá ngẫu nhiên tạm thời.")
-    app.add_middleware(SessionMiddleware, secret_key=session_secret, same_site="lax")
 
     app.include_router(health.router)
     app.include_router(auth.router)

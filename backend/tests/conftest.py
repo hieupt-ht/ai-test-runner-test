@@ -22,7 +22,7 @@ from app.core.repositories.users import UserRepository
 from app.core.sheets.schema import SYSTEM_TABS
 from app.main import create_app
 from app.settings import Settings
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 
 SYSTEM_SHEET_ID = "1SystemSheetId000000000000000000"
 SHEET_A = "1ProjectSheetA00000000000000000"
@@ -76,11 +76,6 @@ def audit_log(gateway: FakeSheetsGateway) -> AuditLogRepository:
 
 
 @pytest.fixture
-def oauth() -> FakeOAuth:
-    return FakeOAuth()
-
-
-@pytest.fixture
 def github() -> FakeGitHub:
     return FakeGitHub({"org/web": ["develop", "main"], "org/api": ["main"]})
 
@@ -90,7 +85,6 @@ def app(
     users: UserRepository,
     audit_log: AuditLogRepository,
     redis: fakeredis.FakeRedis,
-    oauth: FakeOAuth,
     gateway: FakeSheetsGateway,
     projects: ProjectRepository,
     members: ProjectMemberRepository,
@@ -104,7 +98,6 @@ def app(
         audit_log=audit_log,
         sessions=SessionStore(redis, ttl_seconds=3600),
         login_throttle=LoginThrottle(redis),
-        oauth=oauth,
         gateway=gateway,
         system_spreadsheet_id=SYSTEM_SHEET_ID,
         service_account_email=gateway.service_account_email,

@@ -10,11 +10,8 @@ from collections.abc import Callable
 from typing import Literal
 
 import httplib2
-from fastapi import Request
-from fastapi.responses import RedirectResponse, Response
 from googleapiclient.errors import HttpError
 
-from app.api.oauth import GoogleIdentity
 from app.core.github.client import GitHubError, IssueComment, IssueInfo, RepoInfo
 from app.core.sheets.gateway import SheetAccessDeniedError
 
@@ -117,22 +114,6 @@ class FakeSheetsGateway:
             raise SheetAccessDeniedError(spreadsheet_id)
         self.calls.append(f"add_tab:{tab}")
         self.data.setdefault(spreadsheet_id, {})[tab] = [list(header)]
-
-
-class FakeOAuth:
-    """Google giả: không gọi mạng, trả về danh tính đặt sẵn trong `identity`."""
-
-    def __init__(self) -> None:
-        self.identity = GoogleIdentity(email="an@x.com", name="An")
-        self.fail_with: Exception | None = None
-
-    async def authorize_redirect(self, request: Request, redirect_uri: str) -> Response:
-        return RedirectResponse(f"https://accounts.google.com/fake?redirect_uri={redirect_uri}")
-
-    async def fetch_identity(self, request: Request) -> GoogleIdentity:
-        if self.fail_with is not None:
-            raise self.fail_with
-        return self.identity
 
 
 class FakeGitHub:

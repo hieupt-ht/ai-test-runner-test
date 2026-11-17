@@ -1,4 +1,4 @@
-"""Gom các đối tượng dùng chung (Redis, repository, OAuth, GitHub) vào một chỗ.
+"""Gom các đối tượng dùng chung (Redis, repository, GitHub) vào một chỗ.
 
 App thật dựng chúng từ cấu hình; test truyền vào bản giả.
 """
@@ -10,7 +10,6 @@ from typing import Any
 
 from redis import Redis
 
-from app.api.oauth import GoogleOAuth, OAuthClient
 from app.api.sessions import SessionStore
 from app.core.github.client import GitHubAppClient, GitHubClient
 from app.core.login_throttle import LoginThrottle
@@ -33,7 +32,6 @@ class Services:
     audit_log: AuditLogRepository
     sessions: SessionStore
     login_throttle: LoginThrottle
-    oauth: OAuthClient
     gateway: SheetsGateway
     system_spreadsheet_id: str
     service_account_email: str
@@ -93,7 +91,6 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         audit_log=AuditLogRepository(gateway, system_sheet),
         sessions=SessionStore(redis, ttl_seconds=settings.session_ttl_seconds),
         login_throttle=LoginThrottle(redis),
-        oauth=GoogleOAuth(settings.google_client_id, settings.google_client_secret),
         gateway=gateway,
         system_spreadsheet_id=system_sheet,
         service_account_email=gateway.service_account_email,

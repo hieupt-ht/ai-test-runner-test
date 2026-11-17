@@ -15,8 +15,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
 
     # Đăng nhập Google
-    google_client_id: str = ""
-    google_client_secret: str = ""
     session_secret: str = ""
     bootstrap_admin_email: str = ""
     bootstrap_admin_password: str = ""
