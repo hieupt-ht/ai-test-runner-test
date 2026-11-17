@@ -19,7 +19,7 @@ Bằng chứng ảnh/video (Cloudinary), test Android/iOS, giao bug cho dev. Thi
 
 ## Đang làm (2026-11-17): đăng nhập bằng email + mật khẩu
 
-Thay Google OAuth. Thiết kế `docs/superpowers/specs/2026-11-17-password-login-design.md`, kế hoạch 12 task / 4 đợt `docs/superpowers/plans/2026-11-17-password-login.md`. **Đợt 1 xong** (Task 1–4): argon2, cột `password_hash` ở tab Users, `POST /api/auth/login`, khoá 5 lần sai/15 phút, Admin đầu tiên từ `BOOTSTRAP_ADMIN_EMAIL` + `BOOTSTRAP_ADMIN_PASSWORD`. Backend 578 test qua. Google OAuth còn trong code (gỡ ở đợt 2, Task 7). Việc kế: đợt 2 (đổi/đặt lại mật khẩu, tạo user có mật khẩu, gỡ OAuth).
+Thay Google OAuth. Thiết kế `docs/superpowers/specs/2026-11-17-password-login-design.md`, kế hoạch 12 task / 4 đợt `docs/superpowers/plans/2026-11-17-password-login.md`. **Đợt 1 và 2 xong** (Task 1–7): argon2, cột `password_hash` ở tab Users, `POST /api/auth/login`, khoá 5 lần sai/15 phút, Admin đầu tiên từ `BOOTSTRAP_ADMIN_EMAIL` + `BOOTSTRAP_ADMIN_PASSWORD`. Đợt 2: tạo user kèm mật khẩu, `POST /api/auth/change-password`, `POST /api/users/{email}/reset-password` (xoá mọi phiên cũ), đã gỡ hẳn Google OAuth/authlib. Backend 604 test qua, mypy và ruff sạch. Việc kế: đợt 3 (frontend: trang đăng nhập, form tạo user, đặt lại và đổi mật khẩu), rồi đợt 4 (tài liệu).
 
 ## Việc còn dở
 

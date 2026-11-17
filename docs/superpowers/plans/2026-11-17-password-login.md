@@ -126,11 +126,11 @@
 - Consumes: `UserRepository.create(user, password_hash)`, `hash_password`.
 - Produces: `CreateUserRequest.password: str` (`min_length=8`, `max_length=128`, **không** `strip`); `UserService.create_user(actor, *, email, name, role, password) -> User`. Audit log `diff` **không** chứa mật khẩu/hash. Response vẫn là `User`.
 
-- [ ] **Step 1: Viết test đỏ:** `test_create_user_with_password_can_log_in` (tạo bằng Admin, rồi trình duyệt khác đăng nhập được), `test_create_user_requires_password_422`, `test_short_password_422_and_nothing_saved`, `test_too_long_password_422`, `test_response_has_no_hash_or_password`, `test_audit_log_has_no_password_or_hash`. Sửa các test tạo user cũ truyền `password`.
-- [ ] **Step 2: Chạy** `uv run pytest tests/test_users_api.py -q` → FAIL.
-- [ ] **Step 3: Implement** như Interfaces.
-- [ ] **Step 4: Chạy** → PASS.
-- [ ] **Step 5: Commit** `feat(users): Admin tạo user kèm mật khẩu tạm`.
+- [x] **Step 1: Viết test đỏ:** `test_create_user_with_password_can_log_in` (tạo bằng Admin, rồi trình duyệt khác đăng nhập được), `test_create_user_requires_password_422`, `test_short_password_422_and_nothing_saved`, `test_too_long_password_422`, `test_response_has_no_hash_or_password`, `test_audit_log_has_no_password_or_hash`. Sửa các test tạo user cũ truyền `password`.
+- [x] **Step 2: Chạy** `uv run pytest tests/test_users_api.py -q` → FAIL.
+- [x] **Step 3: Implement** như Interfaces.
+- [x] **Step 4: Chạy** → PASS.
+- [x] **Step 5: Commit** `feat(users): Admin tạo user kèm mật khẩu tạm`.
 
 ### Task 6: Đổi mật khẩu và đặt lại mật khẩu (xoá session)
 
@@ -145,11 +145,11 @@
   - `POST /api/users/{email}/reset-password` body `{password}` (chỉ `Action.MANAGE_USERS`): đặt hash mới, `delete_all_for(email)`, ghi audit log `action="RESET_PASSWORD"` (diff rỗng, không có hash), trả `204`; không có user → `404 "Không tìm thấy người dùng"`.
   - Mật khẩu mới: `min_length=8`, `max_length=128`, không `strip`.
 
-- [ ] **Step 1: Viết test đỏ:** `test_delete_all_for_removes_every_session_of_that_user_only`; `test_change_password_success_old_password_stops_working` + `test_change_password_keeps_current_browser_logged_in` + `test_change_password_logs_out_other_browsers`; `test_change_password_wrong_current_400`; `test_change_password_wrong_current_counts_toward_lock`; `test_change_password_short_new_422`; `test_change_password_requires_login_401`; `test_reset_password_admin_only_403_for_tester`; `test_reset_password_logs_out_target_and_new_password_works`; `test_reset_password_unknown_user_404`; `test_reset_own_password_as_admin_works`; `test_reset_password_for_inactive_user_still_cannot_log_in`; `test_reset_password_audit_has_no_password`.
-- [ ] **Step 2: Chạy** các file test trên → FAIL.
-- [ ] **Step 3: Implement** như Interfaces (logic nghiệp vụ trong `UserService`/`core/services/auth.py`, router mỏng).
-- [ ] **Step 4: Chạy** → PASS.
-- [ ] **Step 5: Commit** `feat(auth): đổi mật khẩu và Admin đặt lại mật khẩu, xoá phiên cũ`.
+- [x] **Step 1: Viết test đỏ:** `test_delete_all_for_removes_every_session_of_that_user_only`; `test_change_password_success_old_password_stops_working` + `test_change_password_keeps_current_browser_logged_in` + `test_change_password_logs_out_other_browsers`; `test_change_password_wrong_current_400`; `test_change_password_wrong_current_counts_toward_lock`; `test_change_password_short_new_422`; `test_change_password_requires_login_401`; `test_reset_password_admin_only_403_for_tester`; `test_reset_password_logs_out_target_and_new_password_works`; `test_reset_password_unknown_user_404`; `test_reset_own_password_as_admin_works`; `test_reset_password_for_inactive_user_still_cannot_log_in`; `test_reset_password_audit_has_no_password`.
+- [x] **Step 2: Chạy** các file test trên → FAIL.
+- [x] **Step 3: Implement** như Interfaces (logic nghiệp vụ trong `UserService`/`core/services/auth.py`, router mỏng).
+- [x] **Step 4: Chạy** → PASS.
+- [x] **Step 5: Commit** `feat(auth): đổi mật khẩu và Admin đặt lại mật khẩu, xoá phiên cũ`.
 
 ### Task 7: Gỡ hẳn Google OAuth
 
@@ -158,13 +158,13 @@
 - Modify: `backend/app/api/services.py` (bỏ `oauth` khỏi `Services`/`build_services`), `backend/app/settings.py` (bỏ `google_client_id`, `google_client_secret`), `backend/app/main.py` (bỏ `SessionMiddleware`; giữ `SESSION_SECRET` như cũ, không động tới), `backend/tests/conftest.py`, `backend/tests/fakes.py` (xoá `FakeOAuth`), `backend/pyproject.toml` (`uv remove authlib`; xoá `itsdangerous`/`httpx` chỉ khi không còn nơi nào dùng — kiểm bằng Grep), mọi test còn tham số `oauth`
 - Test: toàn bộ `backend/tests`
 
-- [ ] **Step 1: Viết test đỏ:** `test_openapi_has_no_oauth_paths` — `/openapi.json` không có `/api/auth/callback`; chỉ có `/api/auth/login` kiểu POST.
-- [ ] **Step 2: Chạy** → FAIL.
-- [ ] **Step 3: Implement** như Files. Dùng Grep `oauth|OAuth|GoogleIdentity|FakeOAuth|authlib` trong `backend/` để dọn sạch (trừ `google.oauth2.service_account` trong `gateway.py`, là Service Account, phải giữ). Cập nhật `backend/export_openapi.py` nếu nó tham chiếu OAuth.
-- [ ] **Step 4: Chạy** `uv run pytest -q && uv run mypy app && uv run ruff check` → sạch.
-- [ ] **Step 5: Commit** `refactor(auth): gỡ Google OAuth khỏi backend`.
+- [x] **Step 1: Viết test đỏ:** `test_openapi_has_no_oauth_paths` — `/openapi.json` không có `/api/auth/callback`; chỉ có `/api/auth/login` kiểu POST.
+- [x] **Step 2: Chạy** → FAIL.
+- [x] **Step 3: Implement** như Files. Dùng Grep `oauth|OAuth|GoogleIdentity|FakeOAuth|authlib` trong `backend/` để dọn sạch (trừ `google.oauth2.service_account` trong `gateway.py`, là Service Account, phải giữ). Cập nhật `backend/export_openapi.py` nếu nó tham chiếu OAuth.
+- [x] **Step 4: Chạy** `uv run pytest -q && uv run mypy app && uv run ruff check` → sạch.
+- [x] **Step 5: Commit** `refactor(auth): gỡ Google OAuth khỏi backend`.
 
-- [ ] **Cuối đợt 2:** tick, ghi `HANDOFF.md`, dừng cho `/compact`.
+- [x] **Cuối đợt 2 (xong 2026-11-17, backend 604 test qua):** tick các task, ghi tiến độ vào `HANDOFF.md`, dừng cho `/compact`.
 
 ---
 
