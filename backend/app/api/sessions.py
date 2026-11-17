@@ -30,6 +30,11 @@ class SessionStore:
         if email is None:
             return None
         self._redis.expire(key, self._ttl_seconds)
+        # Danh sách phiên của user phải sống ít nhất bằng phiên, để đổi mật khẩu xoá được hết.
+        self._redis.expire(
+            self._user_key(email.decode() if isinstance(email, bytes) else str(email)),
+            self._ttl_seconds,
+        )
         return email.decode() if isinstance(email, bytes) else str(email)
 
     def delete(self, session_id: str) -> None:

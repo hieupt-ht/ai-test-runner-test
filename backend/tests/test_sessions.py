@@ -28,3 +28,15 @@ def test_delete_all_for_normalizes_email(redis: fakeredis.FakeRedis) -> None:
     store.delete_all_for("  An@X.com ")
 
     assert store.get_email(session_id) is None
+
+
+def test_dung_phien_thi_gia_han_ca_danh_sach_phien_cua_user() -> None:
+    """Phiên "trượt" mà danh sách phiên hết hạn sớm thì đổi mật khẩu sẽ sót phiên cũ."""
+    redis = fakeredis.FakeRedis()
+    store = SessionStore(redis, ttl_seconds=3600)
+    session_id = store.create("a@x.com")
+    redis.expire("user_sessions:a@x.com", 10)  # giả lập đã trôi qua gần hết hạn
+
+    store.get_email(session_id)
+
+    assert redis.ttl("user_sessions:a@x.com") > 3000
