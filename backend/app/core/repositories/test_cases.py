@@ -196,6 +196,35 @@ class TestCaseRepository:
             self._cache.invalidate()
         return saved
 
+    def approve_all_in_review(self, actor: str) -> list[TestCase]:
+        """Duyệt luôn mọi case IN_REVIEW (khi dự án tắt bước duyệt). Trả các case đã đổi.
+
+        Giữ khoá tab, đọc thẳng Sheet (không qua cache), tăng version và ghi tất cả
+        bằng một lượt. Không có case nào chờ duyệt thì không ghi gì.
+        """
+        with self.lock():
+            numbered = self._table.read_rows_numbered()
+            now = _now_like_sheet()
+            changed: list[tuple[int, TestCase]] = []
+            for row_number, record in numbered:
+                case = _from_record(record)
+                if case.status != TestCaseStatus.IN_REVIEW:
+                    continue
+                approved = case.model_copy(
+                    update={
+                        "status": TestCaseStatus.APPROVED,
+                        "version": case.version + 1,
+                        "updated_by": actor,
+                        "updated_at": now,
+                    }
+                )
+                changed.append((row_number, approved))
+            if not changed:
+                return []
+            self._table.update_many([(row, _to_record(case)) for row, case in changed])
+            self._cache.invalidate()
+        return [case for _, case in changed]
+
     @contextmanager
     def lock(self) -> Iterator[None]:
         """Khoá cả tab TestCases của dự án (dùng khi tạo case).

@@ -537,3 +537,85 @@ def test_batch_approve_forbidden_for_tester(an: TestClient, project: Project) ->
 
 def test_batch_approve_rejects_empty_list(lead: TestClient, project: Project) -> None:
     assert lead.post(url(project, "/approve-batch"), json={"items": []}).status_code == 422
+
+
+# ----- Công tắc "cần QA duyệt" (Task 6) -----
+
+
+def set_review(client: TestClient, project: Project, value: bool) -> Any:
+    return client.patch(f"/api/projects/{project.id}", json={"require_review": value})
+
+
+def statuses(gateway: FakeSheetsGateway, project: Project) -> dict[str, str]:
+    rows = gateway.data[project.spreadsheet_id]["TestCases"]
+    header = rows[0]
+    return {row[0]: row[header.index("status")] for row in rows[1:]}
+
+
+def test_turning_review_off_approves_in_review_once(
+    an: TestClient, lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    set_review(lead, project, True)
+    for _ in range(2):
+        case = create(an, project).json()
+        an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    create(an, project)  # case thứ 3 vẫn là DRAFT
+    gateway.batch_update_calls = 0
+
+    response = set_review(lead, project, False)
+
+    assert response.status_code == 200
+    assert statuses(gateway, project) == {
+        "TC-000001": "APPROVED",
+        "TC-000002": "APPROVED",
+        "TC-000003": "DRAFT",
+    }
+    assert gateway.batch_update_calls == 1
+    audit = [r for r in gateway.data[project.spreadsheet_id]["AuditLog"] if "AUTO_APPROVE" in r]
+    assert len(audit) == 2
+
+
+def test_turning_off_with_nothing_in_review_writes_nothing(
+    an: TestClient, lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    set_review(lead, project, True)
+    create(an, project)
+    gateway.batch_update_calls = 0
+
+    assert set_review(lead, project, False).status_code == 200
+
+    assert gateway.batch_update_calls == 0
+
+
+def test_turning_on_does_not_touch_cases(
+    an: TestClient, lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    create(an, project)
+    gateway.batch_update_calls = 0
+
+    assert set_review(lead, project, True).status_code == 200
+
+    assert gateway.batch_update_calls == 0
+    assert statuses(gateway, project) == {"TC-000001": "DRAFT"}
+
+
+def test_tester_cannot_change_require_review(an: TestClient, project: Project) -> None:
+    assert set_review(an, project, True).status_code == 403
+
+
+def test_lead_cannot_rename_project(lead: TestClient, project: Project) -> None:
+    # Đổi tên vẫn là việc của Admin
+    response = lead.patch(f"/api/projects/{project.id}", json={"name": "Tên mới"})
+    assert response.status_code == 403
+
+
+def test_app_ids_saved_and_reject_spaces(lead: TestClient, project: Project) -> None:
+    ok = lead.patch(
+        f"/api/projects/{project.id}",
+        json={"android_app_id": "com.shop.app", "ios_bundle_id": "vn.shop"},
+    )
+    bad = lead.patch(f"/api/projects/{project.id}", json={"android_app_id": "com shop"})
+
+    assert ok.status_code == 200
+    assert ok.json()["android_app_id"] == "com.shop.app"
+    assert bad.status_code == 422

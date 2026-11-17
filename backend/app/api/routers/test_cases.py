@@ -89,10 +89,10 @@ class TransitionRequest(BaseModel):
 
 
 def _service(services: Services, user: User, project_id: str, action: Action) -> TestCaseService:
-    return _service_for(services, load_project(services, user, project_id, action))
+    return service_for(services, load_project(services, user, project_id, action))
 
 
-def _service_for(services: Services, project: Project) -> TestCaseService:
+def service_for(services: Services, project: Project) -> TestCaseService:
     scope = scope_for(services, project)
     return TestCaseService(
         project_id=project.id,
@@ -183,7 +183,7 @@ def get_test_case(
     project_id: str, case_id: str, user: CurrentUser, services: ServicesDep
 ) -> TestCaseDetail:
     project = load_project(services, user, project_id, Action.VIEW_PROJECT)
-    service = _service_for(services, project)
+    service = service_for(services, project)
     try:
         case = service.get_case(case_id)
     except TestCaseNotFoundError:

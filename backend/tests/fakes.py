@@ -57,6 +57,8 @@ class FakeSheetsGateway:
         # Móc chạy MỘT LẦN, ngay sau khi đọc xong đúng range này (trước khi trả kết quả).
         # Dùng để giả lập "request khác chen vào giữa lúc mình vừa đọc xong và sắp ghi".
         self.after_next_read: dict[str, Callable[[], None]] = {}
+        # Số lần gọi ghi nhiều dòng một lượt (values.batchUpdate)
+        self.batch_update_calls = 0
 
     def _tab(self, spreadsheet_id: str, tab: str) -> list[list[str]]:
         if spreadsheet_id in self.denied:
@@ -93,6 +95,13 @@ class FakeSheetsGateway:
         while len(rows) < row_number:
             rows.append([])
         rows[row_number - 1] = list(values)
+
+    def update_rows(self, spreadsheet_id: str, tab: str, rows: dict[int, list[str]]) -> None:
+        self.calls.append(f"update_rows:{tab}")
+        self.batch_update_calls += 1
+        for row_number, values in rows.items():
+            self.update_row(spreadsheet_id, tab, row_number, values)
+            self.calls.pop()  # chỉ tính là một lời gọi
 
     def list_tabs(self, spreadsheet_id: str) -> list[str]:
         if spreadsheet_id in self.denied:

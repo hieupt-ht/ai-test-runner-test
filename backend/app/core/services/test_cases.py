@@ -286,6 +286,24 @@ class TestCaseService:
             self._refresh_status(screen_id)
         return result
 
+    def approve_all_in_review(self, user: User) -> list[TestCase]:
+        """Dự án vừa tắt bước duyệt: duyệt luôn mọi case đang chờ, một lượt ghi Sheet.
+
+        Mỗi case ghi một dòng AuditLog `AUTO_APPROVE` rồi đẩy đồng bộ issue (nền, một luồng).
+        """
+        approved = self._test_cases.approve_all_in_review(normalize_email(user.email))
+        for case in approved:
+            self._audit(
+                user,
+                "AUTO_APPROVE",
+                case.id,
+                {"status": [TestCaseStatus.IN_REVIEW.value, TestCaseStatus.APPROVED.value]},
+            )
+            self._sync_issue(case)
+        for screen_id in dict.fromkeys(case.screen_id for case in approved):
+            self._refresh_status(screen_id)
+        return approved
+
     def sync_issues(self, user: User) -> SyncIssuesResult:
         if not self.can_review(user):
             raise TestCasePermissionError("Bạn không có quyền đồng bộ issue")

@@ -172,13 +172,31 @@ class SheetTable:
         """
         self._write_row(found.row_number, found.header, found.cells, record)
 
-    def _write_row(
-        self, row_number: int, header: list[str], current: list[str], record: Record
-    ) -> None:
-        new_row = [
+    def update_many(self, items: list[tuple[int, Record]]) -> None:
+        """Ghi nhiều dòng: một lượt đọc cả tab và một lượt ghi (danh sách rỗng thì không làm gì).
+
+        Số dòng phải lấy từ `read_rows_numbered` ngay trước đó, trong cùng một khoá của tab.
+        """
+        if not items:
+            return
+        rows = self._gateway.get_values(self._spreadsheet_id, self._tab)
+        header = self._check_header(rows[0] if rows else [])
+        new_rows: dict[int, list[str]] = {}
+        for row_number, record in items:
+            current = _fit(rows[row_number - 1] if row_number <= len(rows) else [], len(header))
+            new_rows[row_number] = self._merge_row(header, current, record)
+        self._gateway.update_rows(self._spreadsheet_id, self._tab, new_rows)
+
+    def _merge_row(self, header: list[str], current: list[str], record: Record) -> list[str]:
+        return [
             record.get(column, old_value) if column in self._columns else old_value
             for column, old_value in zip(header, current, strict=True)
         ]
+
+    def _write_row(
+        self, row_number: int, header: list[str], current: list[str], record: Record
+    ) -> None:
+        new_row = self._merge_row(header, current, record)
         self._gateway.update_row(self._spreadsheet_id, self._tab, row_number, new_row)
 
     def delete_row(self, row_number: int) -> None:

@@ -30,6 +30,12 @@ class SheetsGateway(Protocol):
         self, spreadsheet_id: str, tab: str, row_number: int, values: list[str]
     ) -> None: ...
 
+    def update_rows(
+        self, spreadsheet_id: str, tab: str, rows: dict[int, list[str]]
+    ) -> None:
+        """Ghi nhiều dòng (số dòng -> giá trị cả dòng) bằng đúng một lời gọi Google."""
+        ...
+
     def list_tabs(self, spreadsheet_id: str) -> list[str]: ...
 
     def add_tab(self, spreadsheet_id: str, tab: str, header: list[str]) -> None: ...
@@ -133,6 +139,23 @@ class GoogleSheetsGateway:
                 range=f"{tab}!A{row_number}",
                 valueInputOption="RAW",
                 body={"values": [values]},
+            )
+            .execute()
+        )
+
+    def update_rows(self, spreadsheet_id: str, tab: str, rows: dict[int, list[str]]) -> None:
+        if not rows:
+            return
+        data = [
+            {"range": f"{tab}!A{row_number}", "values": [values]}
+            for row_number, values in rows.items()
+        ]
+        _call(
+            lambda: self._spreadsheets()
+            .values()
+            .batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"valueInputOption": "RAW", "data": data},
             )
             .execute()
         )
