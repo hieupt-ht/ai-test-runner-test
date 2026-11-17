@@ -19,6 +19,10 @@ export type MemberView = Schemas["MemberView"]
 export type TestCase = Schemas["TestCase"]
 export type TestCaseDetail = Schemas["TestCaseDetail"]
 export type TestStep = Schemas["TestStep"]
+/** Ảnh/video hướng dẫn hoặc bằng chứng (nằm trên Cloudinary). */
+export type Media = Schemas["Media"]
+export type MediaKind = Schemas["MediaKind"]
+export type SignedUpload = Schemas["SignedUpload"]
 /** Phần nội dung người dùng nhập của một test case (không gồm mã, trạng thái, version...). */
 export type TestCaseContent = Pick<
   Schemas["TestCase"],

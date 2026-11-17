@@ -424,5 +424,20 @@
     "emptyHint": "Khi QA Lead giao việc, các màn hình sẽ hiện ở đây.",
     "deadline": "Deadline {date}",
     "openProject": "Mở dự án"
+  },
+  "media": {
+    "add": "Thêm ảnh/video",
+    "remove": "Xoá ảnh/video",
+    "viewLarge": "Xem ảnh lớn",
+    "imageAlt": "Ảnh hướng dẫn",
+    "notePlaceholder": "Ghi chú ngắn (không bắt buộc)",
+    "safetyNote": "Đừng chụp mật khẩu hoặc thông tin cá nhân; ảnh có thể hiện trong issue công khai.",
+    "errors": {
+      "tooLarge": "File quá lớn (ảnh tối đa 10MB, video tối đa 100MB)",
+      "badType": "Định dạng không được hỗ trợ (ảnh: jpg, png, webp, gif; video: mp4, mov, webm)",
+      "tooLong": "Video dài quá 3 phút",
+      "uploadFailed": "Tải lên không được, hãy thử lại",
+      "aborted": "Đã huỷ tải lên"
+    }
   }
 }
