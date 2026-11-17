@@ -9,6 +9,7 @@ import pytest
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import redis_lock
 from app.core.models.assignment import AssignmentStatus
+from app.core.models.media import Media, MediaKind
 from app.core.models.project import Project
 from app.core.models.test_case import (
     Priority,
@@ -492,3 +493,126 @@ def test_edit_with_review_on_resets_to_draft_and_sends_no_note(env: Env) -> None
 
     assert saved.status == TestCaseStatus.DRAFT
     assert sink.edits == []
+
+
+# --- Ảnh/video hướng dẫn: kiểm tra cloud và dọn file ---
+
+
+class FakeJanitor:
+    def __init__(self) -> None:
+        self.deleted: list[str] = []
+
+    def delete(self, items: list[Media]) -> None:
+        self.deleted.extend(item.public_id for item in items)
+
+
+def image(public_id: str, cloud: str = "mine") -> Media:
+    return Media(
+        kind=MediaKind.IMAGE,
+        url=f"https://res.cloudinary.com/{cloud}/image/upload/{public_id}.png",
+        public_id=public_id,
+        note="chụp màn hình",
+    )
+
+
+def with_media(env: Env, janitor: FakeJanitor, cloud_name: str = "mine") -> TestCaseService:
+    return TestCaseService(
+        project_id=env.project.id,
+        test_cases=env.test_cases,
+        screens=env.screens,
+        assignments=env.assignments,
+        members=env.service._members,
+        status_updater=AssignmentStatusUpdater(env.assignments, env.test_cases),
+        audit_log=AuditLogRepository(env.gateway, env.project.spreadsheet_id),
+        cloud_name=cloud_name,
+        janitor=janitor,  # type: ignore[arg-type]
+    )
+
+
+def content_with(case_media: list[Media], step_media: list[Media]) -> TestCaseContent:
+    base = content()
+    return base.model_copy(
+        update={
+            "guide_media": case_media,
+            "steps": [TestStep(action="Nhập email", expected="", guide_media=step_media)],
+        }
+    )
+
+
+def test_media_removed_from_case_is_sent_to_janitor(env: Env) -> None:
+    janitor = FakeJanitor()
+    service = with_media(env, janitor)
+    case = service.create(
+        TESTER_A, screen_id="SC-0001", content=content_with([image("a"), image("b")], [])
+    )
+
+    service.update_content(
+        TESTER_A, case.id, version=1, content=content_with([image("b")], [])
+    )
+
+    assert janitor.deleted == ["a"]
+
+
+def test_media_removed_from_a_step_is_also_cleaned(env: Env) -> None:
+    janitor = FakeJanitor()
+    service = with_media(env, janitor)
+    case = service.create(
+        TESTER_A, screen_id="SC-0001", content=content_with([], [image("s1")])
+    )
+
+    service.update_content(TESTER_A, case.id, version=1, content=content_with([], []))
+
+    assert janitor.deleted == ["s1"]
+
+
+def test_unchanged_media_is_not_deleted(env: Env) -> None:
+    janitor = FakeJanitor()
+    service = with_media(env, janitor)
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content_with([image("a")], []))
+
+    renamed = content_with([image("a")], []).model_copy(update={"title": "Tên mới"})
+    service.update_content(TESTER_A, case.id, version=1, content=renamed)
+
+    assert janitor.deleted == []
+
+
+def test_foreign_cloud_media_is_invalid_and_sheet_unchanged(env: Env) -> None:
+    janitor = FakeJanitor()
+    service = with_media(env, janitor)
+    rows_before = len(env.gateway.data[env.project.spreadsheet_id]["TestCases"])
+
+    with pytest.raises(InvalidTestCaseError, match="không thuộc kho Cloudinary"):
+        service.create(
+            TESTER_A,
+            screen_id="SC-0001",
+            content=content_with([image("x", cloud="other")], []),
+        )
+
+    assert len(env.gateway.data[env.project.spreadsheet_id]["TestCases"]) == rows_before
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content())
+    with pytest.raises(InvalidTestCaseError):
+        service.update_content(
+            TESTER_A, case.id, version=1, content=content_with([], [image("y", cloud="other")])
+        )
+    assert env.test_cases.get(case.id).version == 1  # type: ignore[union-attr]
+    assert janitor.deleted == []
+
+
+def test_media_without_cloudinary_config_is_invalid(env: Env) -> None:
+    service = with_media(env, FakeJanitor(), cloud_name="")
+    with pytest.raises(InvalidTestCaseError, match="Chưa cấu hình Cloudinary"):
+        service.create(TESTER_A, screen_id="SC-0001", content=content_with([image("a")], []))
+
+
+def test_audit_diff_keeps_only_kind_and_note_of_media(env: Env) -> None:
+    service = with_media(env, FakeJanitor())
+    case = service.create(
+        TESTER_A, screen_id="SC-0001", content=content_with([image("a")], [image("s1")])
+    )
+    service.update_content(
+        TESTER_A, case.id, version=1, content=content_with([image("b")], [])
+    )
+
+    rows = env.gateway.data[env.project.spreadsheet_id]["AuditLog"]
+    assert "res.cloudinary.com" not in str(rows)
+    assert "chụp màn hình" in str(rows)  # ghi chú vẫn còn trong lịch sử

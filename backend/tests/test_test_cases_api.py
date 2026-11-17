@@ -396,6 +396,28 @@ def test_validation_errors_are_422(
     assert create(an, project, **changes).status_code == 422
 
 
+def media_json(cloud: str) -> dict[str, str]:
+    return {
+        "kind": "image",
+        "url": f"https://res.cloudinary.com/{cloud}/image/upload/a.png",
+        "public_id": "a",
+    }
+
+
+def test_case_with_foreign_cloud_image_is_422_and_own_cloud_is_ok(
+    app: FastAPI, an: TestClient, project: Project
+) -> None:
+    app.state.services.cloud_name = "mine"
+
+    foreign = create(an, project, guide_media=[media_json("other")])
+    own = create(an, project, guide_media=[media_json("mine")])
+
+    assert foreign.status_code == 422
+    assert "không thuộc kho Cloudinary" in foreign.json()["detail"]
+    assert own.status_code == 201
+    assert own.json()["guide_media"][0]["public_id"] == "a"
+
+
 def test_lead_returns_case_with_comment_and_history_shows_it(
     an: TestClient, lead: TestClient, project: Project
 ) -> None:

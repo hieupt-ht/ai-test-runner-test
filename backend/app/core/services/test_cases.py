@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
+from app.core.media.cloudinary import MediaJanitor
+from app.core.models.media import ForeignMediaError, ensure_own_cloud
 from app.core.models.project import Project
 from app.core.models.test_case import (
     CHANGED_FIELD_LABELS,
@@ -22,6 +24,7 @@ from app.core.models.test_case import (
     TestCase,
     TestCaseContent,
     TestCaseStatus,
+    media_of,
 )
 from app.core.models.user import Role, User, normalize_email
 from app.core.permissions import Action, can
@@ -122,6 +125,17 @@ class SyncIssuesResult(BaseModel):
     failed: list[SkippedCase] = Field(default_factory=list)
 
 
+def _strip_media(value: Any) -> Any:
+    """Lịch sử chỉ giữ chữ: mỗi ảnh/video chỉ còn loại và ghi chú, không giữ link."""
+    if isinstance(value, dict):
+        if "public_id" in value and "url" in value:
+            return {"kind": value.get("kind"), "note": value.get("note", "")}
+        return {key: _strip_media(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_strip_media(item) for item in value]
+    return value
+
+
 class TestCaseService:
     __test__ = False  # pytest đừng tưởng đây là lớp test
 
@@ -141,6 +155,8 @@ class TestCaseService:
         notifier: Notifier | None = None,
         users: UserRepository | None = None,
         has_results: Callable[[str], bool] | None = None,
+        cloud_name: str = "",
+        janitor: MediaJanitor | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -155,6 +171,8 @@ class TestCaseService:
         self._notifier = notifier
         self._users = users
         self._has_results = has_results
+        self._cloud_name = cloud_name
+        self._janitor = janitor
         self._screen_names: dict[str, str] | None = None
 
     @property
@@ -221,6 +239,8 @@ class TestCaseService:
         if not allowed:
             raise TestCasePermissionError("Bạn không có quyền tạo test case cho màn hình này")
 
+        self._require_own_media(content)
+
         # Kiểm tra màn hình rồi tạo case trong CÙNG một khoá: màn hình không bị xoá chen vào giữa.
         with self._test_cases.lock():
             if self._screens.get(screen_id) is None:
@@ -240,6 +260,7 @@ class TestCaseService:
         case = self.get_case(case_id)
         self._require_edit(user, case)
         self._require_version(case, version)
+        self._require_own_media(content)
         if case.status in (TestCaseStatus.DEPRECATED, TestCaseStatus.ARCHIVED):
             raise InvalidTransitionError(
                 "Case đã lưu trữ hoặc ngừng dùng, hãy khôi phục trước khi sửa"
@@ -263,6 +284,7 @@ class TestCaseService:
             diff["status"] = [case.status.value, TestCaseStatus.DRAFT.value]
             changes["status"] = TestCaseStatus.DRAFT
         saved = self._save(user, case, changes, version, "UPDATE", diff)
+        self._clean_removed_media(case, content)
         if keep_status:
             self._note_edited(saved, [field for field in _CONTENT_FIELDS if field in diff])
         return saved
@@ -464,6 +486,22 @@ class TestCaseService:
             self._refresh_status(saved.screen_id)
         return saved
 
+    def _require_own_media(self, content: TestCaseContent) -> None:
+        """Mọi ảnh/video phải nằm trong cloud Cloudinary của app, nếu không thì không ghi gì."""
+        try:
+            ensure_own_cloud(media_of(content), self._cloud_name)
+        except ForeignMediaError as error:
+            raise InvalidTestCaseError(str(error)) from None
+
+    def _clean_removed_media(self, old: TestCaseContent, new: TestCaseContent) -> None:
+        """Xoá khỏi Cloudinary các file bản cũ có mà bản mới không còn (so theo public_id)."""
+        if self._janitor is None:
+            return
+        kept = {item.public_id for item in media_of(new)}
+        removed = [item for item in media_of(old) if item.public_id not in kept]
+        if removed:
+            self._janitor.delete(removed)
+
     def _note_edited(self, case: TestCase, changed_fields: list[str]) -> None:
         """Báo lên issue là case đã sửa tại chỗ; cần chạy lại nếu đổi phần ảnh hưởng kết quả cũ."""
         if self._issue_sync is None or self._project is None:
@@ -508,5 +546,9 @@ class TestCaseService:
 
     def _audit(self, user: User, action: str, case_id: str, diff: dict[str, Any]) -> None:
         self._audit_log.record(
-            actor=user.email, action=action, entity=AUDIT_ENTITY, entity_id=case_id, diff=diff
+            actor=user.email,
+            action=action,
+            entity=AUDIT_ENTITY,
+            entity_id=case_id,
+            diff=_strip_media(diff),
         )

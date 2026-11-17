@@ -112,6 +112,8 @@ def service_for(services: Services, project: Project) -> TestCaseService:
         notifier=Notifier(services.notifications),
         users=services.users,
         has_results=_has_results_checker(services, project),
+        cloud_name=services.cloud_name,
+        janitor=services.media_janitor,
     )
 
 
