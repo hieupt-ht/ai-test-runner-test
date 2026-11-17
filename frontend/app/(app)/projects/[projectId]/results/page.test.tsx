@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { NextIntlClientProvider } from "next-intl"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { makeResult } from "@/components/results/result-fixture"
 import ResultsPage from "@/app/(app)/projects/[projectId]/results/page"
 import type { ResultItem } from "@/lib/api/types"
 import messages from "@/messages/vi.json"
@@ -30,31 +31,24 @@ vi.mock("next/navigation", () => ({
 }))
 
 const results: ResultItem[] = [
-  {
+  makeResult({
     case_id: "TC-1",
-    case_title: "Đăng nhập thành công",
-    screen_id: "SC-login",
-    screen_name: "Đăng nhập",
-    status: "FAIL",
-    reason: "Sai mật khẩu vẫn đăng nhập được",
-    failed_step: 2,
-    evidence: "javascript:alert(1)",
+    evidence: { pruned: false, legacy_url: "javascript:alert(1)" },
     run_id: "run-1",
-    finished_at: "2026-11-14T10:00:00Z",
-  },
-  {
+  }),
+  makeResult({
     case_id: "TC-2",
     case_title: "Trang chủ tải được",
-    screen_id: "SC-login",
-    screen_name: "Đăng nhập",
     status: "PASS",
     reason: "Đúng kết quả mong đợi",
     failed_step: null,
-    evidence: "https://example.com/evidence.png",
+    evidence: { pruned: false, legacy_url: "https://example.com/evidence.png" },
     run_id: "run-2",
     finished_at: "2026-11-14T11:00:00Z",
-  },
+  }),
 ]
+
+const NO_FILTERS = { platform: undefined, runId: undefined, regressionOnly: false }
 
 const homeResult: ResultItem = {
   ...results[1],
@@ -113,7 +107,7 @@ describe("ResultsPage", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Lọc trạng thái" }), {
       target: { value: "PASS" },
     })
-    expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, "SC-login")
+    expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, "SC-login", NO_FILTERS)
     expect(screen.getByRole("button", { name: /PASS: 1/ })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /FAIL:/ })).not.toBeInTheDocument()
   })
@@ -167,7 +161,7 @@ describe("ResultsPage", () => {
     expect(screen.getByRole("button", { name: /Đăng nhập/ })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Trang chủ/ })).toBeInTheDocument()
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
-    expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, undefined)
+    expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, undefined, NO_FILTERS)
   })
 
   it("có screen thì hiện bảng case và ẩn danh sách màn hình", () => {
@@ -178,7 +172,7 @@ describe("ResultsPage", () => {
     expect(screen.getByRole("heading", { name: "Đăng nhập" })).toBeInTheDocument()
     expect(screen.getByRole("table")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Trang chủ/ })).not.toBeInTheDocument()
-    expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, "SC-login")
+    expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, "SC-login", NO_FILTERS)
   })
 
   it("bấm card màn hình thì thêm screen vào URL", () => {
@@ -318,6 +312,44 @@ describe("ResultsPage", () => {
       fireEvent.click(screen.getByRole("button", { name: "Chạy lại" }))
 
       expect(mocks.toastError).toHaveBeenCalledWith("Không yêu cầu được. Thử lại sau.")
+    })
+  })
+
+  describe("bộ lọc và bảng chi tiết", () => {
+    it("lọc theo nền tảng, Run và regression gửi đúng tham số", () => {
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      fireEvent.change(screen.getByRole("combobox", { name: "Nền tảng" }), {
+        target: { value: "ANDROID" },
+      })
+      expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, "SC-login", {
+        ...NO_FILTERS,
+        platform: "ANDROID",
+      })
+      fireEvent.change(screen.getByRole("textbox", { name: "Mã Run" }), {
+        target: { value: "RUN-0002" },
+      })
+      expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, "SC-login", {
+        ...NO_FILTERS,
+        platform: "ANDROID",
+        runId: "RUN-0002",
+      })
+      fireEvent.click(screen.getByRole("checkbox", { name: "Chỉ regression" }))
+      expect(mocks.useResults).toHaveBeenLastCalledWith("p1", undefined, "SC-login", {
+        platform: "ANDROID",
+        runId: "RUN-0002",
+        regressionOnly: true,
+      })
+    })
+
+    it("bấm Chi tiết thì mở bảng bên phải với đúng kết quả", () => {
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      fireEvent.click(screen.getByRole("button", { name: "Chi tiết TC-1" }))
+
+      expect(screen.getByText("Dev phụ trách: @nguyenvana")).toBeInTheDocument()
     })
   })
 })

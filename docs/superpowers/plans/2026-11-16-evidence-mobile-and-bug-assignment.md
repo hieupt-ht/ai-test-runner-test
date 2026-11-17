@@ -446,7 +446,7 @@ def test_update_keeps_result_labels(fake_github):          # Review Focus 2
 - Consumes: `Evidence`, `StepResult` (Task 5), `ensure_own_cloud`.
 - Produces: `AgentResult` thêm `step_results: list[StepResult] = []` (max 50), `evidence: str | AgentEvidence = ""` (`AgentEvidence = {video: Media | None, screenshots: list[Media]}`; chuỗi cũ → `Evidence(legacy_url=...)` chỉ khi bắt đầu `https://`), `actual_result: str = ""` (max 2000), `environment: str = ""` (max 200), `executed_by: str = ""` (max 50), `case_version: int | None`. `AgentResultsRequest` thêm `build_version: str = ""` (max 50) — ghi vào Run mới. `Result.dev_owner` lấy từ `screen.dev_owner` lúc ghi (đọc `scope.screens.list_all()` một lần). Link sai cloud → 422 cho cả request, không tạo Run.
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_old_string_evidence_still_accepted(...):          # Review Focus 3
@@ -459,8 +459,8 @@ def test_dev_owner_snapshot_from_screen(...)
 def test_build_version_saved_on_run(...)
 ```
 
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(agent): nhận kết quả từng bước, video và môi trường`.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(agent): nhận kết quả từng bước, video và môi trường`.
 
 ### Task 16: Giữ bằng chứng 5 lần chạy gần nhất
 
@@ -473,9 +473,9 @@ def test_build_version_saved_on_run(...)
 - Consumes: `SheetTable.update_many` (Task 6).
 - Produces: `ResultRepository.mark_pruned(result_ids: list[str]) -> None` (ghi `evidence_json` = `{"pruned": true}` bằng một lượt `update_many`); `KEEP_RESULTS = 5`; `results_to_prune(results: list[Result], case_ids: set[str]) -> list[Result]` (hàm thuần: với mỗi case, sắp `created_at` giảm dần, bỏ 5 cái đầu, trả các kết quả còn media và chưa `pruned`); `prune_evidence(results_repo, janitor, case_ids) -> None` — đọc Results một lần, gọi `janitor.delete` cho mọi media (video, screenshots, ảnh từng bước), rồi `mark_pruned`. Gọi cuối `write_agent_results`, bọc `try/except` + log.
 
-- [ ] **Bước 1: Test đỏ** — 6 kết quả của TC-1 → kết quả cũ nhất bị chọn; kết quả chỉ có `legacy_url` không bị chọn (không phải file của mình); đã `pruned` thì bỏ qua; lỗi janitor không làm request lỗi.
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(agent): dọn bằng chứng cũ, giữ 5 lần chạy gần nhất mỗi case`.
+- [x] **Bước 1: Test đỏ** — 6 kết quả của TC-1 → kết quả cũ nhất bị chọn; kết quả chỉ có `legacy_url` không bị chọn (không phải file của mình); đã `pruned` thì bỏ qua; lỗi janitor không làm request lỗi.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(agent): dọn bằng chứng cũ, giữ 5 lần chạy gần nhất mỗi case`.
 
 ### Task 17: Comment kết quả có bảng từng bước
 
@@ -486,9 +486,9 @@ def test_build_version_saved_on_run(...)
 **Interfaces:**
 - Produces: `format_fail_comment` / `format_pass_comment` dùng `result.step_results` khi có (✅ PASS, ❌ FAIL, – SKIPPED hoặc thiếu bước), thêm cột "Thực tế"; dòng `**Ảnh bước lỗi:** [Mở ảnh](...)`, `**Video:** [Xem video](...)`, `**Môi trường:** ...`, `**Chạy với:** v<N>`. Không có `step_results` thì giữ cách suy từ `failed_step` như cũ. Link qua `_safe_evidence`.
 
-- [ ] **Bước 1: Test đỏ** — bảng có 3 dòng `✅ / ❌ / –` đúng thứ tự; có link video; chữ "Thực tế" chứa email bị thay `[đã ẩn email]`.
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(issues): comment kết quả có bảng từng bước, ảnh và video`.
+- [x] **Bước 1: Test đỏ** — bảng có 3 dòng `✅ / ❌ / –` đúng thứ tự; có link video; chữ "Thực tế" chứa email bị thay `[đã ẩn email]`.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(issues): comment kết quả có bảng từng bước, ảnh và video`.
 
 ### Task 18: Script `upload_evidence` cho Codex
 
@@ -499,9 +499,9 @@ def test_build_version_saved_on_run(...)
 **Interfaces:**
 - Produces: chạy `cd backend && uv run python -m app.tools.upload_evidence --project PRJ-0001 --file shot.png [--note "Bước 2"]` → in một dòng JSON `Media`. Đọc `AGENT_API_TOKEN` và `AI_TEST_RUNNER_URL` từ biến môi trường; thiếu thì thoát mã 2 với câu tiếng Việt. `kind` đoán theo đuôi file. Hàm `upload(path: Path, *, project_id: str, note: str, base_url: str, token: str, http: httpx.Client) -> dict`. Không in token kể cả khi lỗi.
 
-- [ ] **Bước 1: Test đỏ** — `httpx.MockTransport`: gọi đúng `/api/agent/projects/PRJ-0001/media/sign` với `Authorization: Bearer t`, rồi POST file lên `upload_url`, trả `{"kind": "image", "url": secure_url, ...}`; lỗi 401 → thông báo không chứa token.
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(tools): script upload bằng chứng cho Codex`.
+- [x] **Bước 1: Test đỏ** — `httpx.MockTransport`: gọi đúng `/api/agent/projects/PRJ-0001/media/sign` với `Authorization: Bearer t`, rồi POST file lên `upload_url`, trả `{"kind": "image", "url": secure_url, ...}`; lỗi 401 → thông báo không chứa token.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(tools): script upload bằng chứng cho Codex`.
 
 ### Task 19: API Kết quả trả đủ thông tin và lọc
 
@@ -512,9 +512,9 @@ def test_build_version_saved_on_run(...)
 **Interfaces:**
 - Produces: `ResultItem` thêm `platform`, `regression`, `case_version`, `environment`, `executed_by`, `dev_owner`, `actual_result`, `step_results`, `evidence: Evidence`, `issue_url: str` (không gọi GitHub: dựng link tìm theo nhãn `https://github.com/<repo>/issues?q=label%3Atc%3A<case_id>`), `build_version`. Bỏ `evidence: str` cũ (frontend sửa cùng Task 20). Tham số lọc mới: `platform: Platform | None`, `run_id: str | None` (khi có: lấy kết quả của đúng Run đó thay vì mới nhất toàn dự án), `regression_only: bool = False`.
 
-- [ ] **Bước 1: Test đỏ** — lọc `platform=ANDROID`; `run_id=RUN-0002` trả kết quả của run đó dù có run mới hơn; `regression_only=true` chỉ trả case `regression`.
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** `gen:api`; commit `feat(results): trả kết quả từng bước, bằng chứng và bộ lọc mới`.
+- [x] **Bước 1: Test đỏ** — lọc `platform=ANDROID`; `run_id=RUN-0002` trả kết quả của run đó dù có run mới hơn; `regression_only=true` chỉ trả case `regression`.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** `gen:api`; commit `feat(results): trả kết quả từng bước, bằng chứng và bộ lọc mới`.
 
 ### Task 20: Bảng chi tiết kết quả (frontend)
 
@@ -526,11 +526,11 @@ def test_build_version_saved_on_run(...)
 **Interfaces:**
 - Consumes: `ResultItem` mới, `MediaLightbox` (Task 12).
 
-- [ ] **Bước 1: Test đỏ** — `ResultDetail` cho kết quả FAIL hiện tiêu đề `TC-000005 … FAIL · v2 · Pixel 7 / Android 14`, `Dev phụ trách: @nguyenvana`, `Chạy bởi codex-windows`, trình phát video, bảng bước (ảnh mở lightbox), bước không chạy hiện "Không chạy"; `evidence.pruned` → "Bằng chứng đã được dọn"; `legacy_url` → một link "Mở bằng chứng". Trang lọc theo nền tảng/Run/regression gửi đúng query.
-- [ ] **Bước 2:** FAIL.
-- [ ] **Bước 3:** Bấm một kết quả mở bảng bên phải (`Dialog` kiểu sheet, toàn màn hình dưới `sm`). Dùng lại `safeEvidenceUrl` có sẵn cho link.
-- [ ] **Bước 4:** PASS + typecheck + lint.
-- [ ] **Bước 5:** Commit `feat(frontend): bảng chi tiết kết quả có ảnh từng bước và video`.
+- [x] **Bước 1: Test đỏ** — `ResultDetail` cho kết quả FAIL hiện tiêu đề `TC-000005 … FAIL · v2 · Pixel 7 / Android 14`, `Dev phụ trách: @nguyenvana`, `Chạy bởi codex-windows`, trình phát video, bảng bước (ảnh mở lightbox), bước không chạy hiện "Không chạy"; `evidence.pruned` → "Bằng chứng đã được dọn"; `legacy_url` → một link "Mở bằng chứng". Trang lọc theo nền tảng/Run/regression gửi đúng query.
+- [x] **Bước 2:** FAIL.
+- [x] **Bước 3:** Bấm một kết quả mở bảng bên phải (`Dialog` kiểu sheet, toàn màn hình dưới `sm`). Dùng lại `safeEvidenceUrl` có sẵn cho link.
+- [x] **Bước 4:** PASS + typecheck + lint.
+- [x] **Bước 5:** Commit `feat(frontend): bảng chi tiết kết quả có ảnh từng bước và video`.
 
 ---
 

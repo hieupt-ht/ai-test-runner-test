@@ -40,6 +40,26 @@ describe("useResults", () => {
     })
   })
 
+  it("gửi thêm nền tảng, Run và regression khi có bộ lọc", async () => {
+    vi.mocked(api.GET).mockResolvedValue({ data: [] } as never)
+    const { result } = renderHook(
+      () =>
+        useResults("p1", undefined, undefined, {
+          platform: "IOS",
+          runId: "RUN-0002",
+          regressionOnly: true,
+        }),
+      { wrapper: makeWrapper() },
+    )
+    await waitFor(() => expect(result.current.data).toEqual([]))
+    expect(api.GET).toHaveBeenLastCalledWith("/api/projects/{project_id}/results", {
+      params: {
+        path: { project_id: "p1" },
+        query: { platform: "IOS", run_id: "RUN-0002", regression_only: true },
+      },
+    })
+  })
+
   it("yêu cầu chạy lại gọi đúng endpoint với mã dự án và mã case", async () => {
     vi.mocked(api.POST).mockResolvedValue({ response: { ok: true } } as never)
     const { result } = renderHook(() => useRequestRerun("p1"), { wrapper: makeWrapper() })

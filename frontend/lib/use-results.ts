@@ -4,11 +4,31 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
 import { ensureOk, unwrap } from "@/lib/api/request"
-import type { ResultItem, ResultStatus } from "@/lib/api/types"
+import type { Platform, ResultItem, ResultStatus } from "@/lib/api/types"
 
-export function useResults(projectId: string, status?: ResultStatus, screenId?: string) {
+export type ResultsFilters = {
+  platform?: Platform
+  runId?: string
+  regressionOnly?: boolean
+}
+
+export function useResults(
+  projectId: string,
+  status?: ResultStatus,
+  screenId?: string,
+  filters: ResultsFilters = {},
+) {
   return useQuery({
-    queryKey: ["projects", projectId, "results", status ?? "all", screenId ?? "all-screens"],
+    queryKey: [
+      "projects",
+      projectId,
+      "results",
+      status ?? "all",
+      screenId ?? "all-screens",
+      filters.platform ?? "all-platforms",
+      filters.runId ?? "latest",
+      filters.regressionOnly ?? false,
+    ],
     queryFn: async (): Promise<ResultItem[]> =>
       unwrap(
         await api.GET("/api/projects/{project_id}/results", {
@@ -17,6 +37,9 @@ export function useResults(projectId: string, status?: ResultStatus, screenId?: 
             query: {
               ...(status ? { status } : {}),
               ...(screenId ? { screen_id: screenId } : {}),
+              ...(filters.platform ? { platform: filters.platform } : {}),
+              ...(filters.runId ? { run_id: filters.runId } : {}),
+              ...(filters.regressionOnly ? { regression_only: true } : {}),
             },
           },
         }),

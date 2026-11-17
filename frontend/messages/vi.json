@@ -57,7 +57,30 @@
     "rerunError": "Không yêu cầu được. Thử lại sau.",
     "empty": "Chưa có kết quả test",
     "loading": "Đang tải kết quả...",
-    "error": "Không tải được kết quả test. Vui lòng thử lại."
+    "error": "Không tải được kết quả test. Vui lòng thử lại.",
+    "viewDetail": "Chi tiết",
+    "filters": {
+      "platform": "Nền tảng",
+      "allPlatforms": "Mọi nền tảng",
+      "run": "Mã Run",
+      "runPlaceholder": "RUN-0002",
+      "regressionOnly": "Chỉ regression"
+    },
+    "detail": {
+      "devOwner": "Dev phụ trách: @{name}",
+      "executedBy": "Chạy bởi {name}",
+      "actualResult": "Thực tế",
+      "pruned": "Bằng chứng đã được dọn",
+      "legacyEvidence": "Mở bằng chứng",
+      "step": "Bước",
+      "stepStatus": "Kết quả",
+      "stepActual": "Thực tế",
+      "stepImage": "Ảnh",
+      "skipped": "Không chạy",
+      "viewStepImage": "Xem ảnh bước {step}",
+      "viewScreenshot": "Xem ảnh bằng chứng",
+      "openIssue": "Mở issue trên GitHub"
+    }
   },
   "overview": {
     "title": "Tổng quan",
