@@ -292,6 +292,8 @@ def approve_test_cases(
         result = service.approve_many(user, [(item.case_id, item.version) for item in body.items])
     except TestCasePermissionError:
         raise HTTPException(status.HTTP_403_FORBIDDEN, NO_PERMISSION) from None
+    except InvalidTransitionError as error:  # dự án đang tắt bước duyệt
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from None
     except LockTimeout:
         raise HTTPException(status.HTTP_409_CONFLICT, BUSY) from None
     return BatchApproveResponse(

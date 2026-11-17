@@ -46,12 +46,14 @@ def project(
     ):
         if users.get(user.email) is None:
             users.create(user)
-    return make_project(
+    created = make_project(
         projects,
         members,
         gateway,
         member_emails=("lead@x.com", "an@x.com", "binh@x.com", "viewer@x.com"),
     )
+    # Các test cũ giả định dự án có bước duyệt
+    return projects.update(created.model_copy(update={"require_review": True}))
 
 
 @pytest.fixture
@@ -619,3 +621,60 @@ def test_app_ids_saved_and_reject_spaces(lead: TestClient, project: Project) -> 
     assert ok.status_code == 200
     assert ok.json()["android_app_id"] == "com.shop.app"
     assert bad.status_code == 422
+
+
+# ----- Tắt bước duyệt: gửi là duyệt luôn (Task 7) -----
+
+
+@pytest.fixture
+def review_off(projects: ProjectRepository, project: Project) -> Project:
+    return projects.update(project.model_copy(update={"require_review": False}))
+
+
+def test_submit_goes_straight_to_approved_when_review_off(
+    app: FastAPI, an: TestClient, project: Project, review_off: Project,
+    redis: fakeredis.FakeRedis, gateway: FakeSheetsGateway,
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    case = create(an, project).json()
+
+    response = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "APPROVED"
+    assert sink.calls[-1][1] == "APPROVED"
+    assert not any(i.type == "case_submitted" for i in NotificationStore(redis).list("lead@x.com"))
+    audit = [r for r in gateway.data[project.spreadsheet_id]["AuditLog"] if "SUBMIT" in r]
+    assert audit and "APPROVED" in audit[-1][-1] and "DRAFT" in audit[-1][-1]
+
+
+@pytest.mark.parametrize("path", ["approve", "return"])
+def test_review_endpoints_409_when_off(
+    an: TestClient, lead: TestClient, project: Project, review_off: Project, path: str
+) -> None:
+    case = create(an, project).json()
+    response = lead.post(
+        url(project, f"/{case['id']}/{path}"), json={"version": 1, "comment": "x"}
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Dự án đang tắt bước duyệt"
+
+
+def test_approve_batch_409_when_off(
+    an: TestClient, lead: TestClient, project: Project, review_off: Project
+) -> None:
+    case = create(an, project).json()
+    response = lead.post(
+        url(project, "/approve-batch"), json={"items": [{"case_id": case["id"], "version": 1}]}
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Dự án đang tắt bước duyệt"
+
+
+def test_review_on_keeps_old_flow(an: TestClient, project: Project) -> None:
+    case = create(an, project).json()
+    response = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    assert response.json()["status"] == "IN_REVIEW"

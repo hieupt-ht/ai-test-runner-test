@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 AUDIT_ENTITY = "test_case"
 MAX_COMMENT_LENGTH = 1000
 MAX_SYNC_BATCH_SIZE = 200
+REVIEW_OFF = "Dự án đang tắt bước duyệt"
 
 
 class CaseAction(StrEnum):
@@ -146,6 +147,11 @@ class TestCaseService:
         self._notifier = notifier
         self._users = users
         self._screen_names: dict[str, str] | None = None
+
+    @property
+    def review_enabled(self) -> bool:
+        """Dự án có bắt buộc QA duyệt không. Không biết dự án thì giữ hành vi cũ (có duyệt)."""
+        return self._project is None or self._project.require_review
 
     # --- Đọc ---
 
@@ -263,6 +269,8 @@ class TestCaseService:
         """
         if not self.can_review(user):
             raise TestCasePermissionError("Bạn không có quyền duyệt test case")
+        if not self.review_enabled:
+            raise InvalidTransitionError(REVIEW_OFF)
 
         result = BatchApproveResult()
         with self._test_cases.lock():
@@ -342,11 +350,15 @@ class TestCaseService:
         elif action in _REVIEW_ACTIONS:
             if not self.can_review(user):
                 raise TestCasePermissionError("Bạn không có quyền duyệt test case")
+            if action in {CaseAction.APPROVE, CaseAction.RETURN} and not self.review_enabled:
+                raise InvalidTransitionError(REVIEW_OFF)
         else:
             self._require_edit(user, case)
         self._require_version(case, version)
 
         allowed_from, target = _TRANSITIONS[action]
+        if action == CaseAction.SUBMIT and not self.review_enabled:
+            target = TestCaseStatus.APPROVED  # tắt bước duyệt: gửi là duyệt luôn
         if case.status not in allowed_from:
             raise InvalidTransitionError(
                 f"Không thể thực hiện thao tác này khi case đang ở trạng thái {case.status.value}"
@@ -361,7 +373,7 @@ class TestCaseService:
         saved = self._save(
             user, case, {"status": target}, version, action.value, diff, refresh=refresh
         )
-        if action == CaseAction.SUBMIT:
+        if action == CaseAction.SUBMIT and target == TestCaseStatus.IN_REVIEW:
             self._notify_submitted(user, saved)
         if self._notifier is not None and case.created_by != normalize_email(user.email):
             if action == CaseAction.RETURN:
