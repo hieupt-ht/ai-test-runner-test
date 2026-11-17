@@ -43,7 +43,7 @@ export function UserFormDialog() {
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
-    defaultValues: { email: "", name: "", role: "TESTER" },
+    defaultValues: { email: "", name: "", role: "TESTER", password: "" },
   })
   const { errors, isSubmitting } = form.formState
   const roleItems = ROLES.map((role) => ({ value: role, label: t(`roles.${role}`) }))
@@ -115,6 +115,19 @@ export function UserFormDialog() {
               )}
             />
             <FieldError message={errors.role?.message} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="user-password">{t("users.fieldPassword")}</Label>
+            <Input
+              id="user-password"
+              type="text"
+              autoComplete="off"
+              aria-invalid={Boolean(errors.password)}
+              {...form.register("password")}
+            />
+            <p className="text-xs text-muted-foreground">{t("users.passwordHint")}</p>
+            <FieldError message={errors.password?.message} />
           </div>
 
           <DialogFooter>

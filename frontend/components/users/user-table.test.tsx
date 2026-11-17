@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { NextIntlClientProvider } from "next-intl"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 
 import { UserTable } from "@/components/users/user-table"
 import type { User } from "@/lib/api/types"
@@ -23,6 +23,8 @@ function renderTable() {
 }
 
 describe("UserTable", () => {
+  afterEach(cleanup)
+
   it("cho đổi vai trò của người khác, nhưng không cho tự đổi vai trò của mình", () => {
     renderTable()
 
@@ -31,5 +33,14 @@ describe("UserTable", () => {
 
     expect(selfRole).toHaveAttribute("data-disabled")
     expect(otherRole).not.toHaveAttribute("data-disabled")
+  })
+
+  it("có nút đặt lại mật khẩu ở mỗi dòng, mở hộp thoại khi bấm", async () => {
+    renderTable()
+
+    expect(screen.getAllByRole("button", { name: /Đặt lại mật khẩu của/ })).toHaveLength(2)
+    fireEvent.click(screen.getByRole("button", { name: "Đặt lại mật khẩu của an@x.com" }))
+
+    expect(await screen.findByLabelText("Mật khẩu mới")).toBeInTheDocument()
   })
 })
