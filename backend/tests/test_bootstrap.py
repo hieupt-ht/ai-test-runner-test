@@ -1,8 +1,9 @@
 import fakeredis
 import pytest
 
-from app.core.bootstrap import bootstrap_system_spreadsheet
+from app.core.bootstrap import ConfigError, bootstrap_system_spreadsheet
 from app.core.models.user import Role
+from app.core.passwords import verify_password
 from app.core.repositories.users import UserRepository
 from app.core.sheets.schema import SYSTEM_TABS
 from tests.conftest import make_user
@@ -30,7 +31,7 @@ def test_creates_missing_tabs_with_headers() -> None:
 def test_adds_bootstrap_admin_when_users_empty() -> None:
     gateway, users = setup({})
 
-    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "  Boss@X.com ")
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "  Boss@X.com ", "mat-khau-1")
 
     admin = users.get("boss@x.com")
     assert admin is not None
@@ -38,12 +39,56 @@ def test_adds_bootstrap_admin_when_users_empty() -> None:
     assert admin.active
 
 
+def test_adds_bootstrap_admin_with_password() -> None:
+    gateway, users = setup({})
+
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com", "mat-khau-1")
+
+    assert verify_password("mat-khau-1", users.get_password_hash("boss@x.com"))
+    assert users.get_password_hash("boss@x.com") != "mat-khau-1"
+
+
+def test_missing_password_raises_config_error() -> None:
+    gateway, users = setup({})
+
+    with pytest.raises(ConfigError, match="BOOTSTRAP_ADMIN_PASSWORD"):
+        bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com", "")
+
+
+def test_existing_admin_without_hash_gets_hash() -> None:
+    gateway, users = setup({})
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "")
+    users.create(make_user("boss@x.com", role=Role.ADMIN))  # Admin từ bản cũ, chưa có mật khẩu
+
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com", "mat-khau-1")
+
+    assert verify_password("mat-khau-1", users.get_password_hash("boss@x.com"))
+
+
+def test_existing_hash_not_overwritten() -> None:
+    gateway, users = setup({})
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com", "mat-khau-1")
+
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com", "mat-khau-moi")
+
+    assert verify_password("mat-khau-1", users.get_password_hash("boss@x.com"))
+
+
+def test_old_users_tab_gets_password_hash_column() -> None:
+    old = ["email", "name", "role", "active", "created_at"]
+    gateway, users = setup({"Users": [old]})
+
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "")
+
+    assert gateway.data[SHEET_ID]["Users"][0][-1] == "password_hash"
+
+
 def test_does_not_add_admin_when_users_exist() -> None:
     gateway, users = setup({})
     bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "")
     users.create(make_user("an@x.com"))
 
-    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com")
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com", "mat-khau-1")
 
     assert users.get("boss@x.com") is None
 
@@ -67,8 +112,10 @@ def test_existing_tab_with_missing_column_gets_it_appended() -> None:
 def test_running_twice_is_idempotent() -> None:
     gateway, users = setup({})
 
-    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com")
-    created_again = bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com")
+    bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "boss@x.com", "mat-khau-1")
+    created_again = bootstrap_system_spreadsheet(
+        gateway, SHEET_ID, users, "boss@x.com", "mat-khau-1"
+    )
 
     assert created_again == []
     assert len(users.list_all()) == 1

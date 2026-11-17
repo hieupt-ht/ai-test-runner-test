@@ -1,62 +1,109 @@
-from authlib.integrations.base_client.errors import OAuthError
 from fastapi.testclient import TestClient
 
-from app.api.oauth import GoogleIdentity
 from app.core.models.user import Role
+from app.core.passwords import hash_password
 from app.core.repositories.users import UserRepository
 from tests.conftest import make_user
-from tests.fakes import FakeOAuth
+
+PASSWORD = "mat-khau-1"
+GENERIC_ERROR = {"detail": "Email hoặc mật khẩu không đúng"}
 
 
-def log_in(client: TestClient, oauth: FakeOAuth, email: str) -> None:
-    oauth.identity = GoogleIdentity(email=email, name="Ai đó")
-    response = client.get("/api/auth/callback")
-    assert response.headers["location"] == "/"
+def add_user(users: UserRepository, email: str = "an@x.com", **kwargs: object) -> None:
+    users.create(make_user(email, **kwargs), password_hash=hash_password(PASSWORD))  # type: ignore[arg-type]
 
 
-def test_login_redirects_to_google(client: TestClient) -> None:
-    response = client.get("/api/auth/login")
-
-    assert response.status_code in (302, 307)
-    assert response.headers["location"].startswith("https://accounts.google.com/")
+def login(client: TestClient, email: str, password: str = PASSWORD):  # type: ignore[no-untyped-def]
+    return client.post("/api/auth/login", json={"email": email, "password": password})
 
 
-def test_callback_allowed_user_sets_cookie_and_redirects_home(
-    client: TestClient, users: UserRepository, oauth: FakeOAuth
-) -> None:
-    users.create(make_user("an@x.com"))
-    oauth.identity = GoogleIdentity(email="  An@X.com", name="An")
+def test_login_success_sets_cookie(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
 
-    response = client.get("/api/auth/callback")
+    response = login(client, "an@x.com")
 
-    assert response.status_code in (302, 307)
-    assert response.headers["location"] == "/"
+    assert response.status_code == 200
+    assert response.json()["email"] == "an@x.com"
     set_cookie = response.headers["set-cookie"]
     assert "atr_session=" in set_cookie
     assert "HttpOnly" in set_cookie
     assert "samesite=lax" in set_cookie.lower()
 
 
-def test_callback_unknown_email_redirects_to_login_error(
-    client: TestClient, oauth: FakeOAuth
-) -> None:
-    oauth.identity = GoogleIdentity(email="la@x.com", name="Lạ")
+def test_login_normalizes_email(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
 
-    response = client.get("/api/auth/callback")
+    assert login(client, "  An@X.com ").status_code == 200
 
-    assert response.headers["location"] == "/login?error=not_allowed"
+
+def test_login_wrong_password_401_generic(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
+
+    response = login(client, "an@x.com", "sai-mat-khau")
+
+    assert response.status_code == 401
+    assert response.json() == GENERIC_ERROR
     assert "atr_session=" not in response.headers.get("set-cookie", "")
 
 
-def test_callback_inactive_user_rejected(
-    client: TestClient, users: UserRepository, oauth: FakeOAuth
+def test_login_unknown_email_same_response_as_wrong_password(
+    client: TestClient, users: UserRepository
 ) -> None:
-    users.create(make_user("an@x.com", active=False))
-    oauth.identity = GoogleIdentity(email="an@x.com", name="An")
+    add_user(users)
 
-    response = client.get("/api/auth/callback")
+    wrong = login(client, "an@x.com", "sai-mat-khau")
+    unknown = login(client, "la@x.com", "sai-mat-khau")
 
-    assert response.headers["location"] == "/login?error=not_allowed"
+    assert (unknown.status_code, unknown.json()) == (wrong.status_code, wrong.json())
+
+
+def test_login_inactive_user_401_generic(client: TestClient, users: UserRepository) -> None:
+    add_user(users, active=False)
+
+    response = login(client, "an@x.com")
+
+    assert (response.status_code, response.json()) == (401, GENERIC_ERROR)
+
+
+def test_login_user_without_password_401_generic(
+    client: TestClient, users: UserRepository
+) -> None:
+    users.create(make_user("an@x.com"))
+
+    for password in ("", PASSWORD):
+        response = login(client, "an@x.com", password)
+        assert (response.status_code, response.json()) == (401, GENERIC_ERROR)
+
+
+def test_login_locked_after_5_failures_429(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
+    for _ in range(5):
+        assert login(client, "an@x.com", "sai-mat-khau").status_code == 401
+
+    response = login(client, "an@x.com")  # đúng mật khẩu nhưng đã bị khoá
+
+    assert response.status_code == 429
+    assert response.json() == {
+        "detail": "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút"
+    }
+
+
+def test_login_unknown_email_is_locked_too(client: TestClient) -> None:
+    for _ in range(5):
+        login(client, "la@x.com", "sai-mat-khau")
+
+    assert login(client, "la@x.com").status_code == 429
+
+
+def test_login_success_resets_counter(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
+    for _ in range(4):
+        login(client, "an@x.com", "sai-mat-khau")
+    assert login(client, "an@x.com").status_code == 200
+    for _ in range(4):
+        login(client, "an@x.com", "sai-mat-khau")
+
+    assert login(client, "an@x.com").status_code == 200
 
 
 def test_me_without_cookie_is_401(client: TestClient) -> None:
@@ -66,33 +113,41 @@ def test_me_without_cookie_is_401(client: TestClient) -> None:
     assert response.json() == {"detail": "Bạn cần đăng nhập"}
 
 
-def test_me_returns_user(client: TestClient, users: UserRepository, oauth: FakeOAuth) -> None:
-    users.create(make_user("an@x.com", role=Role.QA_LEAD, name="An"))
-    log_in(client, oauth, "an@x.com")
+def test_me_returns_user_without_hash(client: TestClient, users: UserRepository) -> None:
+    add_user(users, role=Role.QA_LEAD, name="An")
+    login(client, "an@x.com")
 
     response = client.get("/api/me")
 
     assert response.status_code == 200
     assert response.json()["email"] == "an@x.com"
     assert response.json()["role"] == "QA_LEAD"
+    assert "password" not in response.text
+
+
+def test_login_response_has_no_hash(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
+
+    response = login(client, "an@x.com")
+
+    assert "argon2" not in response.text
+    assert "password" not in response.text
 
 
 def test_user_deactivated_after_login_gets_401_next_request(
-    client: TestClient, users: UserRepository, oauth: FakeOAuth
+    client: TestClient, users: UserRepository
 ) -> None:
-    users.create(make_user("an@x.com"))
-    log_in(client, oauth, "an@x.com")
+    add_user(users)
+    login(client, "an@x.com")
 
     users.update(make_user("an@x.com", active=False))
 
     assert client.get("/api/me").status_code == 401
 
 
-def test_logout_deletes_session(
-    client: TestClient, users: UserRepository, oauth: FakeOAuth
-) -> None:
-    users.create(make_user("an@x.com"))
-    log_in(client, oauth, "an@x.com")
+def test_logout_deletes_session(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
+    login(client, "an@x.com")
     session_id = client.cookies["atr_session"]
 
     response = client.post("/api/auth/logout")
@@ -102,11 +157,6 @@ def test_logout_deletes_session(
     assert client.get("/api/me").status_code == 401
 
 
-def test_callback_oauth_error_redirects_to_login_error(
-    client: TestClient, oauth: FakeOAuth
-) -> None:
-    oauth.fail_with = OAuthError(error="access_denied")  # người dùng bấm Huỷ ở Google
-
-    response = client.get("/api/auth/callback?error=access_denied")
-
-    assert response.headers["location"] == "/login?error=oauth_failed"
+def test_old_oauth_routes_are_gone(client: TestClient) -> None:
+    assert client.get("/api/auth/callback").status_code == 404
+    assert client.get("/api/auth/login").status_code == 405

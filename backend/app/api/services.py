@@ -13,6 +13,7 @@ from redis import Redis
 from app.api.oauth import GoogleOAuth, OAuthClient
 from app.api.sessions import SessionStore
 from app.core.github.client import GitHubAppClient, GitHubClient
+from app.core.login_throttle import LoginThrottle
 from app.core.media.cloudinary import CloudinaryClient, CloudinarySigner, MediaJanitor
 from app.core.notifications import NotificationStore
 from app.core.repositories.audit_log import AuditLogRepository
@@ -31,6 +32,7 @@ class Services:
     users: UserRepository
     audit_log: AuditLogRepository
     sessions: SessionStore
+    login_throttle: LoginThrottle
     oauth: OAuthClient
     gateway: SheetsGateway
     system_spreadsheet_id: str
@@ -90,6 +92,7 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         ),
         audit_log=AuditLogRepository(gateway, system_sheet),
         sessions=SessionStore(redis, ttl_seconds=settings.session_ttl_seconds),
+        login_throttle=LoginThrottle(redis),
         oauth=GoogleOAuth(settings.google_client_id, settings.google_client_secret),
         gateway=gateway,
         system_spreadsheet_id=system_sheet,

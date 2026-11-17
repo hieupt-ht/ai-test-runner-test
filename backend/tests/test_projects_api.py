@@ -7,7 +7,7 @@ from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.sheets.schema import PROJECT_TABS
 from tests.conftest import SHEET_A, SHEET_B, SYSTEM_SHEET_ID, client_for, make_project
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 
 LINK_A = f"  https://docs.google.com/spreadsheets/d/{SHEET_A}/edit#gid=0 "
 
@@ -137,7 +137,6 @@ def test_detail_includes_permissions(
 
 def test_archived_project_hidden_for_non_admin(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     projects: ProjectRepository,
     members: ProjectMemberRepository,
@@ -146,8 +145,8 @@ def test_archived_project_hidden_for_non_admin(
     project = make_project(
         projects, members, gateway, member_emails=("lead@x.com",), archived=True
     )
-    lead = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
-    admin = client_for(app, oauth, users, "admin@x.com", Role.ADMIN)
+    lead = client_for(app, users, "lead@x.com", Role.QA_LEAD)
+    admin = client_for(app, users, "admin@x.com", Role.ADMIN)
 
     assert lead.get("/api/projects").json() == []
     assert lead.get(f"/api/projects/{project.id}").status_code == 404

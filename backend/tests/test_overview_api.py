@@ -12,7 +12,7 @@ from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import utc_now
 from tests.conftest import SHEET_B, client_for, make_project
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeSheetsGateway
 
 
 def _add_case(app: FastAPI, project: Project, *, title: str, status: TestCaseStatus) -> str:
@@ -60,7 +60,6 @@ def _add_result(app: FastAPI, project: Project, case_id: str) -> None:
 
 def test_qa_overview_counts_pending_cases_and_finds_result_across_projects(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     projects: ProjectRepository,
     members: ProjectMemberRepository,
@@ -82,7 +81,7 @@ def test_qa_overview_counts_pending_cases_and_finds_result_across_projects(
         app, second, title="Case đang chờ QA", status=TestCaseStatus.IN_REVIEW
     )
     _add_result(app, second, pending_id)
-    lead = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+    lead = client_for(app, users, "lead@x.com", Role.QA_LEAD)
 
     response = lead.get("/api/me/overview")
 

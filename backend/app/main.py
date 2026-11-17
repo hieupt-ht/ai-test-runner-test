@@ -49,7 +49,8 @@ def start_real_services(settings: Settings) -> Services | None:
     gateway = build_gateway(settings)
     services = build_services(settings, gateway)
     created_tabs = bootstrap_system_spreadsheet(
-        gateway, settings.system_spreadsheet_id, services.users, settings.bootstrap_admin_email
+        gateway, settings.system_spreadsheet_id, services.users, settings.bootstrap_admin_email,
+        settings.bootstrap_admin_password,
     )
     if created_tabs:
         logger.info("Đã tạo các tab: %s", ", ".join(created_tabs))

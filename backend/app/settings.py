@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     session_secret: str = ""
     bootstrap_admin_email: str = ""
+    bootstrap_admin_password: str = ""
 
     # Google Sheets
     google_service_account_json: str = ""

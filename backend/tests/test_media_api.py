@@ -13,7 +13,7 @@ from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from tests.conftest import client_for, make_project, make_user
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeSheetsGateway
 
 SECRET = "super-secret-value"
 GUIDE = {"kind": "image", "purpose": "guide"}
@@ -39,8 +39,8 @@ def signer(app: FastAPI) -> CloudinarySigner:
 
 
 @pytest.fixture
-def an(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project) -> TestClient:
-    return client_for(app, oauth, users, "an@x.com", Role.TESTER)
+def an(app: FastAPI, users: UserRepository, project: Project) -> TestClient:
+    return client_for(app, users, "an@x.com", Role.TESTER)
 
 
 def sign_path(project: Project) -> str:
@@ -73,12 +73,11 @@ def test_tester_cannot_sign_for_evidence_folder(
 
 def test_viewer_cannot_sign(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
     signer: CloudinarySigner,
 ) -> None:
-    viewer = client_for(app, oauth, users, "viewer@x.com", Role.VIEWER)
+    viewer = client_for(app, users, "viewer@x.com", Role.VIEWER)
     assert viewer.post(sign_path(project), json=GUIDE).status_code == 403
 
 

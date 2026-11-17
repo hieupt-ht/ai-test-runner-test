@@ -20,7 +20,7 @@ from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import utc_now
 from tests.conftest import client_for, make_project, make_user
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeSheetsGateway
 
 
 @pytest.fixture
@@ -42,9 +42,9 @@ def project(
 
 
 def browser(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, email: str, role: Role
+    app: FastAPI, users: UserRepository, email: str, role: Role
 ) -> TestClient:
-    return client_for(app, oauth, users, email, role)
+    return client_for(app, users, email, role)
 
 
 def seed_results(app: FastAPI, project: Project) -> tuple[str, str]:
@@ -106,7 +106,6 @@ def path(project: Project, status: str = "") -> str:
 
 def test_qa_lead_sees_all_latest_results(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
     gateway: FakeSheetsGateway,
@@ -114,7 +113,7 @@ def test_qa_lead_sees_all_latest_results(
     first_id, second_id = seed_results(app, project)
     gateway.calls.clear()
 
-    response = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD).get(path(project))
+    response = browser(app, users, "lead@x.com", Role.QA_LEAD).get(path(project))
 
     assert response.status_code == 200
     items = {item["case_id"]: item for item in response.json()}
@@ -135,13 +134,12 @@ def test_qa_lead_sees_all_latest_results(
 
 def test_tester_sees_only_own_cases(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
     first_id, _ = seed_results(app, project)
 
-    response = browser(app, oauth, users, "an@x.com", Role.TESTER).get(path(project))
+    response = browser(app, users, "an@x.com", Role.TESTER).get(path(project))
 
     assert response.status_code == 200
     assert [item["case_id"] for item in response.json()] == [first_id]
@@ -149,13 +147,12 @@ def test_tester_sees_only_own_cases(
 
 def test_filter_by_status(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
     first_id, _ = seed_results(app, project)
 
-    response = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD).get(
+    response = browser(app, users, "lead@x.com", Role.QA_LEAD).get(
         path(project, "?status=FAIL")
     )
 
@@ -165,13 +162,12 @@ def test_filter_by_status(
 
 def test_filter_by_screen_id(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
     first_id, _ = seed_results(app, project)
 
-    response = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD).get(
+    response = browser(app, users, "lead@x.com", Role.QA_LEAD).get(
         path(project, "?screen_id=SC-0001")
     )
 
@@ -181,7 +177,6 @@ def test_filter_by_screen_id(
 
 def test_missing_screen_uses_screen_id_as_name(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
@@ -215,7 +210,7 @@ def test_missing_screen_uses_screen_id_as_name(
         ]
     )
 
-    response = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD).get(path(project))
+    response = browser(app, users, "lead@x.com", Role.QA_LEAD).get(path(project))
 
     assert response.status_code == 200
     assert response.json()[0]["screen_id"] == "SC-DELETED"
@@ -224,11 +219,10 @@ def test_missing_screen_uses_screen_id_as_name(
 
 def test_non_member_forbidden(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
-    response = browser(app, oauth, users, "outsider@x.com", Role.TESTER).get(path(project))
+    response = browser(app, users, "outsider@x.com", Role.TESTER).get(path(project))
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Không tìm thấy dự án"}
@@ -236,11 +230,10 @@ def test_non_member_forbidden(
 
 def test_no_runs_returns_empty_list(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
-    response = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD).get(path(project))
+    response = browser(app, users, "lead@x.com", Role.QA_LEAD).get(path(project))
 
     assert response.status_code == 200
     assert response.json() == []
@@ -248,7 +241,6 @@ def test_no_runs_returns_empty_list(
 
 def test_archived_project_results_remain_visible(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     projects: ProjectRepository,
     project: Project,
@@ -256,7 +248,7 @@ def test_archived_project_results_remain_visible(
     seed_results(app, project)
     projects.update(project.model_copy(update={"archived": True}))
 
-    response = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD).get(path(project))
+    response = browser(app, users, "lead@x.com", Role.QA_LEAD).get(path(project))
 
     assert response.status_code == 200
     assert len(response.json()) == 2
@@ -309,19 +301,19 @@ def seed_mixed(app: FastAPI, project: Project) -> tuple[str, str]:
 
 
 def lead_get(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project, query: str = ""
+    app: FastAPI, users: UserRepository, project: Project, query: str = ""
 ) -> list[dict[str, object]]:
-    client = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+    client = browser(app, users, "lead@x.com", Role.QA_LEAD)
     response = client.get(path(project, query))
     assert response.status_code == 200
     return response.json()
 
 
 def test_item_has_full_detail(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+    app: FastAPI, users: UserRepository, project: Project
 ) -> None:
     web, _ = seed_mixed(app, project)
-    item = next(i for i in lead_get(app, oauth, users, project) if i["case_id"] == web)
+    item = next(i for i in lead_get(app, users, project) if i["case_id"] == web)
     assert item["platform"] == "WEB" and item["regression"] is False
     assert item["case_version"] == 1 and item["environment"] == "Pixel 7"
     assert item["executed_by"] == "codex-win" and item["dev_owner"] == "nguyenvana"
@@ -334,25 +326,25 @@ def test_item_has_full_detail(
 
 
 def test_filter_by_platform(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+    app: FastAPI, users: UserRepository, project: Project
 ) -> None:
     _, android = seed_mixed(app, project)
-    items = lead_get(app, oauth, users, project, "?platform=ANDROID")
+    items = lead_get(app, users, project, "?platform=ANDROID")
     assert [i["case_id"] for i in items] == [android]
 
 
 def test_run_id_filter_returns_that_run_even_if_newer_exists(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+    app: FastAPI, users: UserRepository, project: Project
 ) -> None:
     web, android = seed_mixed(app, project)
-    items = lead_get(app, oauth, users, project, "?run_id=RUN-0001")
+    items = lead_get(app, users, project, "?run_id=RUN-0001")
     assert {i["case_id"] for i in items} == {web, android}
     assert {i["run_id"] for i in items} == {"RUN-0001"}
 
 
 def test_regression_only_filter(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+    app: FastAPI, users: UserRepository, project: Project
 ) -> None:
     _, android = seed_mixed(app, project)
-    items = lead_get(app, oauth, users, project, "?regression_only=true")
+    items = lead_get(app, users, project, "?regression_only=true")
     assert [i["case_id"] for i in items] == [android]

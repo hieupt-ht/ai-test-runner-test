@@ -18,7 +18,7 @@ from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import today_in_vietnam
 from tests.conftest import client_for, make_project, make_user
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 
 NEXT_WEEK = (today_in_vietnam() + timedelta(days=7)).isoformat()
 
@@ -57,9 +57,9 @@ def project(
 
 
 @pytest.fixture
-def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project) -> TestClient:
+def lead(app: FastAPI, users: UserRepository, project: Project) -> TestClient:
     """QA Lead; đã tạo màn hình SC-0001 và giao cho An và Bình."""
-    browser = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+    browser = client_for(app, users, "lead@x.com", Role.QA_LEAD)
     browser.post(f"/api/projects/{project.id}/screens", json={"name": "Đăng nhập"})
     browser.post(
         f"/api/projects/{project.id}/assignments",
@@ -73,13 +73,13 @@ def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
 
 
 @pytest.fixture
-def an(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient) -> TestClient:
-    return client_for(app, oauth, users, "an@x.com", Role.TESTER)
+def an(app: FastAPI, users: UserRepository, lead: TestClient) -> TestClient:
+    return client_for(app, users, "an@x.com", Role.TESTER)
 
 
 @pytest.fixture
-def binh(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient) -> TestClient:
-    return client_for(app, oauth, users, "binh@x.com", Role.TESTER)
+def binh(app: FastAPI, users: UserRepository, lead: TestClient) -> TestClient:
+    return client_for(app, users, "binh@x.com", Role.TESTER)
 
 
 def url(project: Project, suffix: str = "") -> str:
@@ -447,9 +447,9 @@ def test_lead_returns_case_with_comment_and_history_shows_it(
 
 
 def test_viewer_can_read_but_not_create(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient, project: Project
+    app: FastAPI, users: UserRepository, lead: TestClient, project: Project
 ) -> None:
-    viewer = client_for(app, oauth, users, "viewer@x.com", Role.VIEWER)
+    viewer = client_for(app, users, "viewer@x.com", Role.VIEWER)
 
     assert viewer.get(url(project)).status_code == 200
     forbidden = create(viewer, project)
@@ -458,9 +458,9 @@ def test_viewer_can_read_but_not_create(
 
 
 def test_non_member_gets_404(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+    app: FastAPI, users: UserRepository, project: Project
 ) -> None:
-    stranger = client_for(app, oauth, users, "la@x.com", Role.TESTER)
+    stranger = client_for(app, users, "la@x.com", Role.TESTER)
 
     assert stranger.get(url(project)).status_code == 404
     assert create(stranger, project).status_code == 404
@@ -468,7 +468,6 @@ def test_non_member_gets_404(
 
 def test_archived_project_rejects_writes(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     an: TestClient,
     project: Project,
@@ -477,7 +476,7 @@ def test_archived_project_rejects_writes(
     create(an, project)
     projects.update(project.model_copy(update={"archived": True}))
     # Thành viên thường không còn thấy dự án đã lưu trữ; Admin thấy nhưng không được ghi.
-    admin = client_for(app, oauth, users, "admin@x.com", Role.ADMIN)
+    admin = client_for(app, users, "admin@x.com", Role.ADMIN)
 
     assert admin.get(url(project)).status_code == 200
     response = admin.post(url(project, "/TC-000001/deprecate"), json={"version": 1})
@@ -487,11 +486,11 @@ def test_archived_project_rejects_writes(
 
 
 def test_parallel_creates_via_api_get_distinct_ids(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient, project: Project
+    app: FastAPI, users: UserRepository, lead: TestClient, project: Project
 ) -> None:
     browsers = [
-        client_for(app, oauth, users, "an@x.com", Role.TESTER),
-        client_for(app, oauth, users, "binh@x.com", Role.TESTER),
+        client_for(app, users, "an@x.com", Role.TESTER),
+        client_for(app, users, "binh@x.com", Role.TESTER),
     ]
     ids: list[str] = []
     failures: list[str] = []
@@ -519,7 +518,6 @@ def test_parallel_creates_via_api_get_distinct_ids(
 
 def test_archived_project_case_cannot_be_edited_or_reviewed(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     an: TestClient,
     project: Project,
@@ -527,7 +525,7 @@ def test_archived_project_case_cannot_be_edited_or_reviewed(
 ) -> None:
     create(an, project)
     projects.update(project.model_copy(update={"archived": True}))
-    admin = client_for(app, oauth, users, "admin@x.com", Role.ADMIN)
+    admin = client_for(app, users, "admin@x.com", Role.ADMIN)
 
     detail = admin.get(url(project, "/TC-000001")).json()
 

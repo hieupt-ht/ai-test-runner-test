@@ -2,13 +2,14 @@
 
 - Tab nào còn thiếu thì tạo, kèm hàng tiêu đề.
 - Tab đã có thì tự thêm các cột còn thiếu vào cuối tiêu đề.
-- Tab Users còn trống thì thêm Admin đầu tiên (từ BOOTSTRAP_ADMIN_EMAIL).
+- Tab Users còn trống thì thêm Admin đầu tiên (từ BOOTSTRAP_ADMIN_EMAIL + BOOTSTRAP_ADMIN_PASSWORD).
 Chạy nhiều lần vẫn cho cùng kết quả.
 """
 
 import logging
 
 from app.core.models.user import Role, User, normalize_email
+from app.core.passwords import hash_password
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.sheets.gateway import SheetsGateway
@@ -39,12 +40,18 @@ def _ensure_tabs(
 
 
 def bootstrap_system_spreadsheet(
-    gateway: SheetsGateway, spreadsheet_id: str, users: UserRepository, bootstrap_admin_email: str
+    gateway: SheetsGateway,
+    spreadsheet_id: str,
+    users: UserRepository,
+    bootstrap_admin_email: str,
+    bootstrap_admin_password: str = "",
 ) -> list[str]:
     created_tabs = _ensure_tabs(gateway, spreadsheet_id, SYSTEM_TABS)
 
     admin_email = normalize_email(bootstrap_admin_email)
     if admin_email and users.is_empty():
+        if not bootstrap_admin_password:
+            raise ConfigError("Thiếu BOOTSTRAP_ADMIN_PASSWORD trong .env")
         users.create(
             User(
                 email=admin_email,
@@ -52,8 +59,17 @@ def bootstrap_system_spreadsheet(
                 role=Role.ADMIN,
                 active=True,
                 created_at=utc_now(),
-            )
+            ),
+            password_hash=hash_password(bootstrap_admin_password),
         )
+    elif (
+        admin_email
+        and bootstrap_admin_password
+        and users.get(admin_email) is not None
+        and not users.get_password_hash(admin_email)
+    ):
+        # Admin đã có từ bản cũ (chưa có mật khẩu): đặt mật khẩu từ .env, chỉ khi hash đang trống.
+        users.set_password_hash(admin_email, hash_password(bootstrap_admin_password))
 
     return created_tabs
 

@@ -13,7 +13,7 @@ from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from tests.conftest import SHEET_B, client_for, make_project, make_user
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 from tests.test_test_cases_api import NEXT_WEEK, create
 
 RESULT = {"test_case_id": "TC-000001", "status": "PASS", "reason": "Đạt"}
@@ -31,8 +31,8 @@ def project(
 
 
 @pytest.fixture
-def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project) -> TestClient:
-    browser = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+def lead(app: FastAPI, users: UserRepository, project: Project) -> TestClient:
+    browser = client_for(app, users, "lead@x.com", Role.QA_LEAD)
     browser.post(f"/api/projects/{project.id}/screens", json={"name": "Đăng nhập"})
     browser.post(
         f"/api/projects/{project.id}/assignments",
@@ -46,8 +46,8 @@ def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
 
 
 @pytest.fixture
-def an(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient) -> TestClient:
-    return client_for(app, oauth, users, "an@x.com", Role.TESTER)
+def an(app: FastAPI, users: UserRepository, lead: TestClient) -> TestClient:
+    return client_for(app, users, "an@x.com", Role.TESTER)
 
 
 def path(project: Project) -> str:

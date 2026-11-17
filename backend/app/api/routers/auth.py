@@ -1,19 +1,27 @@
 import logging
 
-from authlib.integrations.base_client.errors import OAuthError
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.sessions import SESSION_COOKIE
 from app.core.models.user import User
-from app.core.services.auth import authenticate
+from app.core.services.auth import LoginLockedError, authenticate
 from app.settings import Settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
+
+LOGIN_FAILED = "Email hoặc mật khẩu không đúng"
+LOGIN_LOCKED = "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút"
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str  # không strip: khoảng trắng có thể là một phần của mật khẩu
 
 
 def _settings(request: Request) -> Settings:
@@ -21,28 +29,7 @@ def _settings(request: Request) -> Settings:
     return settings
 
 
-@router.get("/auth/login")
-async def login(request: Request, services: ServicesDep) -> Response:
-    redirect_uri = f"{_settings(request).app_base_url}/api/auth/callback"
-    return await services.oauth.authorize_redirect(request, redirect_uri)
-
-
-@router.get("/auth/callback")
-async def callback(request: Request, services: ServicesDep) -> Response:
-    try:
-        identity = await services.oauth.fetch_identity(request)
-    except OAuthError as error:
-        # Người dùng bấm Huỷ ở Google, hoặc tải lại/mở trang callback ở tab khác.
-        logger.info("Đăng nhập Google không thành công: %s", error.error)
-        return RedirectResponse("/login?error=oauth_failed", status.HTTP_302_FOUND)
-    # Đọc Sheet là việc chặn (blocking), nên chạy trong threadpool.
-    user = await run_in_threadpool(authenticate, services.users, identity.email)
-    if user is None:
-        return RedirectResponse("/login?error=not_allowed", status.HTTP_302_FOUND)
-
-    settings = _settings(request)
-    session_id = services.sessions.create(user.email)
-    response = RedirectResponse("/", status.HTTP_302_FOUND)
+def set_session_cookie(response: Response, settings: Settings, session_id: str) -> None:
     response.set_cookie(
         SESSION_COOKIE,
         session_id,
@@ -51,6 +38,22 @@ async def callback(request: Request, services: ServicesDep) -> Response:
         samesite="lax",
         secure=settings.app_base_url.startswith("https"),
     )
+
+
+@router.post("/auth/login")
+async def login(body: LoginRequest, request: Request, services: ServicesDep) -> Response:
+    try:
+        # Đọc Sheet là việc chặn (blocking), nên chạy trong threadpool.
+        user = await run_in_threadpool(
+            authenticate, services.users, body.email, body.password, services.login_throttle
+        )
+    except LoginLockedError:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, LOGIN_LOCKED) from None
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, LOGIN_FAILED)
+
+    response = JSONResponse(user.model_dump(mode="json"))
+    set_session_cookie(response, _settings(request), services.sessions.create(user.email))
     return response
 
 
