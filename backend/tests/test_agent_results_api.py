@@ -4,6 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.api.project_scope import scope_for
 from app.core.models.project import Project
 from app.core.models.user import Role
 from app.core.notifications import NotificationStore
@@ -401,3 +402,123 @@ def test_results_write_failure_marks_run_failed(
     run_rows = gateway.data[project.spreadsheet_id]["Runs"]
     run = dict(zip(run_rows[0], run_rows[1], strict=True))
     assert run["status"] == "FAILED"
+
+
+# ---------- Task 15: kết quả mở rộng (từng bước, video, môi trường) ----------
+
+AUTH = {"Authorization": "Bearer test-token"}
+
+
+def media(cloud: str, name: str = "a", kind: str = "image") -> dict[str, str]:
+    return {
+        "kind": kind,
+        "url": f"https://res.cloudinary.com/{cloud}/{kind}/upload/{name}.png",
+        "public_id": name,
+    }
+
+
+def stored_results(project: Project, gateway: FakeSheetsGateway) -> list[dict[str, str]]:
+    rows = gateway.data[project.spreadsheet_id]["Results"]
+    return [dict(zip(rows[0], row, strict=False)) for row in rows[1:]]
+
+
+def post_results(
+    app: FastAPI, client: TestClient, project: Project, results: list[dict[str, object]], **extra: object
+) -> object:
+    app.state.settings.agent_api_token = "test-token"
+    return client.post(path(project), json={"results": results, **extra}, headers=AUTH)
+
+
+def test_old_string_evidence_still_accepted(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    approve_case(an, lead, project)
+    response = post_results(
+        app, client, project, [{**RESULT, "evidence": "https://example.com/a.png"}]
+    )
+    assert response.status_code == 200
+    assert "https://example.com/a.png" in stored_results(project, gateway)[0]["evidence_json"]
+    assert "legacy_url" in stored_results(project, gateway)[0]["evidence_json"]
+
+
+def test_old_string_evidence_not_https_is_dropped(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    approve_case(an, lead, project)
+    post_results(app, client, project, [{**RESULT, "evidence": "javascript:alert(1)"}])
+    assert stored_results(project, gateway)[0]["evidence_json"] == ""
+
+
+def test_new_evidence_and_steps_stored(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.cloud_name = "mine"
+    approve_case(an, lead, project)
+    response = post_results(
+        app, client, project,
+        [{
+            **RESULT,
+            "evidence": {
+                "video": media("mine", "v", "video"),
+                "screenshots": [media("mine", "s1")],
+            },
+            "step_results": [
+                {"step_no": 1, "status": "PASS", "actual": "ok"},
+                {"step_no": 2, "status": "FAIL", "screenshot": media("mine", "s2")},
+            ],
+            "actual_result": "Thấy lỗi",
+            "environment": "Pixel 7 / Android 14",
+            "executed_by": "codex-windows",
+            "case_version": 3,
+        }],
+    )
+    assert response.status_code == 200
+    row = stored_results(project, gateway)[0]
+    assert '"v"' in row["evidence_json"] and '"s1"' in row["evidence_json"]
+    assert '"s2"' in row["step_results_json"]
+    assert row["actual_result"] == "Thấy lỗi"
+    assert row["environment"] == "Pixel 7 / Android 14"
+    assert row["executed_by"] == "codex-windows"
+    assert row["case_version"] == "3"
+
+
+def test_foreign_cloud_rejected_and_no_run_created(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.cloud_name = "mine"
+    approve_case(an, lead, project)
+    response = post_results(
+        app, client, project,
+        [{**RESULT, "evidence": {"screenshots": [media("other")]}}],
+    )
+    assert response.status_code == 422
+    assert len(gateway.data[project.spreadsheet_id]["Runs"]) == 1  # chỉ còn dòng tiêu đề
+    assert len(gateway.data[project.spreadsheet_id]["Results"]) == 1
+
+
+def test_dev_owner_snapshot_from_screen(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    approve_case(an, lead, project)
+    screens = app.state.services
+    scope = scope_for(screens, screens.projects.get(project.id))
+    screen = scope.screens.list_all()[0]
+    scope.screens.update(screen.model_copy(update={"dev_owner": "nguyenvana"}))
+    post_results(app, client, project, [RESULT])
+    assert stored_results(project, gateway)[0]["dev_owner"] == "nguyenvana"
+
+
+def test_build_version_saved_on_run(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    approve_case(an, lead, project)
+    post_results(app, client, project, [RESULT], build_version="1.4.2")
+    rows = gateway.data[project.spreadsheet_id]["Runs"]
+    run = dict(zip(rows[0], rows[1], strict=False))
+    assert run["build_version"] == "1.4.2"

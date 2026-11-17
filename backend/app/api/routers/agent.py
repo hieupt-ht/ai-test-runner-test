@@ -10,8 +10,21 @@ from app.api.project_scope import scope_for
 from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
 from app.core.media.cloudinary import SignedUpload
-from app.core.models.media import NOT_CONFIGURED, MediaKind
-from app.core.models.run import Evidence, Result, ResultStatus, RunScope, RunStatus
+from app.core.models.media import (
+    NOT_CONFIGURED,
+    ForeignMediaError,
+    Media,
+    MediaKind,
+    ensure_own_cloud,
+)
+from app.core.models.run import (
+    Evidence,
+    Result,
+    ResultStatus,
+    RunScope,
+    RunStatus,
+    StepResult,
+)
 from app.core.models.test_case import TestCaseStatus
 from app.core.models.user import Role
 from app.core.repositories.runs import RunInProgressError
@@ -24,16 +37,30 @@ router = APIRouter(prefix="/api/agent/projects/{project_id}", tags=["agent"])
 logger = logging.getLogger(__name__)
 
 
+class AgentEvidence(BaseModel):
+    """Bằng chứng dạng mới: một video và các ảnh chụp (đã đẩy lên Cloudinary)."""
+
+    video: Media | None = None
+    screenshots: list[Media] = Field(default_factory=list, max_length=20)
+
+
 class AgentResult(BaseModel):
     test_case_id: str
     status: ResultStatus
     reason: str = Field(default="", max_length=2000)
     failed_step: int | None = Field(default=None, ge=1)
-    evidence: str = Field(default="", max_length=2000)
+    # Chuỗi (kiểu cũ: một link) hoặc đối tượng (kiểu mới)
+    evidence: str | AgentEvidence = Field(default="", union_mode="left_to_right")
+    step_results: list[StepResult] = Field(default_factory=list, max_length=50)
+    actual_result: str = Field(default="", max_length=2000)
+    environment: str = Field(default="", max_length=200)
+    executed_by: str = Field(default="", max_length=50)
+    case_version: int | None = Field(default=None, ge=1)
 
 
 class AgentResultsRequest(BaseModel):
     results: list[AgentResult] = Field(max_length=200)
+    build_version: str = Field(default="", max_length=50)
     duration_seconds: float = Field(default=0, ge=0, le=86400)
 
 
@@ -46,6 +73,24 @@ class AgentResultsResponse(BaseModel):
     run_id: str
     written: int
     ignored: list[IgnoredResult]
+
+
+def _to_evidence(raw: str | AgentEvidence) -> Evidence:
+    """Đổi bằng chứng agent gửi sang dạng lưu; chuỗi cũ chỉ nhận khi là link https."""
+    if isinstance(raw, str):
+        return Evidence(legacy_url=raw if raw.startswith("https://") else None)
+    return Evidence(video=raw.video, screenshots=raw.screenshots)
+
+
+def _all_media(item: AgentResult) -> list[Media]:
+    """Mọi ảnh/video trong một kết quả, để kiểm tra có đúng kho Cloudinary của app."""
+    found: list[Media] = []
+    if isinstance(item.evidence, AgentEvidence):
+        if item.evidence.video is not None:
+            found.append(item.evidence.video)
+        found.extend(item.evidence.screenshots)
+    found.extend(step.screenshot for step in item.step_results if step.screenshot is not None)
+    return found
 
 
 def _check_token(request: Request) -> None:
@@ -113,12 +158,20 @@ def write_agent_results(
                 )
             )
 
+    # Link sai kho Cloudinary thì từ chối cả request, chưa tạo Run nào
+    try:
+        for item in accepted:
+            ensure_own_cloud(_all_media(item), services.cloud_name)
+    except ForeignMediaError as error:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
+
     try:
         run = scope.runs.create(
             triggered_by="codex-agent",
             scope=RunScope(),
             branch=project.branch,
             total=len(accepted),
+            build_version=body.build_version,
         )
     except (RunInProgressError, LockTimeout):
         raise HTTPException(
@@ -126,6 +179,8 @@ def write_agent_results(
             "Đang có một lần ghi kết quả khác, hãy thử lại",
         ) from None
 
+    # Đọc màn hình một lần để ghi lại dev phụ trách tại thời điểm này
+    dev_by_screen = {screen.id: screen.dev_owner for screen in scope.screens.list_all()}
     results = [
         Result(
             id=f"{run.id}-{item.test_case_id}",
@@ -134,7 +189,13 @@ def write_agent_results(
             status=item.status,
             reason=item.reason,
             failed_step=item.failed_step,
-            evidence=Evidence(legacy_url=item.evidence or None),
+            evidence=_to_evidence(item.evidence),
+            step_results=item.step_results,
+            actual_result=item.actual_result,
+            environment=item.environment,
+            executed_by=item.executed_by,
+            case_version=item.case_version,
+            dev_owner=dev_by_screen.get(approved[item.test_case_id].screen_id, ""),
             created_at=utc_now(),
         )
         for item in accepted

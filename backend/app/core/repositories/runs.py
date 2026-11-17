@@ -111,7 +111,15 @@ class RunRepository:
     def active(self) -> Run | None:
         return next((run for run in self.list_all() if run.status in ACTIVE_RUN_STATUSES), None)
 
-    def create(self, *, triggered_by: str, scope: RunScope, branch: str, total: int) -> Run:
+    def create(
+        self,
+        *,
+        triggered_by: str,
+        scope: RunScope,
+        branch: str,
+        total: int,
+        build_version: str = "",
+    ) -> Run:
         with self._tab_lock():
             if any(run.status in ACTIVE_RUN_STATUSES for run in self.list_all()):
                 raise RunInProgressError("Dự án đang có một lần chạy chưa xong")
@@ -128,6 +136,7 @@ class RunRepository:
                 passed=0,
                 failed=0,
                 tokens_used=0,
+                build_version=build_version,
             )
             self._table.append(_run_to_record(run))
         return run
