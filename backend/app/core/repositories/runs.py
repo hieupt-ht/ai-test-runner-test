@@ -271,3 +271,13 @@ class ResultRepository:
 
     def list_for_run(self, run_id: str) -> list[Result]:
         return [result for result in self.list_all() if result.run_id == run_id]
+
+    def mark_pruned(self, result_ids: list[str]) -> None:
+        """Đánh dấu bằng chứng đã dọn (ghi một lượt, không đụng các cột khác)."""
+        wanted = set(result_ids)
+        rows = [
+            (row_number, {"evidence_json": '{"pruned": true}'})
+            for row_number, record in self._table.read_rows_numbered()
+            if record["id"] in wanted
+        ]
+        self._table.update_many(rows)

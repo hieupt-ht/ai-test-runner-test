@@ -28,6 +28,7 @@ from app.core.models.run import (
 from app.core.models.test_case import TestCaseStatus
 from app.core.models.user import Role
 from app.core.repositories.runs import RunInProgressError
+from app.core.services.evidence_retention import prune_evidence
 from app.core.services.notify import Notifier
 from app.core.services.result_issue_sync import sync_result_issue
 from app.core.time import utc_now
@@ -266,4 +267,6 @@ def write_agent_results(
                     project.id,
                     exc_info=True,
                 )
+    # Dọn bằng chứng cũ của các case vừa chạy (lỗi chỉ ghi log, không ảnh hưởng kết quả)
+    prune_evidence(scope.results, services.media_janitor, {item.test_case_id for item in accepted})
     return AgentResultsResponse(run_id=run.id, written=len(results), ignored=ignored)

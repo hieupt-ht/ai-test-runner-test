@@ -423,7 +423,11 @@ def stored_results(project: Project, gateway: FakeSheetsGateway) -> list[dict[st
 
 
 def post_results(
-    app: FastAPI, client: TestClient, project: Project, results: list[dict[str, object]], **extra: object
+    app: FastAPI,
+    client: TestClient,
+    project: Project,
+    results: list[dict[str, object]],
+    **extra: object,
 ) -> object:
     app.state.settings.agent_api_token = "test-token"
     return client.post(path(project), json={"results": results, **extra}, headers=AUTH)
@@ -522,3 +526,27 @@ def test_build_version_saved_on_run(
     rows = gateway.data[project.spreadsheet_id]["Runs"]
     run = dict(zip(rows[0], rows[1], strict=False))
     assert run["build_version"] == "1.4.2"
+
+
+def test_sixth_run_prunes_oldest_evidence_and_deletes_files(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.cloud_name = "mine"
+    deleted: list[str] = []
+
+    class Janitor:
+        def delete(self, items: list[object]) -> None:
+            deleted.extend(item.public_id for item in items)  # type: ignore[attr-defined]
+
+    app.state.services.media_janitor = Janitor()
+    approve_case(an, lead, project)
+    for n in range(1, 7):
+        post_results(
+            app, client, project,
+            [{**RESULT, "evidence": {"screenshots": [media("mine", f"s{n}")]}}],
+        )
+    rows = stored_results(project, gateway)
+    assert deleted == ["s1"]
+    assert rows[0]["evidence_json"] == '{"pruned": true}'
+    assert all("pruned" not in row["evidence_json"] for row in rows[1:])
