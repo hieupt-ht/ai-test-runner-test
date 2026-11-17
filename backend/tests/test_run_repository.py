@@ -17,6 +17,7 @@ from app.core.models.run import (
 )
 from app.core.models.test_case import Priority
 from app.core.repositories.runs import (
+    InvalidRunStateError,
     ResultRepository,
     RunInProgressError,
     RunNotFoundError,
@@ -286,3 +287,120 @@ def test_run_new_fields_round_trip(repo: RunRepository) -> None:
 
     assert saved is not None and saved.build_version == "1.4.2"
     assert saved.scope.regression_only is True and saved.scope.case_ids == ["TC-000001"]
+
+
+# ---- Run regression: chạy nhiều lần gửi kết quả, cộng dồn vào cùng một run ----
+
+
+def new_regression(repo: RunRepository, case_ids: list[str] | None = None) -> Run:
+    return repo.create_regression(
+        triggered_by=LEAD,
+        branch="main",
+        build_version="1.4.2",
+        case_ids=case_ids or ["TC-1", "TC-2"],
+    )
+
+
+def make_result(run_id: str, case_id: str, status: ResultStatus = ResultStatus.PASS) -> Result:
+    return Result(
+        id=f"{run_id}-{case_id}",
+        run_id=run_id,
+        test_case_id=case_id,
+        status=status,
+        reason="",
+        failed_step=None,
+        created_at=datetime.now(UTC),
+    )
+
+
+def test_create_regression_is_running_with_case_list(repo: RunRepository) -> None:
+    run = new_regression(repo)
+
+    assert run.status == RunStatus.RUNNING
+    assert run.scope.regression_only is True
+    assert run.scope.case_ids == ["TC-1", "TC-2"]
+    assert run.total == 2
+    assert run.build_version == "1.4.2"
+
+
+def test_regression_run_does_not_block_normal_run(repo: RunRepository) -> None:
+    regression = new_regression(repo)
+
+    normal = new_run(repo)
+
+    assert normal.status == RunStatus.QUEUED
+    assert repo.active() is not None
+    assert repo.active().id == normal.id  # type: ignore[union-attr]
+    assert regression.id != normal.id
+
+
+def test_regression_can_start_while_normal_run_active(repo: RunRepository) -> None:
+    new_run(repo)
+
+    assert new_regression(repo).status == RunStatus.RUNNING
+
+
+def test_active_ignores_regression_run(repo: RunRepository) -> None:
+    new_regression(repo)
+
+    assert repo.active() is None
+
+
+def test_add_results_accumulates_and_completes_when_all_cases_done(
+    repo: RunRepository, gateway: FakeSheetsGateway
+) -> None:
+    run = new_regression(repo)
+
+    first = repo.add_results(run.id, [make_result(run.id, "TC-1")])
+    assert first.status == RunStatus.RUNNING
+    assert (first.passed, first.failed, first.finished_at) == (1, 0, None)
+
+    second = repo.add_results(run.id, [make_result(run.id, "TC-2", ResultStatus.FAIL)])
+    assert second.status == RunStatus.COMPLETED
+    assert (second.passed, second.failed) == (1, 1)
+    assert second.finished_at is not None
+    assert len(ResultRepository(gateway, SHEET).list_for_run(run.id)) == 2
+
+
+def test_add_results_same_case_twice_is_not_counted_twice(repo: RunRepository) -> None:
+    run = new_regression(repo)
+
+    repo.add_results(run.id, [make_result(run.id, "TC-1")])
+    again = repo.add_results(run.id, [make_result(run.id, "TC-1")])
+
+    assert (again.passed, again.failed, again.total) == (1, 0, 2)
+    assert again.status == RunStatus.RUNNING
+
+
+def test_add_results_on_normal_or_finished_run_is_rejected(repo: RunRepository) -> None:
+    normal = new_run(repo)
+    with pytest.raises(InvalidRunStateError):
+        repo.add_results(normal.id, [make_result(normal.id, "TC-1")])
+
+    run = new_regression(repo)
+    repo.finish(run.id)
+    with pytest.raises(InvalidRunStateError):
+        repo.add_results(run.id, [make_result(run.id, "TC-1")])
+
+
+def test_add_results_unknown_run_raises(repo: RunRepository) -> None:
+    with pytest.raises(RunNotFoundError):
+        repo.add_results("RUN-9999", [])
+
+
+def test_finish_regression_run_completes_it(repo: RunRepository) -> None:
+    run = new_regression(repo)
+
+    finished = repo.finish(run.id)
+
+    assert finished.status == RunStatus.COMPLETED
+    assert finished.finished_at is not None
+    with pytest.raises(InvalidRunStateError):
+        repo.finish(run.id)
+
+
+def test_finish_normal_run_is_rejected(repo: RunRepository) -> None:
+    normal = new_run(repo)
+
+    with pytest.raises(InvalidRunStateError):
+        repo.finish(normal.id)
