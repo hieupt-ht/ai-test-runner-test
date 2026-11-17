@@ -582,9 +582,9 @@ def test_build_version_saved_on_run(...)
   - `RunRepository.add_results(run_id: str, results: list[Result], *, all_case_ids_done: Callable[[Run], bool]) -> Run` — trong khoá run: cộng dồn `passed/failed`, nếu mọi `case_ids` đã có kết quả thì `COMPLETED` + `finished_at`.
   - `RunRepository.finish(run_id: str) -> Run` — `RUNNING → COMPLETED`; run thường hoặc đã xong → `InvalidRunStateError`.
 
-- [ ] **Bước 1: Test đỏ** — có run regression `RUNNING` thì `create()` vẫn tạo được run thường; `add_results` hai lần cộng dồn đúng; đủ case thì tự `COMPLETED`; gửi lại cùng case hai lần không đếm `total` hai lần (đếm theo case khác nhau).
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(runs): thêm run regression cộng dồn kết quả`.
+- [x] **Bước 1: Test đỏ** — có run regression `RUNNING` thì `create()` vẫn tạo được run thường; `add_results` hai lần cộng dồn đúng; đủ case thì tự `COMPLETED`; gửi lại cùng case hai lần không đếm `total` hai lần (đếm theo case khác nhau).
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(runs): thêm run regression cộng dồn kết quả`.
 
 ### Task 24: API chạy bộ regression và gắn kết quả theo `run_id`
 
@@ -601,9 +601,9 @@ def test_build_version_saved_on_run(...)
   - `AgentResultsRequest.run_id: str | None`: có thì dùng `add_results` (run phải là regression `RUNNING`, không thì 409 "Lần chạy này đã kết thúc hoặc không phải lần chạy regression"); case không thuộc `scope.case_ids` bị cho vào `ignored`.
   - `results_for_project` coi run regression `RUNNING` như run đã có kết quả (dùng `started_at` khi chưa có `finished_at`) để kết quả hiện ngay.
 
-- [ ] **Bước 1: Test đỏ** — tạo regression với 2 case regression + 1 case thường → `total == 2`, 2 comment rerun có `RUN-0001`; agent gửi `run_id` hai lần mỗi lần một case → run `COMPLETED`, `passed+failed == 2`; `run_id` của run thường → 409; tester gọi tạo → 403.
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** `gen:api`; commit `feat(regression): chạy bộ regression theo bản build`.
+- [x] **Bước 1: Test đỏ** — tạo regression với 2 case regression + 1 case thường → `total == 2`, 2 comment rerun có `RUN-0001`; agent gửi `run_id` hai lần mỗi lần một case → run `COMPLETED`, `passed+failed == 2`; `run_id` của run thường → 409; tester gọi tạo → 403.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** `gen:api`; commit `feat(regression): chạy bộ regression theo bản build`.
 
 ### Task 25: Nút "Chạy bộ regression" (frontend)
 
@@ -611,9 +611,9 @@ def test_build_version_saved_on_run(...)
 - Create: `frontend/components/results/regression-dialog.tsx`, `frontend/components/results/regression-dialog.test.tsx`
 - Modify: `frontend/app/(app)/projects/[projectId]/results/page.tsx`, `frontend/components/results/result-filters.tsx`, `frontend/lib/use-results.ts`, `frontend/messages/vi.json`
 
-- [ ] **Bước 1: Test đỏ** — hộp thoại bắt nhập bản build (rỗng thì khoá nút), gửi đúng body; sau khi tạo, bộ lọc Run chọn sẵn run mới; nút "Kết thúc" chỉ hiện cho run regression `RUNNING` và chỉ với QA Lead/Admin.
-- [ ] **Bước 2–4:** FAIL → viết → PASS + typecheck + lint.
-- [ ] **Bước 5:** Commit `feat(frontend): nút chạy bộ regression ở trang Kết quả`.
+- [x] **Bước 1: Test đỏ** — hộp thoại bắt nhập bản build (rỗng thì khoá nút), gửi đúng body; sau khi tạo, bộ lọc Run chọn sẵn run mới; nút "Kết thúc" chỉ hiện cho run regression `RUNNING` và chỉ với QA Lead/Admin.
+- [x] **Bước 2–4:** FAIL → viết → PASS + typecheck + lint.
+- [x] **Bước 5:** Commit `feat(frontend): nút chạy bộ regression ở trang Kết quả`.
 
 ---
 
