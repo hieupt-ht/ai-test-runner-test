@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { useMe } from "@/lib/use-me"
 import { useRequestRerun, useResults } from "@/lib/use-results"
 import { ResultDetail } from "@/components/results/result-detail"
+import { OpenRegressionRuns, RegressionDialog } from "@/components/results/regression-dialog"
 import { ResultFilters, type ResultFilterValues } from "@/components/results/result-filters"
 import { safeEvidenceUrl } from "@/lib/safe-url"
 import type { ResultItem, ResultStatus } from "@/lib/api/types"
@@ -185,7 +186,16 @@ function ResultsContent() {
         )}
       </div>
 
-      <ResultFilters value={filters} onChange={setFilters} />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <ResultFilters value={filters} onChange={setFilters} />
+        {canRerun && (
+          <RegressionDialog
+            projectId={projectId}
+            onCreated={(run) => setFilters((current) => ({ ...current, runId: run.id }))}
+          />
+        )}
+      </div>
+      <OpenRegressionRuns projectId={projectId} canManage={canRerun} />
 
       {isLoading ? (
         <Skeleton className="h-48 w-full" aria-label={t("loading")} />

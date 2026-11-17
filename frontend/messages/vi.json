@@ -80,6 +80,21 @@
       "viewStepImage": "Xem ảnh bước {step}",
       "viewScreenshot": "Xem ảnh bằng chứng",
       "openIssue": "Mở issue trên GitHub"
+    },
+    "regression": {
+      "open": "Chạy bộ regression",
+      "title": "Chạy bộ regression",
+      "description": "App sẽ gom mọi case regression đã duyệt vào một lần chạy và nhắc Codex trên từng issue. Codex chạy rồi gửi kết quả kèm mã lần chạy.",
+      "fieldBuild": "Bản build",
+      "buildPlaceholder": "Ví dụ 1.4.2",
+      "submit": "Tạo lần chạy",
+      "created": "Đã tạo lần chạy {run}. Mở Codex để chạy các case.",
+      "createError": "Không tạo được lần chạy. Thử lại sau.",
+      "running": "Đang chạy: {run} · bản build {build} · {done}/{total} case",
+      "finish": "Kết thúc",
+      "finishLabel": "Kết thúc {run}",
+      "finished": "Đã kết thúc lần chạy.",
+      "finishError": "Không kết thúc được lần chạy. Thử lại sau."
     }
   },
   "overview": {

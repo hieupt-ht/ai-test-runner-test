@@ -218,3 +218,16 @@ def test_agent_unknown_run_id_is_404(
     first, _second, _normal = seed_three(an, lead, project)
 
     assert post_results(agent, project, "RUN-9999", first).status_code == 404
+
+
+def test_list_open_regression_runs_for_the_finish_button(
+    an: TestClient, lead: TestClient, project: Project
+) -> None:
+    seed_three(an, lead, project)
+    assert lead.get(regression_url(project)).json() == []
+
+    run_id = lead.post(regression_url(project), json={"build_version": "1"}).json()["id"]
+    assert [run["id"] for run in an.get(regression_url(project)).json()] == [run_id]
+
+    lead.post(regression_url(project, f"/{run_id}/finish"))
+    assert lead.get(regression_url(project)).json() == []

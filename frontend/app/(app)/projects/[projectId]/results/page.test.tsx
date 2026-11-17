@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { NextIntlClientProvider } from "next-intl"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   searchParams: "screen=SC-login",
   useResults: vi.fn(),
   useRequestRerun: vi.fn(),
+  createRun: vi.fn(),
   useMe: vi.fn(),
   mutate: vi.fn(),
   toastSuccess: vi.fn(),
@@ -22,6 +23,9 @@ vi.mock("@/lib/use-project-id", () => ({ useProjectId: () => "p1" }))
 vi.mock("@/lib/use-results", () => ({
   useResults: mocks.useResults,
   useRequestRerun: mocks.useRequestRerun,
+  useCreateRegressionRun: () => ({ mutateAsync: mocks.createRun, isPending: false }),
+  useFinishRegressionRun: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useOpenRegressionRuns: () => ({ data: [] }),
 }))
 vi.mock("@/lib/use-me", () => ({ useMe: mocks.useMe }))
 vi.mock("sonner", () => ({ toast: { success: mocks.toastSuccess, error: mocks.toastError } }))
@@ -350,6 +354,28 @@ describe("ResultsPage", () => {
       fireEvent.click(screen.getByRole("button", { name: "Chi tiết TC-1" }))
 
       expect(screen.getByText("Dev phụ trách: @nguyenvana")).toBeInTheDocument()
+    })
+
+    it("tạo lần chạy regression xong thì bộ lọc Run chọn sẵn run mới", async () => {
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      mocks.createRun.mockResolvedValue({ id: "RUN-0009" })
+      renderPage()
+
+      fireEvent.click(screen.getByRole("button", { name: "Chạy bộ regression" }))
+      fireEvent.change(screen.getByLabelText("Bản build"), { target: { value: "2.0.0" } })
+      fireEvent.click(screen.getByRole("button", { name: "Tạo lần chạy" }))
+
+      await waitFor(() =>
+        expect(screen.getByRole("textbox", { name: "Mã Run" })).toHaveValue("RUN-0009"),
+      )
+    })
+
+    it("tester không thấy nút Chạy bộ regression", () => {
+      mocks.useMe.mockReturnValue({ user: { role: "TESTER" }, isLoading: false })
+      mocks.useResults.mockReturnValue({ data: results, isLoading: false, isError: false })
+      renderPage()
+
+      expect(screen.queryByRole("button", { name: "Chạy bộ regression" })).toBeNull()
     })
   })
 })

@@ -16,7 +16,7 @@ from app.api.project_scope import scope_for
 from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
-from app.core.models.run import Run
+from app.core.models.run import Run, RunStatus
 from app.core.models.test_case import TestCaseStatus
 from app.core.permissions import Action
 from app.core.repositories.runs import InvalidRunStateError, RunNotFoundError
@@ -60,6 +60,19 @@ def _request_reruns(
         services.issue_sync.submit(work)
     else:
         work()
+
+
+@router.get("")
+def list_open_regression_runs(
+    project_id: str, user: CurrentUser, services: ServicesDep
+) -> list[Run]:
+    """Các lần chạy regression còn đang mở (giao diện dùng để hiện nút "Kết thúc")."""
+    project = load_project(services, user, project_id, Action.VIEW_PROJECT)
+    return [
+        run
+        for run in scope_for(services, project).runs.list_all()
+        if run.scope.regression_only and run.status == RunStatus.RUNNING
+    ]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

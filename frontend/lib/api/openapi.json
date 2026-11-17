@@ -2302,6 +2302,51 @@
       }
     },
     "/api/projects/{project_id}/regression-runs": {
+      "get": {
+        "tags": [
+          "regression"
+        ],
+        "summary": "List Open Regression Runs",
+        "description": "Các lần chạy regression còn đang mở (giao diện dùng để hiện nút \"Kết thúc\").",
+        "operationId": "list_open_regression_runs_api_projects__project_id__regression_runs_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Run"
+                  },
+                  "title": "Response List Open Regression Runs Api Projects  Project Id  Regression Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "regression"

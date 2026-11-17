@@ -725,7 +725,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Open Regression Runs
+         * @description Các lần chạy regression còn đang mở (giao diện dùng để hiện nút "Kết thúc").
+         */
+        get: operations["list_open_regression_runs_api_projects__project_id__regression_runs_get"];
         put?: never;
         /** Create Regression Run */
         post: operations["create_regression_run_api_projects__project_id__regression_runs_post"];
@@ -3366,6 +3370,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_open_regression_runs_api_projects__project_id__regression_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"][];
                 };
             };
             /** @description Validation Error */
