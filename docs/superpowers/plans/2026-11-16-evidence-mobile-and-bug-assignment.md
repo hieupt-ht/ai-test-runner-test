@@ -545,9 +545,9 @@ def test_build_version_saved_on_run(...)
 **Interfaces:**
 - Produces: `GitHubUsername = Annotated[str, Field(max_length=39, pattern=r"^$|^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$")]`; tự bỏ `@` ở đầu trước khi kiểm tra. `CreateScreenRequest.dev_owner = ""`, `UpdateScreenRequest.dev_owner: GitHubUsername | None`.
 
-- [ ] **Bước 1: Test đỏ** — `"@nguyenvana"` lưu thành `"nguyenvana"`; `"a b"` → 422; tester không sửa được (403 như hiện nay).
-- [ ] **Bước 2–4:** FAIL → viết → PASS. Danh sách màn hình hiện cột "Dev phụ trách".
-- [ ] **Bước 5:** `gen:api`; commit `feat(screens): thêm dev phụ trách cho màn hình`.
+- [x] **Bước 1: Test đỏ** — `"@nguyenvana"` lưu thành `"nguyenvana"`; `"a b"` → 422; tester không sửa được (403 như hiện nay).
+- [x] **Bước 2–4:** FAIL → viết → PASS. Danh sách màn hình hiện cột "Dev phụ trách".
+- [x] **Bước 5:** `gen:api`; commit `feat(screens): thêm dev phụ trách cho màn hình`.
 
 ### Task 22: Gán issue cho dev khi FAIL
 
@@ -561,9 +561,9 @@ def test_build_version_saved_on_run(...)
   - `BUG_LABEL = "bug: cần sửa"`, màu `b60205`.
   - `sync_result_issue` FAIL + `result.dev_owner`: `add_assignees`, thêm `BUG_LABEL` vào nhãn, comment có dòng `Giao cho @<dev_owner>` (tạo trực tiếp, không qua `_safe_text`). Gán lỗi → comment có dòng `⚠️ Không gán được issue cho @<dev_owner>, hãy kiểm tra tên GitHub và quyền repo.` và vẫn cập nhật nhãn. PASS: bỏ `BUG_LABEL`, không bỏ người được gán.
 
-- [ ] **Bước 1: Test đỏ** — FAIL có dev → `fake.assignees[1] == ["nguyenvana"]`, nhãn có `bug: cần sửa`; PASS sau đó → nhãn mất `bug: cần sửa`, `assignees` giữ nguyên; `fail_assign_with=GitHubError` → comment có câu cảnh báo, kết quả vẫn ghi (API trả 200).
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(issues): gán issue FAIL cho dev phụ trách màn hình`.
+- [x] **Bước 1: Test đỏ** — FAIL có dev → `fake.assignees[1] == ["nguyenvana"]`, nhãn có `bug: cần sửa`; PASS sau đó → nhãn mất `bug: cần sửa`, `assignees` giữ nguyên; `fail_assign_with=GitHubError` → comment có câu cảnh báo, kết quả vẫn ghi (API trả 200).
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(issues): gán issue FAIL cho dev phụ trách màn hình`.
 
 ---
 
