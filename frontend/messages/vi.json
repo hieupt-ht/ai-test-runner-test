@@ -158,6 +158,16 @@
     "you": "Bạn",
     "roleOf": "Vai trò của {email}"
   },
+  "account": {
+    "title": "Đổi mật khẩu",
+    "description": "Sau khi đổi, các trình duyệt khác đang đăng nhập bằng tài khoản này sẽ bị đăng xuất.",
+    "current": "Mật khẩu hiện tại",
+    "new": "Mật khẩu mới",
+    "confirm": "Nhập lại mật khẩu mới",
+    "cancel": "Huỷ",
+    "submit": "Đổi mật khẩu",
+    "done": "Đã đổi mật khẩu"
+  },
   "errors": {
     "generic": "Có lỗi xảy ra, vui lòng thử lại."
   },

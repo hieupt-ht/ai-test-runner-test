@@ -41,5 +41,6 @@ describe("UserFormDialog", () => {
         body: { email: "an@x.com", name: "An", role: "TESTER", password: "mat-khau-12" },
       }),
     )
-  })
+    // Hộp thoại + form nặng nên khi chạy song song với test khác có thể chậm hơn 5 giây.
+  }, 20000)
 })

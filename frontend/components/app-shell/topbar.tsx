@@ -1,11 +1,13 @@
 "use client"
 
 import { useQueryClient } from "@tanstack/react-query"
-import { LogOut, Monitor, Moon, Sun } from "lucide-react"
+import { KeyRound, LogOut, Monitor, Moon, Sun } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
+import { useState } from "react"
 
+import { ChangePasswordDialog } from "@/components/account/change-password-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { NotificationBell } from "@/components/notifications/notification-bell"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +34,7 @@ export function Topbar({ user, title }: { user: User; title: string }) {
   const { setTheme } = useTheme()
   const queryClient = useQueryClient()
   const router = useRouter()
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
 
   async function logout() {
     await api.POST("/api/auth/logout")
@@ -78,12 +81,17 @@ export function Topbar({ user, title }: { user: User; title: string }) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
+              <KeyRound /> {t("account.title")}
+            </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onClick={logout}>
               <LogOut /> {t("topbar.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {/* Đặt ngoài menu: menu đóng lại thì hộp thoại vẫn phải còn */}
+      <ChangePasswordDialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen} />
     </header>
   )
 }
