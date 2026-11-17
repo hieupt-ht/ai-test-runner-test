@@ -222,7 +222,7 @@
 - [ ] **Step 4: Chạy** đủ `npx vitest run && npm run typecheck && npm run lint` → sạch.
 - [ ] **Step 5: Commit** `feat(frontend): người dùng tự đổi mật khẩu`.
 
-- [ ] **Cuối đợt 3:** tick, ghi `HANDOFF.md`, dừng cho `/compact`.
+- [x] **Cuối đợt 3:** tick, ghi `HANDOFF.md`, dừng cho `/compact`.
 
 ---
 

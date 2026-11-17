@@ -29,5 +29,6 @@ describe("Topbar", () => {
     fireEvent.click(await screen.findByRole("menuitem", { name: /Đổi mật khẩu/ }))
 
     expect(await screen.findByLabelText("Mật khẩu hiện tại")).toBeInTheDocument()
-  })
+    // Menu + hộp thoại nặng nên khi chạy song song với test khác có thể chậm hơn 5 giây.
+  }, 20000)
 })
