@@ -91,13 +91,13 @@ class UserRepository:
     def is_empty(self) -> bool:
         return not self._read_from_sheet()
 
-    def create(self, user: User) -> User:
+    def create(self, user: User, password_hash: str = "") -> User:
         user = user.model_copy(update={"email": normalize_email(user.email)})
         with self._lock():
             # Kiểm tra trực tiếp trên Sheet (không qua cache) để chắc chắn không trùng.
             if self._table.find_row_number("email", user.email) is not None:
                 raise UserAlreadyExistsError(user.email)
-            self._table.append(_to_record(user))
+            self._table.append({**_to_record(user), "password_hash": password_hash})
         self._clear_cache()
         return user
 
@@ -111,6 +111,22 @@ class UserRepository:
             self._table.update(row_number, _to_record(user))
         self._clear_cache()
         return user
+
+    def get_password_hash(self, email: str) -> str:
+        """Bản băm mật khẩu của user ("" nếu không có user hoặc chưa có mật khẩu).
+
+        Đọc thẳng Sheet, không qua cache, để hash không bao giờ nằm trong Redis.
+        """
+        found = self._table.find_record("email", normalize_email(email))
+        return found.record.get("password_hash", "") if found else ""
+
+    def set_password_hash(self, email: str, password_hash: str) -> None:
+        with self._lock():
+            found = self._table.find_record("email", normalize_email(email))
+            if found is None:
+                raise UserNotFoundError(normalize_email(email))
+            # Chỉ ghi cột password_hash; các cột khác giữ nguyên.
+            self._table.update_found(found, {"password_hash": password_hash})
 
     def _read_from_sheet(self) -> list[User]:
         users: list[User] = []

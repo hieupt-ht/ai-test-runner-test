@@ -5,7 +5,7 @@ PROJECTS_TAB = "Projects"
 PROJECT_MEMBERS_TAB = "ProjectMembers"
 AUDIT_LOG_TAB = "AuditLog"
 
-USER_COLUMNS = ["email", "name", "role", "active", "created_at"]
+USER_COLUMNS = ["email", "name", "role", "active", "created_at", "password_hash"]
 PROJECT_COLUMNS = [
     "id",
     "name",

@@ -54,7 +54,14 @@ def test_existing_tab_with_missing_column_gets_it_appended() -> None:
     bootstrap_system_spreadsheet(gateway, SHEET_ID, users, "")
 
     # Cột còn thiếu được thêm vào cuối, không báo lỗi
-    assert gateway.data[SHEET_ID]["Users"][0] == ["email", "name", "active", "created_at", "role"]
+    assert gateway.data[SHEET_ID]["Users"][0] == [
+        "email",
+        "name",
+        "active",
+        "created_at",
+        "role",
+        "password_hash",
+    ]
 
 
 def test_running_twice_is_idempotent() -> None:
