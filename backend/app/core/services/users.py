@@ -44,6 +44,20 @@ class UserService:
         )
         return user
 
+    def reset_password(self, actor: User, email: str, password: str) -> None:
+        """Admin đặt mật khẩu mới cho một user. Nhật ký không ghi mật khẩu hay hash."""
+        target = self._users.get(email)
+        if target is None:
+            raise UserNotFoundError(normalize_email(email))
+        self._users.set_password_hash(target.email, hash_password(password))
+        self._audit_log.record(
+            actor=actor.email,
+            action="RESET_PASSWORD",
+            entity="user",
+            entity_id=target.email,
+            diff={},
+        )
+
     def update_user(
         self,
         actor: User,

@@ -4,6 +4,8 @@ import secrets
 
 from redis import Redis
 
+from app.core.models.user import normalize_email
+
 SESSION_COOKIE = "atr_session"
 
 
@@ -15,6 +17,10 @@ class SessionStore:
     def create(self, email: str) -> str:
         session_id = secrets.token_urlsafe(32)
         self._redis.set(self._key(session_id), email, ex=self._ttl_seconds)
+        # Ghi nhớ các phiên của từng người để xoá hết một lượt khi đổi/đặt lại mật khẩu.
+        user_key = self._user_key(email)
+        self._redis.sadd(user_key, session_id)
+        self._redis.expire(user_key, self._ttl_seconds)
         return session_id
 
     def get_email(self, session_id: str) -> str | None:
@@ -28,6 +34,18 @@ class SessionStore:
 
     def delete(self, session_id: str) -> None:
         self._redis.delete(self._key(session_id))
+
+    def delete_all_for(self, email: str) -> None:
+        """Xoá mọi phiên của email này (đăng xuất khỏi mọi trình duyệt)."""
+        user_key = self._user_key(email)
+        for raw in self._redis.smembers(user_key):
+            session_id = raw.decode() if isinstance(raw, bytes) else str(raw)
+            self._redis.delete(self._key(session_id))
+        self._redis.delete(user_key)
+
+    @staticmethod
+    def _user_key(email: str) -> str:
+        return f"user_sessions:{normalize_email(email)}"
 
     @staticmethod
     def _key(session_id: str) -> str:

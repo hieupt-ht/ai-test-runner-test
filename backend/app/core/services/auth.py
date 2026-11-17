@@ -32,3 +32,21 @@ def authenticate(
 
     throttle.reset(email)
     return user
+
+
+class WrongCurrentPasswordError(Exception):
+    """Mật khẩu hiện tại nhập sai khi đổi mật khẩu."""
+
+
+def change_password(
+    users: UserRepository, email: str, current: str, new: str, throttle: LoginThrottle
+) -> None:
+    """Đổi mật khẩu của chính người đang đăng nhập. Nhập sai mật khẩu cũ cũng tính vào khoá."""
+    email = normalize_email(email)
+    if throttle.is_locked(email):
+        raise LoginLockedError
+    if not verify_password(current, users.get_password_hash(email)):
+        throttle.record_failure(email)
+        raise WrongCurrentPasswordError
+    users.set_password_hash(email, hash_password(new))
+    throttle.reset(email)

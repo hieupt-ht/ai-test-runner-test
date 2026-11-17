@@ -1,3 +1,4 @@
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.models.user import Role
@@ -65,9 +66,7 @@ def test_login_inactive_user_401_generic(client: TestClient, users: UserReposito
     assert (response.status_code, response.json()) == (401, GENERIC_ERROR)
 
 
-def test_login_user_without_password_401_generic(
-    client: TestClient, users: UserRepository
-) -> None:
+def test_login_user_without_password_401_generic(client: TestClient, users: UserRepository) -> None:
     users.create(make_user("an@x.com"))
 
     for password in ("", PASSWORD):
@@ -160,3 +159,89 @@ def test_logout_deletes_session(client: TestClient, users: UserRepository) -> No
 def test_old_oauth_routes_are_gone(client: TestClient) -> None:
     assert client.get("/api/auth/callback").status_code == 404
     assert client.get("/api/auth/login").status_code == 405
+
+
+# ---- Đổi mật khẩu ----
+
+NEW_PASSWORD = "mat-khau-moi-2"
+
+
+def change(client: TestClient, current: str = PASSWORD, new: str = NEW_PASSWORD):  # type: ignore[no-untyped-def]
+    return client.post(
+        "/api/auth/change-password", json={"current_password": current, "new_password": new}
+    )
+
+
+def test_change_password_success_old_password_stops_working(
+    client: TestClient, app: FastAPI, users: UserRepository
+) -> None:
+    add_user(users)
+    login(client, "an@x.com")
+
+    assert change(client).status_code == 204
+
+    fresh = TestClient(app, follow_redirects=False)
+    assert login(fresh, "an@x.com", PASSWORD).status_code == 401
+    assert login(fresh, "an@x.com", NEW_PASSWORD).status_code == 200
+
+
+def test_change_password_keeps_current_browser_logged_in(
+    client: TestClient, users: UserRepository
+) -> None:
+    add_user(users)
+    login(client, "an@x.com")
+
+    response = change(client)
+
+    assert "atr_session=" in response.headers["set-cookie"]
+    assert client.get("/api/me").status_code == 200
+
+
+def test_change_password_logs_out_other_browsers(
+    client: TestClient, app: FastAPI, users: UserRepository
+) -> None:
+    add_user(users)
+    login(client, "an@x.com")
+    other = TestClient(app, follow_redirects=False)
+    login(other, "an@x.com")
+
+    change(client)
+
+    assert other.get("/api/me").status_code == 401
+    assert client.get("/api/me").status_code == 200
+
+
+def test_change_password_wrong_current_400(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
+    login(client, "an@x.com")
+
+    response = change(client, current="sai-roi-nhe")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Mật khẩu hiện tại không đúng"}
+    assert login(TestClient(client.app), "an@x.com", PASSWORD).status_code == 200  # type: ignore[arg-type]
+
+
+def test_change_password_wrong_current_counts_toward_lock(
+    client: TestClient, users: UserRepository
+) -> None:
+    add_user(users)
+    login(client, "an@x.com")
+
+    for _ in range(5):
+        assert change(client, current="sai-roi-nhe").status_code == 400
+
+    assert change(client).status_code == 429  # bị khoá, đúng mật khẩu cũng không được
+
+
+def test_change_password_short_new_422(client: TestClient, users: UserRepository) -> None:
+    add_user(users)
+    login(client, "an@x.com")
+
+    assert change(client, new="ngan").status_code == 422
+    assert change(client, new="a" * 129).status_code == 422
+    assert login(TestClient(client.app), "an@x.com", PASSWORD).status_code == 200  # type: ignore[arg-type]
+
+
+def test_change_password_requires_login_401(client: TestClient) -> None:
+    assert change(client).status_code == 401

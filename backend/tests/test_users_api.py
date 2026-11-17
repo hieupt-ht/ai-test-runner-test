@@ -178,3 +178,92 @@ def test_audit_log_has_no_password_or_hash(
     assert "password" not in row
     assert "argon2" not in row
     assert "mat-khau-1" not in row
+
+
+# ---- Đặt lại mật khẩu ----
+
+RESET_BODY = {"password": "mat-khau-moi-2"}
+
+
+def test_reset_password_admin_only_403_for_tester(
+    client_as_tester: TestClient, users: UserRepository
+) -> None:
+    users.create(make_user("an@x.com"))
+
+    response = client_as_tester.post("/api/users/an@x.com/reset-password", json=RESET_BODY)
+
+    assert response.status_code == 403
+
+
+def test_reset_password_logs_out_target_and_new_password_works(
+    client_as_admin: TestClient, app: FastAPI, users: UserRepository
+) -> None:
+    from app.core.models.user import Role
+    from tests.conftest import log_in_as
+
+    target = TestClient(app, follow_redirects=False)
+    log_in_as(target, users, "an@x.com", Role.TESTER)
+
+    response = client_as_admin.post("/api/users/an@x.com/reset-password", json=RESET_BODY)
+
+    assert response.status_code == 204
+    assert target.get("/api/me").status_code == 401
+    fresh = TestClient(app, follow_redirects=False)
+    ok = fresh.post("/api/auth/login", json={"email": "an@x.com", **{"password": "mat-khau-moi-2"}})
+    assert ok.status_code == 200
+
+
+def test_reset_password_unknown_user_404(client_as_admin: TestClient) -> None:
+    response = client_as_admin.post("/api/users/khong-co@x.com/reset-password", json=RESET_BODY)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Không tìm thấy người dùng"}
+
+
+def test_reset_password_short_422(client_as_admin: TestClient, users: UserRepository) -> None:
+    users.create(make_user("an@x.com"))
+
+    response = client_as_admin.post("/api/users/an@x.com/reset-password", json={"password": "ngan"})
+
+    assert response.status_code == 422
+
+
+def test_reset_own_password_as_admin_works(client_as_admin: TestClient, app: FastAPI) -> None:
+    response = client_as_admin.post("/api/users/admin@x.com/reset-password", json=RESET_BODY)
+
+    assert response.status_code == 204
+    assert client_as_admin.get("/api/me").status_code == 401  # session cũ đã bị xoá
+    fresh = TestClient(app, follow_redirects=False)
+    ok = fresh.post("/api/auth/login", json={"email": "admin@x.com", "password": "mat-khau-moi-2"})
+    assert ok.status_code == 200
+
+
+def test_reset_password_for_inactive_user_still_cannot_log_in(
+    client_as_admin: TestClient, app: FastAPI, users: UserRepository
+) -> None:
+    users.create(make_user("an@x.com", active=False))
+
+    assert (
+        client_as_admin.post("/api/users/an@x.com/reset-password", json=RESET_BODY).status_code
+        == 204
+    )
+
+    fresh = TestClient(app, follow_redirects=False)
+    response = fresh.post(
+        "/api/auth/login", json={"email": "an@x.com", "password": "mat-khau-moi-2"}
+    )
+    assert response.status_code == 401
+
+
+def test_reset_password_audit_has_no_password(
+    client_as_admin: TestClient, users: UserRepository, gateway: FakeSheetsGateway
+) -> None:
+    users.create(make_user("an@x.com"))
+
+    client_as_admin.post("/api/users/an@x.com/reset-password", json=RESET_BODY)
+
+    row = audit_rows(gateway)[-1]
+    assert row[1:5] == ["admin@x.com", "RESET_PASSWORD", "user", "an@x.com"]
+    text = " ".join(row)
+    assert "mat-khau-moi-2" not in text
+    assert "argon2" not in text

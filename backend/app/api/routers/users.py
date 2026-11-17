@@ -40,6 +40,10 @@ class UpdateUserRequest(BaseModel):
     active: bool | None = None
 
 
+class ResetPasswordRequest(BaseModel):
+    password: Password
+
+
 def _service(services: ServicesDep) -> UserService:
     return UserService(services.users, services.audit_log)
 
@@ -80,6 +84,20 @@ def update_user(
         ) from None
     except LockTimeout:
         raise _busy_error() from None
+
+
+@router.post("/{email}/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+def reset_password(
+    email: str, body: ResetPasswordRequest, user: CurrentUser, services: ServicesDep
+) -> None:
+    require(user, Action.MANAGE_USERS)
+    try:
+        _service(services).reset_password(user, email, body.password)
+    except UserNotFoundError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy người dùng") from None
+    except LockTimeout:
+        raise _busy_error() from None
+    services.sessions.delete_all_for(email)  # bắt người đó đăng nhập lại bằng mật khẩu mới
 
 
 def _busy_error() -> HTTPException:
