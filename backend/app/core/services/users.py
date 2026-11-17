@@ -6,6 +6,7 @@ Router chỉ kiểm tra quyền rồi gọi vào đây.
 from typing import Any
 
 from app.core.models.user import Role, User, normalize_email
+from app.core.passwords import hash_password
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.users import UserNotFoundError, UserRepository
 from app.core.time import utc_now
@@ -29,9 +30,10 @@ class UserService:
     def list_users(self) -> list[User]:
         return self._users.list_all()
 
-    def create_user(self, actor: User, *, email: str, name: str, role: Role) -> User:
+    def create_user(self, actor: User, *, email: str, name: str, role: Role, password: str) -> User:
         user = self._users.create(
-            User(email=email, name=name, role=role, active=True, created_at=utc_now())
+            User(email=email, name=name, role=role, active=True, created_at=utc_now()),
+            password_hash=hash_password(password),
         )
         self._audit_log.record(
             actor=actor.email,
