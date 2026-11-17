@@ -624,11 +624,11 @@ def test_build_version_saved_on_run(...)
 **Files:**
 - Modify: `docs/codex-agent.md`, `HANDOFF.md`, `.env.example`
 
-- [ ] **Bước 1:** Viết lại `docs/codex-agent.md`: phần cài **Windows** (Java 17+, `adb`, Maestro CLI, Maestro MCP trong Codex, bật Gỡ lỗi USB, Playwright) và **Mac** (Xcode + Simulator, Java 17+, Maestro CLI/MCP, cài `.app` lên Simulator); biến môi trường `AGENT_API_TOKEN`, `AI_TEST_RUNNER_URL`; quy tắc **một phiên Codex mỗi máy**.
-- [ ] **Bước 2:** Hai prompt: Windows chỉ lấy issue mở có `platform: web` hoặc `platform: android`; Mac chỉ `platform: ios`. Prompt yêu cầu: chụp ảnh mỗi bước và upload bằng `upload_evidence`; quay video (`recordVideo` / `adb shell screenrecord` — lưu ý giới hạn 3 phút của screenrecord / `xcrun simctl io booted recordVideo`); gửi `case_version` từ dòng "Phiên bản case" trong issue, `run_id` nếu comment chạy lại có mã, `environment`, `executed_by` (`codex-windows`/`codex-mac`), `step_results`.
-- [ ] **Bước 3:** Cập nhật `HANDOFF.md` (việc dở số 2 đã xong, số test mới). `.env.example` thêm ba biến `CLOUDINARY_*` rỗng.
-- [ ] **Bước 4:** Chạy cả hai bộ test (không đổi code, chỉ xác nhận).
-- [ ] **Bước 5:** Commit `docs: hướng dẫn Codex cho máy Windows và Mac`.
+- [x] **Bước 1:** Viết lại `docs/codex-agent.md`: phần cài **Windows** (Java 17+, `adb`, Maestro CLI, Maestro MCP trong Codex, bật Gỡ lỗi USB, Playwright) và **Mac** (Xcode + Simulator, Java 17+, Maestro CLI/MCP, cài `.app` lên Simulator); biến môi trường `AGENT_API_TOKEN`, `AI_TEST_RUNNER_URL`; quy tắc **một phiên Codex mỗi máy**.
+- [x] **Bước 2:** Hai prompt: Windows chỉ lấy issue mở có `platform: web` hoặc `platform: android`; Mac chỉ `platform: ios`. Prompt yêu cầu: chụp ảnh mỗi bước và upload bằng `upload_evidence`; quay video (`recordVideo` / `adb shell screenrecord` — lưu ý giới hạn 3 phút của screenrecord / `xcrun simctl io booted recordVideo`); gửi `case_version` từ dòng "Phiên bản case" trong issue, `run_id` nếu comment chạy lại có mã, `environment`, `executed_by` (`codex-windows`/`codex-mac`), `step_results`.
+- [x] **Bước 3:** Cập nhật `HANDOFF.md` (việc dở số 2 đã xong, số test mới). `.env.example` thêm ba biến `CLOUDINARY_*` rỗng.
+- [x] **Bước 4:** Chạy cả hai bộ test (không đổi code, chỉ xác nhận).
+- [x] **Bước 5:** Commit `docs: hướng dẫn Codex cho máy Windows và Mac`.
 
 ### Task 27: Chạy thử thật (chủ dự án cùng làm)
 
