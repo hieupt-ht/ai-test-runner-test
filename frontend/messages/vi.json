@@ -14,10 +14,10 @@
   },
   "login": {
     "title": "Đăng nhập",
-    "subtitle": "Dùng tài khoản Google đã được Admin cấp quyền.",
-    "button": "Đăng nhập bằng Google",
-    "notAllowed": "Tài khoản của bạn chưa được cấp quyền. Hãy liên hệ Admin.",
-    "oauthFailed": "Đăng nhập Google chưa hoàn tất (có thể bạn đã bấm Huỷ). Vui lòng thử lại."
+    "subtitle": "Dùng email công ty và mật khẩu do Admin cấp.",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "button": "Đăng nhập"
   },
   "topbar": {
     "theme": "Giao diện",

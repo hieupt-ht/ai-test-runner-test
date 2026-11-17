@@ -31,27 +31,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /** Login */
-        get: operations["login_api_auth_login_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auth/callback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Callback */
-        get: operations["callback_api_auth_callback_get"];
-        put?: never;
-        post?: never;
+        post: operations["login_api_auth_login_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -69,6 +52,23 @@ export interface paths {
         put?: never;
         /** Logout */
         post: operations["logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change My Password */
+        post: operations["change_my_password_api_auth_change_password_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -125,6 +125,23 @@ export interface paths {
         head?: never;
         /** Update User */
         patch: operations["update_user_api_users__email__patch"];
+        trace?: never;
+    };
+    "/api/users/{email}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Password */
+        post: operations["reset_password_api_users__email__reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/projects": {
@@ -929,6 +946,13 @@ export interface components {
              */
             deadline: string;
         };
+        /** ChangePasswordRequest */
+        ChangePasswordRequest: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
         /**
          * ConflictResponse
          * @description Phản hồi 409 khi version cũ: kèm bản mới nhất để giao diện cho người dùng so sánh.
@@ -1040,6 +1064,8 @@ export interface components {
             /** Name */
             name: string;
             role: components["schemas"]["Role"];
+            /** Password */
+            password: string;
         };
         /**
          * Evidence
@@ -1068,6 +1094,13 @@ export interface components {
             test_case_id: string;
             /** Reason */
             reason: string;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
         };
         /** Media */
         Media: {
@@ -1258,6 +1291,11 @@ export interface components {
             default_branch: string;
             /** Private */
             private: boolean;
+        };
+        /** ResetPasswordRequest */
+        ResetPasswordRequest: {
+            /** Password */
+            password: string;
         };
         /** ResultItem */
         ResultItem: {
@@ -1849,14 +1887,18 @@ export interface operations {
             };
         };
     };
-    login_api_auth_login_get: {
+    login_api_auth_login_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1867,24 +1909,13 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-        };
-    };
-    callback_api_auth_callback_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1904,6 +1935,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    change_my_password_api_auth_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
@@ -2003,6 +2065,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_api_users__email__reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

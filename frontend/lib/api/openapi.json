@@ -29,9 +29,19 @@
       }
     },
     "/api/auth/login": {
-      "get": {
+      "post": {
         "summary": "Login",
-        "operationId": "login_api_auth_login_get",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -40,20 +50,14 @@
                 "schema": {}
               }
             }
-          }
-        }
-      }
-    },
-    "/api/auth/callback": {
-      "get": {
-        "summary": "Callback",
-        "operationId": "callback_api_auth_callback_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
+          },
+          "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -67,6 +71,37 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "summary": "Change My Password",
+        "operationId": "change_my_password_api_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -191,6 +226,51 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{email}/reset-password": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Reset Password",
+        "operationId": "reset_password_api_users__email__reset_password_post",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Email"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -2855,6 +2935,26 @@
         ],
         "title": "ChangeDeadlineRequest"
       },
+      "ChangePasswordRequest": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePasswordRequest"
+      },
       "ConflictResponse": {
         "properties": {
           "detail": {
@@ -3089,13 +3189,20 @@
           },
           "role": {
             "$ref": "#/components/schemas/Role"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
           }
         },
         "type": "object",
         "required": [
           "email",
           "name",
-          "role"
+          "role",
+          "password"
         ],
         "title": "CreateUserRequest"
       },
@@ -3170,6 +3277,24 @@
           "reason"
         ],
         "title": "IgnoredResult"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
       },
       "Media": {
         "properties": {
@@ -3559,6 +3684,21 @@
           "private"
         ],
         "title": "RepoInfo"
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "ResetPasswordRequest"
       },
       "ResultItem": {
         "properties": {
