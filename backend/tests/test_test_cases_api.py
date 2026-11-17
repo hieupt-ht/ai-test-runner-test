@@ -169,7 +169,14 @@ class RecordingIssueSink:
     ) -> None:
         self.edits.append((case.id, changed, needs_rerun))
 
-    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None:
+    def sync_case(
+        self,
+        project: Project,
+        case: TestCase,
+        *,
+        screen_name: str = "",
+        screen: object = None,
+    ) -> None:
         self.calls.append((case.id, case.status.value, screen_name))
         if self.fail:
             raise RuntimeError("GitHub giả bị lỗi")

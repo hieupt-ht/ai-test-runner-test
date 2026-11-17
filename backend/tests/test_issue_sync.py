@@ -8,7 +8,7 @@ import pytest
 
 from app.core.github.client import GitHubError
 from app.core.models.project import Project
-from app.core.models.test_case import TestCaseStatus
+from app.core.models.test_case import Platform, TestCaseStatus
 from app.core.services.issue_sync import BackgroundIssueSync, IssueSyncer
 from tests.fakes import FakeGitHub
 from tests.test_issue_format import make_case
@@ -34,7 +34,7 @@ def test_approved_case_without_issue_creates_one_with_labels() -> None:
     )
     assert result == "created"
     issue, body = github.issues["org/web"][0]
-    assert issue.labels == ["test-case", "tc:TC-000123", "status:APPROVED"]
+    assert issue.labels == ["test-case", "tc:TC-000123", "status:APPROVED", "platform: web"]
     assert "Mã dự án: `PRJ-0001`" in body
     assert (
         "Endpoint: `https://runner.example.com/api/agent/projects/PRJ-0001/results`"
@@ -66,7 +66,46 @@ def test_status_change_replaces_status_label() -> None:
     project = make_project()
     syncer.sync_case(project, make_case())
     syncer.sync_case(project, make_case(status=TestCaseStatus.DRAFT))
-    assert github.issues["org/web"][0][0].labels == ["test-case", "tc:TC-000123", "status:DRAFT"]
+    assert github.issues["org/web"][0][0].labels == [
+        "test-case",
+        "tc:TC-000123",
+        "status:DRAFT",
+        "platform: web",
+    ]
+
+
+def test_update_keeps_result_labels() -> None:
+    github = FakeGitHub()
+    syncer = IssueSyncer(github)
+    project = make_project()
+    syncer.sync_case(project, make_case())
+    old, body = github.issues["org/web"][0]
+    github.issues["org/web"][0] = (
+        old.model_copy(
+            update={"labels": [*old.labels, "needs-rerun", "test: fail", "bug: cần sửa"]}
+        ),
+        body,
+    )
+
+    syncer.sync_case(project, make_case(platform=Platform.ANDROID))
+
+    labels = github.issues["org/web"][0][0].labels
+    assert "platform: android" in labels
+    assert "platform: web" not in labels
+    for kept in ("needs-rerun", "test: fail", "bug: cần sửa", "test-case", "tc:TC-000123"):
+        assert kept in labels
+    assert labels.count("status:APPROVED") == 1
+
+
+def test_update_replaces_old_status_label() -> None:
+    github = FakeGitHub()
+    syncer = IssueSyncer(github)
+    project = make_project()
+    syncer.sync_case(project, make_case())
+    syncer.sync_case(project, make_case(status=TestCaseStatus.DRAFT))
+    labels = github.issues["org/web"][0][0].labels
+    assert "status:DRAFT" in labels
+    assert "status:APPROVED" not in labels
 
 
 def test_deprecated_closes_and_restore_reopens() -> None:

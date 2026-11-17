@@ -412,7 +412,14 @@ class EditSink:
     def __init__(self) -> None:
         self.edits: list[tuple[str, list[str], bool]] = []
 
-    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None:
+    def sync_case(
+        self,
+        project: Project,
+        case: TestCase,
+        *,
+        screen_name: str = "",
+        screen: object = None,
+    ) -> None:
         pass
 
     def note_case_edited(

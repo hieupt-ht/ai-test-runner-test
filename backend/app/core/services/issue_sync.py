@@ -7,6 +7,7 @@ from typing import Literal, Protocol
 from app.core.github.client import GitHubClient
 from app.core.github.issue_format import case_label, render_issue
 from app.core.models.project import Project
+from app.core.models.screen import Screen
 from app.core.models.test_case import TestCase, TestCaseStatus
 from app.core.services.rerun_request import request_rerun_on_issue
 from app.core.time import utc_now
@@ -16,11 +17,32 @@ logger = logging.getLogger(__name__)
 
 
 class IssueSink(Protocol):
-    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None: ...
+    def sync_case(
+        self,
+        project: Project,
+        case: TestCase,
+        *,
+        screen_name: str = "",
+        screen: Screen | None = None,
+    ) -> None: ...
 
     def note_case_edited(
         self, project: Project, case: TestCase, *, changed: list[str], needs_rerun: bool
     ) -> None: ...
+
+
+# Nhãn do app tự sinh từ case: được thay mới mỗi lần đồng bộ. Mọi nhãn khác giữ nguyên.
+APP_LABEL_PREFIXES = ("status:", "platform:")
+
+
+def _merge_labels(new_labels: list[str], old_labels: list[str]) -> list[str]:
+    """Nhãn mới của case + nhãn cũ không do app sinh (needs-rerun, test: fail, nhãn tay...)."""
+    kept = [
+        label
+        for label in old_labels
+        if label not in new_labels and not label.startswith(APP_LABEL_PREFIXES)
+    ]
+    return [*new_labels, *kept]
 
 
 class IssueSyncer:
@@ -33,13 +55,22 @@ class IssueSyncer:
         self._github = github
         self._app_base_url = app_base_url
 
-    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> SyncResult:
+    def sync_case(
+        self,
+        project: Project,
+        case: TestCase,
+        *,
+        screen_name: str = "",
+        screen: Screen | None = None,
+    ) -> SyncResult:
         github = self._github
         if github is None or project.archived:
             return "skipped"
 
         content = render_issue(
             case,
+            project=project,
+            screen=screen,
             screen_name=screen_name,
             project_id=project.id,
             app_base_url=self._app_base_url,
@@ -69,7 +100,7 @@ class IssueSyncer:
             existing.number,
             title=content.title,
             body=content.body,
-            labels=content.labels,
+            labels=_merge_labels(content.labels, existing.labels),
             state=state,
         )
         if state == "closed" and existing.state == "open":
@@ -108,8 +139,15 @@ class BackgroundIssueSync:
         self._syncer = syncer
         self._executor = executor or ThreadPoolExecutor(max_workers=1)
 
-    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None:
-        self._executor.submit(self._sync_safely, project, case, screen_name)
+    def sync_case(
+        self,
+        project: Project,
+        case: TestCase,
+        *,
+        screen_name: str = "",
+        screen: Screen | None = None,
+    ) -> None:
+        self._executor.submit(self._sync_safely, project, case, screen_name, screen)
 
     def note_case_edited(
         self, project: Project, case: TestCase, *, changed: list[str], needs_rerun: bool
@@ -125,8 +163,10 @@ class BackgroundIssueSync:
         except Exception:
             logger.warning("Không báo được case %s đã sửa lên issue", case.id)
 
-    def _sync_safely(self, project: Project, case: TestCase, screen_name: str) -> None:
+    def _sync_safely(
+        self, project: Project, case: TestCase, screen_name: str, screen: Screen | None
+    ) -> None:
         try:
-            self._syncer.sync_case(project, case, screen_name=screen_name)
+            self._syncer.sync_case(project, case, screen_name=screen_name, screen=screen)
         except Exception:
             logger.warning("Không đồng bộ được issue cho case %s của dự án %s", case.id, project.id)

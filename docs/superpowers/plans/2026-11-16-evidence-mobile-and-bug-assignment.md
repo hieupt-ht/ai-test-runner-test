@@ -414,7 +414,7 @@ def test_janitor_logs_and_swallows_errors(caplog)
   - Nhãn: thêm `platform_label(case.platform)`.
   - `IssueSyncer.sync_case` khi cập nhật: nhãn mới = nhãn do app sinh + mọi nhãn cũ **không** bắt đầu bằng `status:` hoặc `platform:` (giữ `needs-rerun`, `test: fail`, `bug: cần sửa`, nhãn tay của người dùng).
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_video_frames():
@@ -429,8 +429,8 @@ def test_update_keeps_result_labels(fake_github):          # Review Focus 2
     # đổi platform sang ANDROID → nhãn có "platform: android", vẫn còn "needs-rerun","test: fail", mất "platform: web"
 ```
 
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(issues): thêm nền tảng, ảnh hướng dẫn và ảnh cắt từ video vào issue`.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(issues): thêm nền tảng, ảnh hướng dẫn và ảnh cắt từ video vào issue`.
 
 ---
 

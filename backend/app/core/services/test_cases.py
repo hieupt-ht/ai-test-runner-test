@@ -18,6 +18,7 @@ from app.core.locks.redis_lock import LockTimeout
 from app.core.media.cloudinary import MediaJanitor
 from app.core.models.media import ForeignMediaError, ensure_own_cloud
 from app.core.models.project import Project
+from app.core.models.screen import Screen
 from app.core.models.test_case import (
     CHANGED_FIELD_LABELS,
     RERUN_FIELDS,
@@ -173,7 +174,7 @@ class TestCaseService:
         self._has_results = has_results
         self._cloud_name = cloud_name
         self._janitor = janitor
-        self._screen_names: dict[str, str] | None = None
+        self._screens_by_id: dict[str, Screen] | None = None
 
     @property
     def review_enabled(self) -> bool:
@@ -354,11 +355,15 @@ class TestCaseService:
             raise RuntimeError("GitHub chưa được cấu hình")
 
         result = SyncIssuesResult()
-        screen_names = {screen.id: screen.name for screen in self._screens.list_all()}
+        screens = {screen.id: screen for screen in self._screens.list_all()}
         for case in self._test_cases.list_all()[:MAX_SYNC_BATCH_SIZE]:
             try:
+                screen = screens.get(case.screen_id)
                 outcome = self._issue_syncer.sync_case(
-                    self._project, case, screen_name=screen_names.get(case.screen_id, "")
+                    self._project,
+                    case,
+                    screen_name=screen.name if screen else "",
+                    screen=screen,
                 )
                 setattr(result, outcome, getattr(result, outcome) + 1)
             except Exception as error:
@@ -524,10 +529,14 @@ class TestCaseService:
         if self._issue_sync is None or self._project is None:
             return
         try:
-            if self._screen_names is None:
-                self._screen_names = {screen.id: screen.name for screen in self._screens.list_all()}
+            if self._screens_by_id is None:
+                self._screens_by_id = {screen.id: screen for screen in self._screens.list_all()}
+            screen = self._screens_by_id.get(case.screen_id)
             self._issue_sync.sync_case(
-                self._project, case, screen_name=self._screen_names.get(case.screen_id, "")
+                self._project,
+                case,
+                screen_name=screen.name if screen else "",
+                screen=screen,
             )
         except Exception:
             # Case đã được ghi vào Sheet; lỗi GitHub không được khiến người dùng tạo lại.
