@@ -1,6 +1,6 @@
 # Dùng Codex chạy test case từ GitHub issue (hai máy: Windows và Mac)
 
-Luồng: QA Lead duyệt case trên AI Test Runner → app tạo issue trong repo của dự án → bạn tự mở Codex để chạy test → Codex đẩy ảnh/video lên Cloudinary rồi gọi API ghi kết quả vào tab `Results` của Google Sheet → **app tự comment kết quả lên issue**, đóng/mở issue, đổi nhãn và giao bug cho dev. App không tự mở Codex.
+Luồng: Tester bấm **Gửi** case trên AI Test Runner (nếu dự án tắt "Cần QA duyệt" thì case được duyệt luôn; nếu bật thì QA Lead duyệt trước) → app tạo issue trong repo của dự án → bạn tự mở Codex để chạy test → Codex đẩy ảnh/video lên Cloudinary rồi gọi API ghi kết quả vào tab `Results` của Google Sheet → **app tự comment kết quả lên issue**, đóng/mở issue, đổi nhãn và giao bug cho dev. App không tự mở Codex.
 
 Có hai máy, mỗi máy lo một nền tảng:
 
