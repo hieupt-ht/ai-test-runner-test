@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.project_scope import scope_for
+from app.core.github.client import GitHubError
 from app.core.models.project import Project
 from app.core.models.user import Role
 from app.core.notifications import NotificationStore
@@ -550,3 +551,34 @@ def test_sixth_run_prunes_oldest_evidence_and_deletes_files(
     assert deleted == ["s1"]
     assert rows[0]["evidence_json"] == '{"pruned": true}'
     assert all("pruned" not in row["evidence_json"] for row in rows[1:])
+
+
+def test_fail_assigns_issue_to_screen_dev_and_survives_assign_error(
+    app: FastAPI,
+    client: TestClient,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    github: FakeGitHub,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    lead.patch(f"/api/projects/{project.id}/screens/SC-0001", json={"dev_owner": "@nguyenvana"})
+    case = create(an, project).json()
+    an.post(f"/api/projects/{project.id}/test-cases/{case['id']}/submit", json={"version": 1})
+    lead.post(f"/api/projects/{project.id}/test-cases/{case['id']}/approve", json={"version": 2})
+    github.create_issue(
+        project.repo_full_name, title="t", body="", labels=[f"tc:{case['id']}", "test-case"]
+    )
+    fail = {**RESULT, "test_case_id": case["id"], "status": "FAIL", "reason": "Lỗi"}
+    headers = {"Authorization": "Bearer test-token"}
+
+    assert client.post(path(project), json={"results": [fail]}, headers=headers).status_code == 200
+    assert github.assignees[1] == ["nguyenvana"]
+
+    github.fail_assign_with = GitHubError("Không gán được @nguyenvana")
+    again = client.post(path(project), json={"results": [fail]}, headers=headers)
+    assert again.status_code == 200
+    assert "⚠️ Không gán được issue cho @nguyenvana" in (
+        github.issue_comments[project.repo_full_name][1][0].body
+    )

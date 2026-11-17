@@ -4,7 +4,7 @@ import re
 from typing import Literal
 from urllib.parse import urlparse
 
-from app.core.github.client import GitHubClient, IssueInfo
+from app.core.github.client import GitHubClient, GitHubError, IssueInfo
 from app.core.github.issue_format import case_label
 from app.core.models.run import Result, ResultStatus, Run
 from app.core.models.test_case import TestCase
@@ -12,7 +12,12 @@ from app.core.models.test_case import TestCase
 RESULT_MARKER = "<!-- ai-test-runner-result -->"
 PASS_LABEL = "test: pass"
 FAIL_LABEL = "test: fail"
+BUG_LABEL = "bug: cần sửa"  # có lỗi thật, đã giao cho dev; gỡ khi test PASS lại
 RERUN_LABEL = "needs-rerun"  # có kết quả mới thì yêu cầu chạy lại đã được đáp ứng
+
+
+# Tên GitHub hợp lệ (cùng luật với ô "Dev phụ trách" ở màn hình)
+_GITHUB_NAME = re.compile(r"^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$")
 
 
 def _private_values(case: TestCase) -> list[str]:
@@ -131,6 +136,7 @@ def format_fail_comment(
     app_url: str,
     project_id: str,
     duration: float = 0,
+    assignment_note: str | None = None,
 ) -> str:
     failed_step = result.failed_step or 0
     lines = [
@@ -154,6 +160,8 @@ def format_fail_comment(
             status = "✅" if number < failed_step else "❌" if number == failed_step else "—"
             lines.append(f"| {number} | {_safe_text(step.action, case)} | {status} |")
     lines.extend(["", f"**Lý do:** {_safe_text(result.reason, case)}"])
+    if assignment_note:
+        lines.append(assignment_note)
     lines.extend(_extra_lines(result, case))
     evidence = _safe_evidence(result.evidence.legacy_url, case)
     if evidence:
@@ -186,6 +194,8 @@ def sync_issue_state(
     repo: str,
     issue: IssueInfo,
     passed: bool,
+    *,
+    mark_bug: bool = False,
 ) -> None:
     state: Literal["open", "closed"] = "closed" if passed else "open"
     add_label, remove_label = (PASS_LABEL, FAIL_LABEL) if passed else (FAIL_LABEL, PASS_LABEL)
@@ -193,6 +203,13 @@ def sync_issue_state(
     labels = [label for label in issue.labels if label not in (remove_label, RERUN_LABEL)]
     if add_label not in labels:
         labels.append(add_label)
+    if passed:
+        # Hết lỗi thì gỡ nhãn bug; người đã được giao vẫn giữ nguyên
+        labels = [label for label in labels if label != BUG_LABEL]
+    elif mark_bug:
+        github.ensure_label(repo, BUG_LABEL, color="b60205")
+        if BUG_LABEL not in labels:
+            labels.append(BUG_LABEL)
     github.update_issue_state_and_labels(repo, issue.number, state=state, labels=labels)
 
 
@@ -212,6 +229,17 @@ def sync_result_issue(
     issue = github.find_issue_by_label(repo, case_label(case.id))
     if issue is None:
         return
+    dev = result.dev_owner if _GITHUB_NAME.match(result.dev_owner) else ""
+    note: str | None = None
+    if result.status == ResultStatus.FAIL and dev:
+        try:
+            github.add_assignees(repo, issue.number, [dev])
+            note = f"**Giao cho @{dev}**"
+        except GitHubError:
+            note = (
+                f"⚠️ Không gán được issue cho @{dev}, "
+                "hãy kiểm tra tên GitHub và quyền repo."
+            )
     if result.status == ResultStatus.PASS:
         body = format_pass_comment(
             run,
@@ -229,6 +257,9 @@ def sync_result_issue(
             app_url=app_url,
             project_id=project_id,
             duration=duration,
+            assignment_note=note,
         )
     upsert_result_comment(github, repo, issue.number, body)
-    sync_issue_state(github, repo, issue, result.status == ResultStatus.PASS)
+    sync_issue_state(
+        github, repo, issue, result.status == ResultStatus.PASS, mark_bug=bool(dev)
+    )

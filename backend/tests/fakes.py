@@ -145,6 +145,9 @@ class FakeGitHub:
         self.fail_with: Exception | None = None
         self.issue_comments: dict[str, dict[int, list[IssueComment]]] = {}
         self.labels: dict[str, dict[str, str]] = {}
+        # Người được giao theo số issue (test chỉ dùng một repo)
+        self.assignees: dict[int, list[str]] = {}
+        self.fail_assign_with: Exception | None = None
 
     def _check(self) -> None:
         if self.fail_with is not None:
@@ -232,6 +235,16 @@ class FakeGitHub:
                     comments[index] = IssueComment(id=comment.id, body=body)
                     return
         raise GitHubError("Không tìm thấy comment")
+
+    def add_assignees(
+        self, repo_full_name: str, issue_number: int, assignees: list[str]
+    ) -> None:
+        self._check()
+        self.calls.append("assign")
+        if self.fail_assign_with is not None:
+            raise self.fail_assign_with
+        current = self.assignees.setdefault(issue_number, [])
+        current.extend(name for name in assignees if name not in current)
 
     def update_issue_state_and_labels(
         self,

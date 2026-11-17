@@ -161,3 +161,38 @@ def test_github_error_on_403_rate_limit_has_vietnamese_message() -> None:
 
     with pytest.raises(GitHubError, match="giới hạn"):
         make_client(httpx.MockTransport(handle)).find_issue_by_label("org/web", "tc:TC-000001")
+
+
+def assignees_server(returned: list[str], sent: list[httpx.Request]):  # type: ignore[no-untyped-def]
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/repos/org/web/issues/5/assignees":
+            sent.append(request)
+            return httpx.Response(
+                201, json={"number": 5, "assignees": [{"login": name} for name in returned]}
+            )
+        return server(request)
+
+    return handle
+
+
+def test_add_assignees_posts_to_assignees_endpoint() -> None:
+    sent: list[httpx.Request] = []
+    client = make_client(httpx.MockTransport(assignees_server(["nguyenvana"], sent)))
+
+    client.add_assignees("org/web", 5, ["nguyenvana"])
+
+    assert sent[0].method == "POST"
+    assert b'"assignees":["nguyenvana"]' in sent[0].read()
+
+
+def test_add_assignees_errors_when_github_silently_ignores_the_user() -> None:
+    # GitHub trả 201 nhưng bỏ qua người không có quyền: phải tự so sánh danh sách trả về
+    client = make_client(httpx.MockTransport(assignees_server([], [])))
+
+    with pytest.raises(GitHubError, match="Không gán được @nguyenvana"):
+        client.add_assignees("org/web", 5, ["nguyenvana"])
+
+
+def test_add_assignees_compares_names_case_insensitively() -> None:
+    client = make_client(httpx.MockTransport(assignees_server(["NguyenVanA"], [])))
+    client.add_assignees("org/web", 5, ["nguyenvana"])

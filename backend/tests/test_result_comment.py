@@ -2,10 +2,16 @@
 
 from datetime import UTC, datetime
 
+from app.core.github.client import GitHubError
 from app.core.models.media import Media
 from app.core.models.run import Evidence, Result, ResultStatus, Run, RunScope, RunStatus, StepResult
 from app.core.models.test_case import Priority, Severity, TestCase, TestCaseStatus, TestStep
-from app.core.services.result_issue_sync import format_fail_comment, format_pass_comment
+from app.core.services.result_issue_sync import (
+    format_fail_comment,
+    format_pass_comment,
+    sync_result_issue,
+)
+from tests.fakes import FakeGitHub
 
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -115,3 +121,66 @@ def test_pass_comment_without_steps_is_unchanged_shape() -> None:
         project_id="PRJ-1",
     )
     assert "| Bước |" not in body
+
+
+# ----- Gán issue cho dev khi FAIL -----
+
+
+def seeded_github() -> FakeGitHub:
+    github = FakeGitHub()
+    github.create_issue("org/web", title="t", body="", labels=["tc:TC-1", "test-case"])
+    return github
+
+
+def sync(github: FakeGitHub, result: Result) -> None:
+    sync_result_issue(
+        github, repo="org/web", project_id="PRJ-1", app_url="http://app",
+        run=make_run(), result=result, case=make_case(),
+    )
+
+
+def issue_comment(github: FakeGitHub) -> str:
+    return github.issue_comments["org/web"][1][0].body
+
+
+def test_fail_with_dev_owner_assigns_labels_and_mentions() -> None:
+    github = seeded_github()
+    sync(github, make_result(dev_owner="nguyenvana"))
+
+    assert github.assignees[1] == ["nguyenvana"]
+    assert "bug: cần sửa" in github.issues["org/web"][0][0].labels
+    assert github.labels["org/web"]["bug: cần sửa"] == "b60205"
+    assert "Giao cho @nguyenvana" in issue_comment(github)
+
+
+def test_fail_without_dev_owner_does_not_assign() -> None:
+    github = seeded_github()
+    sync(github, make_result())
+
+    assert github.assignees == {}
+    assert "bug: cần sửa" not in github.issues["org/web"][0][0].labels
+    assert "Giao cho" not in issue_comment(github)
+
+
+def test_pass_after_fail_removes_bug_label_but_keeps_assignee() -> None:
+    github = seeded_github()
+    sync(github, make_result(dev_owner="nguyenvana"))
+    sync(github, make_result(ResultStatus.PASS, dev_owner="nguyenvana"))
+
+    assert "bug: cần sửa" not in github.issues["org/web"][0][0].labels
+    assert github.assignees[1] == ["nguyenvana"]
+
+
+def test_assign_failure_adds_warning_and_still_updates_labels() -> None:
+    github = seeded_github()
+    github.fail_assign_with = GitHubError("Không gán được @nguyenvana")
+    sync(github, make_result(dev_owner="nguyenvana"))
+
+    body = issue_comment(github)
+    assert (
+        "⚠️ Không gán được issue cho @nguyenvana, "
+        "hãy kiểm tra tên GitHub và quyền repo." in body
+    )
+    assert "Giao cho @nguyenvana" not in body
+    labels = github.issues["org/web"][0][0].labels
+    assert "test: fail" in labels and "bug: cần sửa" in labels
