@@ -110,7 +110,7 @@
 - [ ] **Step 4: Chạy** toàn bộ `uv run pytest -q && uv run mypy app && uv run ruff check` → sạch.
 - [ ] **Step 5: Commit** `feat(auth): đăng nhập bằng email và mật khẩu, tạo Admin đầu tiên có mật khẩu`.
 
-- [ ] **Cuối đợt 1:** tick các task, ghi tiến độ vào `HANDOFF.md`, dừng cho `/compact`.
+- [x] **Cuối đợt 1 (xong 2026-11-17, backend 578 test qua):** tick các task, ghi tiến độ vào `HANDOFF.md`, dừng cho `/compact`.
 
 ---
 
