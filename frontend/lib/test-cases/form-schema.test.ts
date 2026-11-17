@@ -43,4 +43,19 @@ describe("testCaseFormSchema", () => {
     expect(testCaseFormSchema.safeParse({ ...valid, steps }).success).toBe(false)
     expect(testCaseFormSchema.safeParse({ ...valid, expected_result: " " }).success).toBe(false)
   })
+
+  it("nhận ảnh/video hướng dẫn nhưng không quá 5 mục mỗi nơi", () => {
+    const media = { kind: "image", url: "https://res.cloudinary.com/c/a.png", public_id: "a", note: "" }
+    expect(testCaseFormSchema.safeParse({ ...valid, guide_media: [media] }).success).toBe(true)
+    expect(
+      testCaseFormSchema.safeParse({ ...valid, guide_media: Array(6).fill(media) }).success,
+    ).toBe(false)
+    const steps = [{ action: "a", expected: "", guide_media: Array(6).fill(media) }]
+    expect(testCaseFormSchema.safeParse({ ...valid, steps }).success).toBe(false)
+  })
+
+  it("từ chối nền tảng hoặc loại test lạ", () => {
+    expect(testCaseFormSchema.safeParse({ ...valid, platform: "WINDOWS" }).success).toBe(false)
+    expect(testCaseFormSchema.safeParse({ ...valid, test_type: "OTHER" }).success).toBe(false)
+  })
 })

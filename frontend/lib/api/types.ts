@@ -22,6 +22,8 @@ export type TestStep = Schemas["TestStep"]
 /** Ảnh/video hướng dẫn hoặc bằng chứng (nằm trên Cloudinary). */
 export type Media = Schemas["Media"]
 export type MediaKind = Schemas["MediaKind"]
+export type Platform = Schemas["Platform"]
+export type TestType = Schemas["TestType"]
 export type SignedUpload = Schemas["SignedUpload"]
 /** Phần nội dung người dùng nhập của một test case (không gồm mã, trạng thái, version...). */
 export type TestCaseContent = Pick<

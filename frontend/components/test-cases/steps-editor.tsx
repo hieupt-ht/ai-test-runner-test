@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useRef, useState } from "react"
 
+import { MediaPicker } from "@/components/media/media-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -17,10 +18,21 @@ type Props = {
   /** Mã lỗi (khoá trong testCases.form.errors) theo từng bước, nếu có */
   errors?: ({ action?: string; expected?: string } | undefined)[]
   disabled?: boolean
+  /** Cần để xin chữ ký tải ảnh/video lên */
+  projectId: string
+  /** Báo form biết bước nào đang tải ảnh/video (khoá nút Lưu/Gửi) */
+  onBusyChange?: (key: string, busy: boolean) => void
 }
 
 /** Trình soạn các bước: kéo thả (HTML5), nút lên/xuống, xoá, Ctrl+Enter để thêm bước dưới. */
-export function StepsEditor({ steps, onChange, errors = [], disabled }: Props) {
+export function StepsEditor({
+  steps,
+  onChange,
+  errors = [],
+  disabled,
+  projectId,
+  onBusyChange,
+}: Props) {
   const t = useTranslations("testCases")
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
@@ -125,6 +137,13 @@ export function StepsEditor({ steps, onChange, errors = [], disabled }: Props) {
               {error?.expected && (
                 <p className="text-xs text-destructive">{t(`form.errors.${error.expected}`)}</p>
               )}
+              <MediaPicker
+                value={step.guide_media ?? []}
+                onChange={(guide_media) => update(index, { guide_media })}
+                projectId={projectId}
+                disabled={disabled}
+                onBusyChange={(busy) => onBusyChange?.(`step-${index}`, busy)}
+              />
             </div>
 
             {!disabled && (

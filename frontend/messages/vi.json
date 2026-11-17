@@ -323,7 +323,17 @@
         "stepExpectedTooLong": "Kết quả bước tối đa 500 ký tự",
         "expectedResultRequired": "Nhập kết quả mong đợi"
       },
-      "savedNotSubmitted": "Đã lưu case nhưng chưa gửi duyệt được."
+      "savedNotSubmitted": "Đã lưu case nhưng chưa gửi duyệt được.",
+      "platform": "Nền tảng",
+      "testType": "Loại test",
+      "regression": "Regression",
+      "startPoint": "Bắt đầu tại",
+      "startPointHint": "Màn hình hoặc đường dẫn để Codex mở trước khi làm bước 1",
+      "guideMedia": "Ảnh/video hướng dẫn cho cả case",
+      "more": "Điều kiện, dữ liệu, ...",
+      "postcondition": "Điều kiện sau",
+      "requirementRef": "Mã yêu cầu",
+      "stepsHeading": "Các bước"
     },
     "steps": {
       "action": "Thao tác",
@@ -387,6 +397,15 @@
       "title": "Case đã bị thay đổi",
       "reload": "Tải lại",
       "hint": "Tải lại sẽ thay nội dung bạn đang sửa bằng bản mới nhất."
+    },
+    "platform": {
+      "WEB": "Web",
+      "ANDROID": "Android",
+      "IOS": "iOS"
+    },
+    "testType": {
+      "FUNCTIONAL": "Chức năng",
+      "UI": "Giao diện"
     }
   },
   "statuses": {

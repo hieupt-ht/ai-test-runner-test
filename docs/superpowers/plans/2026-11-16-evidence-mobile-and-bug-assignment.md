@@ -328,7 +328,7 @@ def test_background_note_runs_after_sync(fake_github):
   - `MediaJanitor(client | None)`: `.delete(items: list[Media]) -> None` chạy nền một luồng, lỗi chỉ `logger.warning`; client `None` thì bỏ qua. Gắn vào `Services.media_janitor` và `Services.cloudinary_signer` (`None` khi thiếu cấu hình).
   - Route: `POST /api/projects/{project_id}/media/sign` body `{kind, purpose: "guide"}` (quyền `EDIT_TEST_CASE`); `POST /api/agent/projects/{project_id}/media/sign` body `{kind}` (token agent, `purpose` luôn `evidence`). Chưa cấu hình → 503 "Chưa cấu hình Cloudinary".
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_signature_matches_cloudinary_rule():
@@ -347,8 +347,8 @@ def test_sign_503_when_not_configured(...)
 def test_janitor_logs_and_swallows_errors(caplog)
 ```
 
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** `gen:api`; commit `feat(media): ký upload Cloudinary cho tester và agent`.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** `gen:api`; commit `feat(media): ký upload Cloudinary cho tester và agent`.
 
 ### Task 11: Kiểm tra cloud và dọn file khi lưu case
 
@@ -360,9 +360,9 @@ def test_janitor_logs_and_swallows_errors(caplog)
 - Consumes: `media_of`, `ensure_own_cloud`, `MediaJanitor.delete`.
 - Produces: `TestCaseService.__init__(..., cloud_name: str = "", janitor: MediaJanitor | None = None)`. `ForeignMediaError` đổi thành `InvalidTestCaseError` (422) ở `create`/`update_content`. Sau khi lưu thành công, media có trong bản cũ mà không còn trong bản mới (so theo `public_id`) được gửi `janitor.delete`. AuditLog diff thay mỗi `Media` bằng `{"kind", "note"}` (lịch sử chỉ giữ chữ).
 
-- [ ] **Bước 1: Test đỏ** — case có ảnh `a`,`b`; lưu với chỉ `b` → `janitor.deleted == ["a"]`; ảnh cloud khác → `InvalidTestCaseError` và Sheet không đổi; diff AuditLog không chứa `res.cloudinary.com`.
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(test-cases): kiểm tra link ảnh và dọn file Cloudinary khi sửa case`.
+- [x] **Bước 1: Test đỏ** — case có ảnh `a`,`b`; lưu với chỉ `b` → `janitor.deleted == ["a"]`; ảnh cloud khác → `InvalidTestCaseError` và Sheet không đổi; diff AuditLog không chứa `res.cloudinary.com`.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(test-cases): kiểm tra link ảnh và dọn file Cloudinary khi sửa case`.
 
 ### Task 12: Thư viện upload và ô chọn ảnh/video (frontend)
 
@@ -376,9 +376,9 @@ def test_janitor_logs_and_swallows_errors(caplog)
   - `uploadMedia(file: File, opts: { projectId: string; onProgress?: (percent: number) => void; signal?: AbortSignal }): Promise<Media>` — xin chữ ký rồi `XMLHttpRequest` POST `upload_url` (để có tiến độ); trả `{kind, url: secure_url, public_id, note: ""}`
   - `<MediaPicker value={Media[]} onChange max={5} projectId />` — thumbnail ảnh (bấm mở lightbox), video có `<video controls>`, thanh tiến độ khi đang tải, nút xoá, ô ghi chú ngắn; hết chỗ thì ẩn nút "+".
 
-- [ ] **Bước 1: Test đỏ** — `checkFile` với ảnh 11MB → `tooLarge`; `.exe` → `badType`; `uploadMedia` với XHR giả gọi `onProgress(50)` và trả đúng `secure_url`; `MediaPicker` có 5 mục thì không còn nút "Thêm ảnh/video"; bấm xoá gọi `onChange` thiếu mục đó.
-- [ ] **Bước 2–4:** `npx vitest run lib/media components/media` FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(frontend): upload ảnh/video lên Cloudinary có xem trước`.
+- [x] **Bước 1: Test đỏ** — `checkFile` với ảnh 11MB → `tooLarge`; `.exe` → `badType`; `uploadMedia` với XHR giả gọi `onProgress(50)` và trả đúng `secure_url`; `MediaPicker` có 5 mục thì không còn nút "Thêm ảnh/video"; bấm xoá gọi `onChange` thiếu mục đó.
+- [x] **Bước 2–4:** `npx vitest run lib/media components/media` FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(frontend): upload ảnh/video lên Cloudinary có xem trước`.
 
 ### Task 13: Form tạo/sửa case 2 cột
 
@@ -389,11 +389,11 @@ def test_janitor_logs_and_swallows_errors(caplog)
 **Interfaces:**
 - Consumes: `MediaPicker` (Task 12), trường mới của `TestCaseContent`.
 
-- [ ] **Bước 1: Test đỏ** — schema nhận đủ trường mới với mặc định (`platform: "WEB"`, `regression: false`); `CaseForm` render ô Nền tảng, Loại, Regression, Bắt đầu tại, dòng nhắc an toàn ảnh, mục thu gọn "Điều kiện, dữ liệu, ..." chứa precondition/test_data/postcondition/requirement_ref; khi đang upload thì nút Lưu/Gửi bị khoá.
-- [ ] **Bước 2:** FAIL.
-- [ ] **Bước 3:** Bố cục theo sơ đồ 5.10: bỏ `max-w-3xl` ở hai trang; thanh nút `sticky top-0`; `lg:grid-cols-2`, khung cao `lg:h-[calc(100dvh-<chiều cao topbar+thanh nút>)]`, chỉ cột "Các bước" có `overflow-y-auto`; dưới `lg` một cột. Mỗi bước có `MediaPicker` nhỏ; cột trái có `MediaPicker` cho cả case.
-- [ ] **Bước 4:** PASS + typecheck + lint. Mở trình duyệt ở 1366×768 xác nhận không cuộn cả trang (ghi lại trong báo cáo task).
-- [ ] **Bước 5:** Commit `feat(frontend): form test case 2 cột có ảnh/video hướng dẫn`.
+- [x] **Bước 1: Test đỏ** — schema nhận đủ trường mới với mặc định (`platform: "WEB"`, `regression: false`); `CaseForm` render ô Nền tảng, Loại, Regression, Bắt đầu tại, dòng nhắc an toàn ảnh, mục thu gọn "Điều kiện, dữ liệu, ..." chứa precondition/test_data/postcondition/requirement_ref; khi đang upload thì nút Lưu/Gửi bị khoá.
+- [x] **Bước 2:** FAIL.
+- [x] **Bước 3:** Bố cục theo sơ đồ 5.10: bỏ `max-w-3xl` ở hai trang; thanh nút `sticky top-0`; `lg:grid-cols-2`, khung cao `lg:h-[calc(100dvh-<chiều cao topbar+thanh nút>)]`, chỉ cột "Các bước" có `overflow-y-auto`; dưới `lg` một cột. Mỗi bước có `MediaPicker` nhỏ; cột trái có `MediaPicker` cho cả case.
+- [ ] **Bước 4:** PASS + typecheck + lint. Mở trình duyệt ở 1366×768 xác nhận không cuộn cả trang (ghi lại trong báo cáo task). _(test, typecheck, lint đã qua; CHƯA mở trình duyệt thật ở 1366×768 vì cần đăng nhập Google và Sheet thật — chủ dự án kiểm tra giúp)_
+- [x] **Bước 5:** Commit `feat(frontend): form test case 2 cột có ảnh/video hướng dẫn`.
 
 ---
 

@@ -48,7 +48,7 @@ function TestCaseDetailView() {
   const editable = testCase.can_edit && !["DEPRECATED", "ARCHIVED"].includes(testCase.status)
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <Link
         href={`/projects/${projectId}/test-cases`}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

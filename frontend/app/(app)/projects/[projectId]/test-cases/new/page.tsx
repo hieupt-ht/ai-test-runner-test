@@ -37,7 +37,7 @@ function NewTestCase() {
   const screens = selectableScreens(screensQuery.data ?? [], assignmentsQuery.data ?? [], me)
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <Link
         href={`/projects/${projectId}/test-cases`}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
