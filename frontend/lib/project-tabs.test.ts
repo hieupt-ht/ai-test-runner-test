@@ -4,12 +4,14 @@ import { PROJECT_TABS, visibleProjectTabs } from "@/lib/project-tabs"
 import vi from "@/messages/vi.json"
 
 describe("visibleProjectTabs", () => {
-  it("tab Cài đặt chỉ hiện khi có quyền MANAGE_PROJECTS", () => {
-    const lead = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_SCREENS"]).map((tab) => tab.segment)
-    const admin = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_PROJECTS"]).map((tab) => tab.segment)
+  it("tab Cài đặt hiện khi có quyền MANAGE_PROJECT_SETTINGS (Admin và QA Lead)", () => {
+    const tester = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_SCREENS"]).map((tab) => tab.segment)
+    const lead = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_PROJECT_SETTINGS"]).map(
+      (tab) => tab.segment,
+    )
 
-    expect(lead).toEqual(["screens", "test-cases", "results", "assignments", "members"])
-    expect(admin).toContain("settings")
+    expect(tester).toEqual(["screens", "test-cases", "results", "assignments", "members"])
+    expect(lead).toContain("settings")
   })
 
   it("tab Test case nằm ngay sau Màn hình và có nhãn trong vi.json", () => {

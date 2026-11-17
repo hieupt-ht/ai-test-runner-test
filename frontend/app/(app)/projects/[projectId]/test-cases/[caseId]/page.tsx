@@ -15,6 +15,7 @@ import { CaseStatusBadge } from "@/components/test-cases/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { latestReturn } from "@/lib/test-cases/returned"
 import { useProjectId } from "@/lib/use-project-id"
+import { useProject } from "@/lib/use-projects"
 import { useCaseHistory, useTestCase } from "@/lib/use-test-cases"
 
 export default function TestCaseDetailPage() {
@@ -31,6 +32,8 @@ function TestCaseDetailView() {
   const { caseId } = useParams<{ caseId: string }>()
   const caseQuery = useTestCase(projectId, caseId)
   const historyQuery = useCaseHistory(projectId, caseId)
+  const { data: project } = useProject(projectId)
+  const reviewEnabled = project?.require_review ?? true
   const [formDirty, setFormDirty] = useState(false)
 
   if (caseQuery.isLoading) return <Skeleton className="h-96 w-full" />
@@ -74,6 +77,7 @@ function TestCaseDetailView() {
           testCase={testCase}
           hideSubmit={editable}
           formDirty={editable && formDirty}
+          reviewDisabled={!reviewEnabled}
         />
         <ArchiveAction projectId={projectId} testCase={testCase} />
       </div>
@@ -89,6 +93,7 @@ function TestCaseDetailView() {
           projectId={projectId}
           testCase={testCase}
           onDirtyChange={setFormDirty}
+          reviewEnabled={reviewEnabled}
         />
       ) : (
         <>

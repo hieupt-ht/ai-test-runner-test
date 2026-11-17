@@ -88,6 +88,9 @@ export type UpdateProjectInput = {
   branch?: string
   staging_url?: string
   archived?: boolean
+  android_app_id?: string
+  ios_bundle_id?: string
+  require_review?: boolean
 }
 
 export function useUpdateProject(projectId: string) {

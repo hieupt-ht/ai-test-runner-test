@@ -15,7 +15,7 @@ export const PROJECT_TABS: ProjectTab[] = [
   { segment: "results", labelKey: "results", permission: "VIEW_PROJECT" },
   { segment: "assignments", labelKey: "assignments", permission: "VIEW_PROJECT" },
   { segment: "members", labelKey: "members", permission: "VIEW_PROJECT" },
-  { segment: "settings", labelKey: "settings", permission: "MANAGE_PROJECTS" },
+  { segment: "settings", labelKey: "settings", permission: "MANAGE_PROJECT_SETTINGS" },
 ]
 
 export function visibleProjectTabs(permissions: Action[]): ProjectTab[] {

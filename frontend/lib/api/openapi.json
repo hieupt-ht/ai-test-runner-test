@@ -2162,6 +2162,7 @@
         "enum": [
           "MANAGE_USERS",
           "MANAGE_PROJECTS",
+          "MANAGE_PROJECT_SETTINGS",
           "MANAGE_MEMBERS",
           "MANAGE_SCREENS",
           "EDIT_TEST_CASE",
@@ -3760,6 +3761,43 @@
               }
             ],
             "title": "Archived"
+          },
+          "android_app_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[A-Za-z0-9._-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Android App Id"
+          },
+          "ios_bundle_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[A-Za-z0-9._-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ios Bundle Id"
+          },
+          "require_review": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Require Review"
           }
         },
         "type": "object",

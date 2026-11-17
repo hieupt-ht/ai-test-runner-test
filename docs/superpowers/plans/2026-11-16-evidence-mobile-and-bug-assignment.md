@@ -203,7 +203,7 @@ def test_empty_new_cells_default(...)   # step_results == [], case_version is No
   - `UpdateProjectRequest` thêm `android_app_id: str | None`, `ios_bundle_id: str | None` (max 200, chỉ `[A-Za-z0-9._-]`), `require_review: bool | None`. Quyền: Admin hoặc QA Lead thành viên dự án (khác `MANAGE_PROJECTS` hiện chỉ Admin → thêm `Action.MANAGE_PROJECT_SETTINGS` trong `permissions.py`).
   - `ProjectService.update_project(..., require_review=...)`: chuyển `True → False` thì gọi `approve_all_in_review`, ghi AuditLog `AUTO_APPROVE` cho từng case, rồi `issue_sync.sync_case` từng case (BackgroundIssueSync, một luồng).
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_turning_review_off_approves_in_review_once(lead, project, gateway):
@@ -219,8 +219,8 @@ def test_tester_cannot_change_require_review(...)  # 403
 def test_app_ids_reject_spaces(...)                # 422
 ```
 
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(projects): công tắc cần QA duyệt và app id mobile`.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(projects): công tắc cần QA duyệt và app id mobile`.
 
 ### Task 7: Gửi là duyệt luôn khi tắt bước duyệt
 
@@ -232,7 +232,7 @@ def test_app_ids_reject_spaces(...)                # 422
 - Consumes: `Project.require_review` (Task 3). `TestCaseService` đã nhận `project`.
 - Produces: `REVIEW_OFF = "Dự án đang tắt bước duyệt"`; `TestCaseService.review_enabled -> bool` (không có project thì `True`, giữ hành vi cũ cho test cũ).
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_submit_goes_straight_to_approved_when_review_off(...):
@@ -250,8 +250,8 @@ def test_approve_batch_409_when_off(...)
 def test_review_on_keeps_old_flow(...)         # SUBMIT → IN_REVIEW
 ```
 
-- [ ] **Bước 2–4:** FAIL → viết (SUBMIT có đích `APPROVED` khi tắt; AuditLog ghi `SUBMIT` với diff `DRAFT→APPROVED`) → PASS.
-- [ ] **Bước 5:** Commit `feat(test-cases): gửi case là duyệt luôn khi dự án tắt bước duyệt`.
+- [x] **Bước 2–4:** FAIL → viết (SUBMIT có đích `APPROVED` khi tắt; AuditLog ghi `SUBMIT` với diff `DRAFT→APPROVED`) → PASS.
+- [x] **Bước 5:** Commit `feat(test-cases): gửi case là duyệt luôn khi dự án tắt bước duyệt`.
 
 ### Task 8: Sửa case đã gửi tại chỗ, comment và `needs-rerun`
 
@@ -267,7 +267,7 @@ def test_review_on_keeps_old_flow(...)         # SUBMIT → IN_REVIEW
   - `TestCaseService.__init__(..., has_results: Callable[[str], bool] | None = None)` — router truyền hàm đọc `scope.results.list_all()` một lần (chỉ gọi khi cần, tức case `APPROVED` và đổi trường thuộc `RERUN_FIELDS`).
   - Tên trường trong comment dùng nhãn tiếng Việt: `CHANGED_FIELD_LABELS = {"title": "Tiêu đề", "steps": "Các bước", "expected_result": "Kết quả mong đợi", "platform": "Nền tảng", "start_point": "Điểm bắt đầu", "guide_media": "Ảnh/video hướng dẫn", ...}` (đủ mọi trường `TestCaseContent`).
 
-- [ ] **Bước 1: Test đỏ**
+- [x] **Bước 1: Test đỏ**
 
 ```python
 def test_edit_approved_keeps_status_when_review_off(...):
@@ -288,8 +288,8 @@ def test_background_note_runs_after_sync(fake_github):
     assert "📝 Case đã sửa lên v3: Các bước" in comment_bodies()
 ```
 
-- [ ] **Bước 2–4:** FAIL → viết → PASS.
-- [ ] **Bước 5:** Commit `feat(test-cases): sửa case đã gửi tại chỗ và báo lên issue`.
+- [x] **Bước 2–4:** FAIL → viết → PASS.
+- [x] **Bước 5:** Commit `feat(test-cases): sửa case đã gửi tại chỗ và báo lên issue`.
 
 ### Task 9: Giao diện công tắc, nút duyệt mờ, lịch sử
 
@@ -301,11 +301,11 @@ def test_background_note_runs_after_sync(fake_github):
 - Consumes: `Project.require_review`, `android_app_id`, `ios_bundle_id` (sau `gen:api`).
 - Produces: prop `reviewDisabled: boolean` cho `ReviewActions` và `BulkApproveBar`.
 
-- [ ] **Bước 1: Test đỏ** — `ReviewActions reviewDisabled` render nút "Duyệt"/"Trả lại" có `disabled` và tooltip "Dự án đang tắt bước duyệt"; `HistoryPanel` hiện dòng `v3 · 16/11/2026 14:05 · Lan · Các bước, Nền tảng` (giờ Việt Nam, tên trường dịch từ `CHANGED_FIELD_LABELS` phía frontend trong `lib/test-cases/history.ts`).
-- [ ] **Bước 2:** `npx vitest run components/test-cases` → FAIL.
-- [ ] **Bước 3:** Viết. Trang Cài đặt: `Switch` "Cần QA duyệt" + hai ô app id (Admin/QA Lead). Form: nút "Lưu và gửi duyệt" đổi chữ thành "Gửi" khi tắt duyệt; cảnh báo `resetWarning` chỉ hiện khi bật duyệt.
-- [ ] **Bước 4:** PASS + typecheck + lint.
-- [ ] **Bước 5:** Commit `feat(frontend): công tắc duyệt, nút duyệt mờ và lịch sử phiên bản`.
+- [x] **Bước 1: Test đỏ** — `ReviewActions reviewDisabled` render nút "Duyệt"/"Trả lại" có `disabled` và tooltip "Dự án đang tắt bước duyệt"; `HistoryPanel` hiện dòng `v3 · 16/11/2026 14:05 · Lan · Các bước, Nền tảng` (giờ Việt Nam, tên trường dịch từ `CHANGED_FIELD_LABELS` phía frontend trong `lib/test-cases/history.ts`).
+- [x] **Bước 2:** `npx vitest run components/test-cases` → FAIL.
+- [x] **Bước 3:** Viết. Trang Cài đặt: `Switch` "Cần QA duyệt" + hai ô app id (Admin/QA Lead). Form: nút "Lưu và gửi duyệt" đổi chữ thành "Gửi" khi tắt duyệt; cảnh báo `resetWarning` chỉ hiện khi bật duyệt.
+- [x] **Bước 4:** PASS + typecheck + lint.
+- [x] **Bước 5:** Commit `feat(frontend): công tắc duyệt, nút duyệt mờ và lịch sử phiên bản`.
 
 ---
 

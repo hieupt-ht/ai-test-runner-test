@@ -81,9 +81,18 @@ type Props = {
   defaultScreenId?: string
   /** Báo cho trang cha biết form có thay đổi chưa lưu */
   onDirtyChange?: (dirty: boolean) => void
+  /** Dự án có bước QA duyệt không (mặc định có). Tắt thì "Gửi" là duyệt luôn. */
+  reviewEnabled?: boolean
 }
 
-export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, onDirtyChange }: Props) {
+export function CaseForm({
+  projectId,
+  testCase,
+  screens = [],
+  defaultScreenId,
+  onDirtyChange,
+  reviewEnabled = true,
+}: Props) {
   const t = useTranslations("testCases")
   const tc = useTranslations("common")
   const router = useRouter()
@@ -276,7 +285,7 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, o
         />
       </div>
 
-      {isEdit && testCase?.status !== "DRAFT" && (
+      {reviewEnabled && isEdit && testCase?.status !== "DRAFT" && (
         <p className="text-sm text-amber-700 dark:text-amber-300">{t("form.resetWarning")}</p>
       )}
 
@@ -290,7 +299,7 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, o
             disabled={busy}
             onClick={handleSubmit((values) => save(values, true))}
           >
-            {t("form.saveAndSubmit")}
+            {reviewEnabled ? t("form.saveAndSubmit") : t("form.saveAndSend")}
           </Button>
         )}
       </div>

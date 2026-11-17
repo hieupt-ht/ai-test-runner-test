@@ -158,6 +158,7 @@ function TestCaseList() {
           items={items}
           onDone={() => setSelected(new Set())}
           onClear={() => setSelected(new Set())}
+          reviewDisabled={project ? !project.require_review : false}
         />
       )}
 

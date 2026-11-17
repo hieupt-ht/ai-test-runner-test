@@ -32,10 +32,12 @@ type Props = {
   hideSubmit?: boolean
   /** Form có thay đổi chưa lưu: khoá các nút để không mất phần đang sửa */
   formDirty?: boolean
+  /** Dự án tắt bước duyệt: nút Duyệt/Trả lại mờ đi (backend cũng trả 409) */
+  reviewDisabled?: boolean
 }
 
 /** Các nút chuyển trạng thái (gửi duyệt, duyệt, trả lại, ngừng dùng, khôi phục) của một case. */
-export function ReviewActions({ projectId, testCase, hideSubmit, formDirty }: Props) {
+export function ReviewActions({ projectId, testCase, hideSubmit, formDirty, reviewDisabled }: Props) {
   const t = useTranslations("testCases")
   const tCommon = useTranslations("common")
   const queryClient = useQueryClient()
@@ -91,7 +93,8 @@ export function ReviewActions({ projectId, testCase, hideSubmit, formDirty }: Pr
             <Button
               key={action}
               variant="outline"
-              disabled={formDirty}
+              disabled={formDirty || reviewDisabled}
+              title={reviewDisabled ? t("reviewOff") : undefined}
               onClick={() => setReturnOpen(true)}
             >
               {t("actions.return")}
@@ -113,7 +116,8 @@ export function ReviewActions({ projectId, testCase, hideSubmit, formDirty }: Pr
         return (
           <Button
             key={action}
-            disabled={transition.isPending || formDirty}
+            disabled={transition.isPending || formDirty || (reviewDisabled && action === "approve")}
+            title={reviewDisabled && action === "approve" ? t("reviewOff") : undefined}
             onClick={() => void run(action)}>
             {t(`actions.${action}`)}
           </Button>

@@ -155,6 +155,11 @@
     "notFound": "Không tìm thấy dự án, hoặc bạn không phải thành viên.",
     "archivedBanner": "Dự án đã được lưu trữ: chỉ xem, không sửa được.",
     "settingsTitle": "Cài đặt dự án",
+    "requireReview": "Cần QA duyệt",
+    "requireReviewHint": "Tắt thì test case gửi lên là được duyệt luôn; các case đang chờ duyệt cũng được duyệt ngay.",
+    "fieldAndroidAppId": "Android app id (ví dụ com.shop.app)",
+    "fieldIosBundleId": "iOS bundle id (ví dụ vn.shop.app)",
+    "appIdInvalid": "Chỉ dùng chữ, số, dấu chấm, gạch dưới và gạch ngang",
     "repoLocked": "Repo và Google Sheet không đổi được sau khi tạo dự án.",
     "archive": "Lưu trữ dự án",
     "unarchive": "Bỏ lưu trữ",
@@ -301,6 +306,7 @@
       "priority": "Ưu tiên",
       "saveDraft": "Lưu nháp",
       "saveAndSubmit": "Lưu và gửi duyệt",
+      "saveAndSend": "Gửi",
       "created": "Đã tạo {id}",
       "submitted": "Đã lưu và gửi duyệt",
       "resetWarning": "Sửa nội dung sẽ đưa case về Nháp và phải duyệt lại.",
@@ -329,6 +335,7 @@
       "drag": "Kéo để đổi thứ tự",
       "hint": "Nhấn Ctrl+Enter trong ô thao tác để thêm bước mới ngay bên dưới."
     },
+    "reviewOff": "Dự án đang tắt bước duyệt",
     "detail": {
       "notFound": "Không tìm thấy test case.",
       "returnedBanner": "QA Lead trả lại case này",
@@ -371,19 +378,10 @@
         "APPROVE": "Duyệt",
         "RETURN": "Trả lại",
         "DEPRECATE": "Ngừng dùng",
-        "RESTORE": "Khôi phục"
+        "RESTORE": "Khôi phục",
+        "AUTO_APPROVE": "Tự duyệt (tắt bước duyệt)"
       },
-      "fields": "Đã đổi: {fields}",
-      "field": {
-        "title": "tiêu đề",
-        "precondition": "điều kiện",
-        "test_data": "dữ liệu",
-        "steps": "các bước",
-        "expected_result": "kết quả mong đợi",
-        "severity": "mức độ",
-        "priority": "ưu tiên",
-        "status": "trạng thái"
-      }
+      "fields": "Đã đổi: {fields}"
     },
     "conflict": {
       "title": "Case đã bị thay đổi",

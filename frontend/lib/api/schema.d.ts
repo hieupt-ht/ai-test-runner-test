@@ -689,7 +689,7 @@ export interface components {
          * Action
          * @enum {string}
          */
-        Action: "MANAGE_USERS" | "MANAGE_PROJECTS" | "MANAGE_MEMBERS" | "MANAGE_SCREENS" | "EDIT_TEST_CASE" | "REVIEW_TEST_CASE" | "TRIGGER_RUN" | "REVIEW_RESULTS" | "VIEW_PROJECT";
+        Action: "MANAGE_USERS" | "MANAGE_PROJECTS" | "MANAGE_PROJECT_SETTINGS" | "MANAGE_MEMBERS" | "MANAGE_SCREENS" | "EDIT_TEST_CASE" | "REVIEW_TEST_CASE" | "TRIGGER_RUN" | "REVIEW_RESULTS" | "VIEW_PROJECT";
         /** AddMemberRequest */
         AddMemberRequest: {
             /** Email */
@@ -1441,6 +1441,12 @@ export interface components {
             staging_url?: string | null;
             /** Archived */
             archived?: boolean | null;
+            /** Android App Id */
+            android_app_id?: string | null;
+            /** Ios Bundle Id */
+            ios_bundle_id?: string | null;
+            /** Require Review */
+            require_review?: boolean | null;
         };
         /** UpdateScreenRequest */
         UpdateScreenRequest: {
