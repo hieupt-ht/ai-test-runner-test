@@ -718,6 +718,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/regression-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Regression Run */
+        post: operations["create_regression_run_api_projects__project_id__regression_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/regression-runs/{run_id}/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish Regression Run */
+        post: operations["finish_regression_run_api_projects__project_id__regression_runs__run_id__finish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -792,6 +826,8 @@ export interface components {
              * @default 0
              */
             duration_seconds: number;
+            /** Run Id */
+            run_id?: string | null;
         };
         /** AgentResultsResponse */
         AgentResultsResponse: {
@@ -910,6 +946,11 @@ export interface components {
             staging_url?: string | null;
             /** Spreadsheet */
             spreadsheet: string;
+        };
+        /** CreateRegressionRequest */
+        CreateRegressionRequest: {
+            /** Build Version */
+            build_version: string;
         };
         /** CreateScreenRequest */
         CreateScreenRequest: {
@@ -1281,6 +1322,63 @@ export interface components {
          * @enum {string}
          */
         Role: "ADMIN" | "QA_LEAD" | "TESTER" | "VIEWER";
+        /** Run */
+        Run: {
+            /** Id */
+            id: string;
+            /** Triggered By */
+            triggered_by: string;
+            scope: components["schemas"]["RunScope"];
+            /** Branch */
+            branch: string;
+            /** Commit Sha */
+            commit_sha: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Total */
+            total: number;
+            /** Passed */
+            passed: number;
+            /** Failed */
+            failed: number;
+            /** Tokens Used */
+            tokens_used: number;
+            /**
+             * Build Version
+             * @default
+             */
+            build_version: string;
+        };
+        /**
+         * RunScope
+         * @description Phạm vi một lần chạy. Danh sách rỗng nghĩa là "không lọc theo tiêu chí này".
+         */
+        RunScope: {
+            /** Screen Ids */
+            screen_ids?: string[];
+            /** Priorities */
+            priorities?: components["schemas"]["Priority"][];
+            /** Severities */
+            severities?: components["schemas"]["Severity"][];
+            /**
+             * Regression Only
+             * @default false
+             */
+            regression_only: boolean;
+            /** Case Ids */
+            case_ids?: string[];
+        };
+        /**
+         * RunStatus
+         * @enum {string}
+         */
+        RunStatus: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
         /** Screen */
         Screen: {
             /** Id */
@@ -3268,6 +3366,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_regression_run_api_projects__project_id__regression_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRegressionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finish_regression_run_api_projects__project_id__regression_runs__run_id__finish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
                 };
             };
             /** @description Validation Error */

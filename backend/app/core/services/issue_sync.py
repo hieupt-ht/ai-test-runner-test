@@ -1,6 +1,7 @@
 """Đồng bộ một test case từ Sheet sang issue ở repo của dự án."""
 
 import logging
+from collections.abc import Callable
 from concurrent.futures import Executor, ThreadPoolExecutor
 from typing import Literal, Protocol
 
@@ -148,6 +149,10 @@ class BackgroundIssueSync:
         screen: Screen | None = None,
     ) -> None:
         self._executor.submit(self._sync_safely, project, case, screen_name, screen)
+
+    def submit(self, work: Callable[[], None]) -> None:
+        """Chạy một việc GitHub trên cùng luồng duy nhất (nối đuôi các việc trước đó)."""
+        self._executor.submit(work)
 
     def note_case_edited(
         self, project: Project, case: TestCase, *, changed: list[str], needs_rerun: bool

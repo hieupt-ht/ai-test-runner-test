@@ -21,13 +21,14 @@ from app.core.models.run import (
     Evidence,
     Result,
     ResultStatus,
+    Run,
     RunScope,
     RunStatus,
     StepResult,
 )
 from app.core.models.test_case import TestCaseStatus
 from app.core.models.user import Role
-from app.core.repositories.runs import RunInProgressError
+from app.core.repositories.runs import InvalidRunStateError, RunInProgressError
 from app.core.services.evidence_retention import prune_evidence
 from app.core.services.notify import Notifier
 from app.core.services.result_issue_sync import sync_result_issue
@@ -36,6 +37,8 @@ from app.settings import Settings
 
 router = APIRouter(prefix="/api/agent/projects/{project_id}", tags=["agent"])
 logger = logging.getLogger(__name__)
+
+NOT_OPEN_REGRESSION = "Lần chạy này đã kết thúc hoặc không phải lần chạy regression"
 
 
 class AgentEvidence(BaseModel):
@@ -63,6 +66,8 @@ class AgentResultsRequest(BaseModel):
     results: list[AgentResult] = Field(max_length=200)
     build_version: str = Field(default="", max_length=50)
     duration_seconds: float = Field(default=0, ge=0, le=86400)
+    # Chạy bộ regression: mã lần chạy lấy từ comment trên issue
+    run_id: str | None = Field(default=None, max_length=30)
 
 
 class IgnoredResult(BaseModel):
@@ -147,17 +152,33 @@ def write_agent_results(
         for case in scope.test_cases.list_all()
         if case.status == TestCaseStatus.APPROVED
     }
+    # Có run_id: kết quả thuộc một lần chạy regression đang mở, không tạo run mới
+    regression_run: Run | None = None
+    if body.run_id is not None:
+        regression_run = scope.runs.get(body.run_id)
+        if regression_run is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy lần chạy")
+        if not (
+            regression_run.scope.regression_only and regression_run.status == RunStatus.RUNNING
+        ):
+            raise HTTPException(status.HTTP_409_CONFLICT, NOT_OPEN_REGRESSION)
     accepted: list[AgentResult] = []
     ignored: list[IgnoredResult] = []
     for item in body.results:
-        if item.test_case_id in approved:
-            accepted.append(item)
-        else:
+        if item.test_case_id not in approved:
             ignored.append(
                 IgnoredResult(
                     test_case_id=item.test_case_id, reason="Case không tồn tại hoặc chưa duyệt"
                 )
             )
+        elif regression_run is not None and item.test_case_id not in regression_run.scope.case_ids:
+            ignored.append(
+                IgnoredResult(
+                    test_case_id=item.test_case_id, reason="Case không thuộc lần chạy này"
+                )
+            )
+        else:
+            accepted.append(item)
 
     # Link sai kho Cloudinary thì từ chối cả request, chưa tạo Run nào
     try:
@@ -166,19 +187,22 @@ def write_agent_results(
     except ForeignMediaError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
 
-    try:
-        run = scope.runs.create(
-            triggered_by="codex-agent",
-            scope=RunScope(),
-            branch=project.branch,
-            total=len(accepted),
-            build_version=body.build_version,
-        )
-    except (RunInProgressError, LockTimeout):
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "Đang có một lần ghi kết quả khác, hãy thử lại",
-        ) from None
+    if regression_run is not None:
+        run = regression_run
+    else:
+        try:
+            run = scope.runs.create(
+                triggered_by="codex-agent",
+                scope=RunScope(),
+                branch=project.branch,
+                total=len(accepted),
+                build_version=body.build_version,
+            )
+        except (RunInProgressError, LockTimeout):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Đang có một lần ghi kết quả khác, hãy thử lại",
+            ) from None
 
     # Đọc màn hình một lần để ghi lại dev phụ trách tại thời điểm này
     dev_by_screen = {screen.id: screen.dev_owner for screen in scope.screens.list_all()}
@@ -201,46 +225,68 @@ def write_agent_results(
         )
         for item in accepted
     ]
-    try:
-        scope.results.append_batch(results)
-    except Exception:
-        run.status = RunStatus.FAILED
-        run.finished_at = utc_now()
+    if regression_run is not None:
+        # Run regression cộng dồn: add_results ghi kết quả, đếm và tự hoàn tất khi đủ case
         try:
-            scope.runs.save(run)
+            run = scope.runs.add_results(regression_run.id, results)
+        except InvalidRunStateError:
+            raise HTTPException(status.HTTP_409_CONFLICT, NOT_OPEN_REGRESSION) from None
+        except LockTimeout:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "Đang có một lần ghi kết quả khác, hãy thử lại"
+            ) from None
         except Exception:
-            logger.error("Không đánh dấu được run %s của dự án %s là FAILED", run.id, project.id)
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "Không ghi được kết quả, hãy kiểm tra Sheet trước khi thử lại",
-        ) from None
-    run.status = RunStatus.COMPLETED
-    run.finished_at = utc_now()
-    run.passed = sum(item.status == ResultStatus.PASS for item in accepted)
-    run.failed = sum(item.status == ResultStatus.FAIL for item in accepted)
-    scope.runs.save(run)
+            logger.error("Không ghi được kết quả vào run %s", regression_run.id, exc_info=True)
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Không ghi được kết quả, hãy kiểm tra Sheet trước khi thử lại",
+            ) from None
+    else:
+        try:
+            scope.results.append_batch(results)
+        except Exception:
+            run.status = RunStatus.FAILED
+            run.finished_at = utc_now()
+            try:
+                scope.runs.save(run)
+            except Exception:
+                logger.error(
+                    "Không đánh dấu được run %s của dự án %s là FAILED", run.id, project.id
+                )
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Không ghi được kết quả, hãy kiểm tra Sheet trước khi thử lại",
+            ) from None
+        run.status = RunStatus.COMPLETED
+        run.finished_at = utc_now()
+        run.passed = sum(item.status == ResultStatus.PASS for item in accepted)
+        run.failed = sum(item.status == ResultStatus.FAIL for item in accepted)
+        scope.runs.save(run)
+    # Run regression gửi từng đợt: chỉ báo một lần khi cả run đã xong
+    notify = regression_run is None or run.status == RunStatus.COMPLETED
     try:
-        member_emails = {
-            member.email for member in services.members.list_for_project(project.id)
-        }
-        recipients = {
-            user.email
-            for user in services.users.list_all()
-            if user.active
-            and (
-                user.role == Role.ADMIN
-                or (user.role == Role.QA_LEAD and user.email in member_emails)
+        if notify:
+            member_emails = {
+                member.email for member in services.members.list_for_project(project.id)
+            }
+            recipients = {
+                user.email
+                for user in services.users.list_all()
+                if user.active
+                and (
+                    user.role == Role.ADMIN
+                    or (user.role == Role.QA_LEAD and user.email in member_emails)
+                )
+            }
+            recipients.update(
+                approved[item.test_case_id].created_by
+                for item in accepted
+                if item.status == ResultStatus.FAIL
             )
-        }
-        recipients.update(
-            approved[item.test_case_id].created_by
-            for item in accepted
-            if item.status == ResultStatus.FAIL
-        )
-        Notifier(services.notifications).results_recorded(
-            emails=sorted(recipients), project_id=project.id, run_id=run.id,
-            failed=run.failed, total=run.total,
-        )
+            Notifier(services.notifications).results_recorded(
+                emails=sorted(recipients), project_id=project.id, run_id=run.id,
+                failed=run.failed, total=run.total,
+            )
     except Exception:
         logger.warning("Không xác định được người nhận kết quả run %s", run.id, exc_info=True)
     if services.github is not None:
