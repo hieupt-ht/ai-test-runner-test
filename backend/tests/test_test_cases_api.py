@@ -162,6 +162,12 @@ class RecordingIssueSink:
     def __init__(self, fail: bool = False) -> None:
         self.calls: list[tuple[str, str, str]] = []
         self.fail = fail
+        self.edits: list[tuple[str, list[str], bool]] = []
+
+    def note_case_edited(
+        self, project: Project, case: TestCase, *, changed: list[str], needs_rerun: bool
+    ) -> None:
+        self.edits.append((case.id, changed, needs_rerun))
 
     def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None:
         self.calls.append((case.id, case.status.value, screen_name))
@@ -678,3 +684,32 @@ def test_review_on_keeps_old_flow(an: TestClient, project: Project) -> None:
     case = create(an, project).json()
     response = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
     assert response.json()["status"] == "IN_REVIEW"
+
+
+def test_edit_approved_case_with_results_requests_rerun_through_api(
+    app: FastAPI, an: TestClient, project: Project, review_off: Project,
+    gateway: FakeSheetsGateway,
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    case = create(an, project).json()
+    approved = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1}).json()
+    # Giả lập đã có một kết quả chạy cho case này
+    from datetime import UTC, datetime
+
+    from app.core.models.run import Result, ResultStatus
+    from app.core.repositories.runs import ResultRepository
+
+    ResultRepository(gateway, project.spreadsheet_id).append_batch([
+        Result(id="RUN-1-" + case["id"], run_id="RUN-1", test_case_id=case["id"],
+               status=ResultStatus.PASS, reason="", failed_step=None,
+               created_at=datetime.now(UTC))
+    ])
+    body = {**BODY, "version": approved["version"], "steps": [
+        {"action": "Bước mới", "expected": ""}]}
+
+    response = an.put(url(project, f"/{case['id']}"), json=body)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "APPROVED"
+    assert sink.edits == [(case["id"], ["Các bước"], True)]

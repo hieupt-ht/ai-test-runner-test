@@ -121,3 +121,39 @@ def test_same_case_id_in_two_projects_gets_issues_in_their_own_repos() -> None:
     syncer.sync_case(project, make_case())
     syncer.sync_case(other, make_case())
     assert len(github.issues["org/web"]) == len(github.issues["other/app"]) == 1
+
+
+def test_note_case_edited_comments_then_requests_rerun() -> None:
+    github = FakeGitHub()
+    syncer = IssueSyncer(github)
+    project, case = make_project(), make_case(version=3)
+    syncer.sync_case(project, case)
+
+    syncer.note_case_edited(project, case, changed=["Các bước", "Nền tảng"], needs_rerun=True)
+
+    bodies = [c.body for c in github.issue_comments["org/web"][1]]
+    assert "📝 Case đã sửa lên v3: Các bước, Nền tảng" in bodies[0]
+    assert "needs-rerun" in github.issues["org/web"][0][0].labels
+
+
+def test_note_case_edited_without_rerun_only_comments() -> None:
+    github = FakeGitHub()
+    syncer = IssueSyncer(github)
+    project, case = make_project(), make_case(version=2)
+    syncer.sync_case(project, case)
+
+    syncer.note_case_edited(project, case, changed=["Tiêu đề"], needs_rerun=False)
+
+    assert "needs-rerun" not in github.issues["org/web"][0][0].labels
+    assert len(github.issue_comments["org/web"][1]) == 1
+
+
+def test_background_note_runs_after_sync() -> None:
+    github = FakeGitHub()
+    sink = BackgroundIssueSync(IssueSyncer(github), executor=ImmediateExecutor())
+    project, case = make_project(), make_case(version=3)
+
+    sink.sync_case(project, case)
+    sink.note_case_edited(project, case, changed=["Các bước"], needs_rerun=False)
+
+    assert github.calls.index("create") < github.calls.index("comments:create")

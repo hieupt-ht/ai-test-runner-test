@@ -400,3 +400,95 @@ def test_approve_many_refreshes_each_screen_once(env: Env, monkeypatch: pytest.M
     env.service.approve_many(LEAD, [(first.id, first.version), (second.id, second.version)])
 
     assert refreshed == ["SC-0001"]
+
+
+# ----- Sửa case đã gửi tại chỗ (Task 8) -----
+
+
+class EditSink:
+    """Ghi lại các lần service báo "case đã sửa" (không gọi GitHub)."""
+
+    def __init__(self) -> None:
+        self.edits: list[tuple[str, list[str], bool]] = []
+
+    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None:
+        pass
+
+    def note_case_edited(
+        self, project: Project, case: TestCase, *, changed: list[str], needs_rerun: bool
+    ) -> None:
+        self.edits.append((case.id, changed, needs_rerun))
+
+
+def service_with(
+    env: Env, *, review: bool, sink: EditSink, has_results: bool = False
+) -> TestCaseService:
+    return TestCaseService(
+        project_id=env.project.id,
+        test_cases=env.test_cases,
+        screens=env.screens,
+        assignments=env.assignments,
+        members=env.service._members,
+        status_updater=AssignmentStatusUpdater(env.assignments, env.test_cases),
+        audit_log=AuditLogRepository(env.gateway, env.project.spreadsheet_id),
+        issue_sync=sink,
+        project=env.project.model_copy(update={"require_review": review}),
+        has_results=lambda case_id: has_results,
+    )
+
+
+def approved_case(env: Env, service: TestCaseService) -> TestCase:
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content())
+    return service.transition(TESTER_A, case.id, CaseAction.SUBMIT, version=1)
+
+
+def test_edit_approved_keeps_status_when_review_off(env: Env) -> None:
+    sink = EditSink()
+    service = service_with(env, review=False, sink=sink)
+    case = approved_case(env, service)
+    assert case.status == TestCaseStatus.APPROVED
+
+    saved = service.update_content(
+        TESTER_A, case.id, version=case.version, content=content("Tiêu đề khác")
+    )
+
+    assert saved.status == TestCaseStatus.APPROVED
+    assert saved.version == case.version + 1
+    assert sink.edits == [(case.id, ["Tiêu đề"], False)]
+
+
+def test_edit_steps_with_results_requests_rerun(env: Env) -> None:
+    sink = EditSink()
+    service = service_with(env, review=False, sink=sink, has_results=True)
+    case = approved_case(env, service)
+    changed = content().model_copy(update={"steps": [TestStep(action="Bước mới", expected="")]})
+
+    service.update_content(TESTER_A, case.id, version=case.version, content=changed)
+
+    assert sink.edits[-1] == (case.id, ["Các bước"], True)
+
+
+def test_edit_steps_without_results_no_rerun(env: Env) -> None:
+    sink = EditSink()
+    service = service_with(env, review=False, sink=sink, has_results=False)
+    case = approved_case(env, service)
+    changed = content().model_copy(update={"steps": [TestStep(action="Bước mới", expected="")]})
+
+    service.update_content(TESTER_A, case.id, version=case.version, content=changed)
+
+    assert sink.edits[-1][2] is False
+
+
+def test_edit_with_review_on_resets_to_draft_and_sends_no_note(env: Env) -> None:
+    sink = EditSink()
+    service = service_with(env, review=True, sink=sink)
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content())
+    service.transition(TESTER_A, case.id, CaseAction.SUBMIT, version=1)
+    service.transition(LEAD, case.id, CaseAction.APPROVE, version=2)
+
+    saved = service.update_content(
+        TESTER_A, case.id, version=3, content=content("Tiêu đề khác")
+    )
+
+    assert saved.status == TestCaseStatus.DRAFT
+    assert sink.edits == []

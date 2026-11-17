@@ -6,6 +6,7 @@ Việc tính lại lấy khoá `assignments`, nên luôn chạy SAU KHI đã nh�
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -15,7 +16,13 @@ from pydantic import BaseModel, Field
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
-from app.core.models.test_case import TestCase, TestCaseContent, TestCaseStatus
+from app.core.models.test_case import (
+    CHANGED_FIELD_LABELS,
+    RERUN_FIELDS,
+    TestCase,
+    TestCaseContent,
+    TestCaseStatus,
+)
 from app.core.models.user import Role, User, normalize_email
 from app.core.permissions import Action, can
 from app.core.repositories.assignments import AssignmentRepository
@@ -133,6 +140,7 @@ class TestCaseService:
         issue_syncer: IssueSyncer | None = None,
         notifier: Notifier | None = None,
         users: UserRepository | None = None,
+        has_results: Callable[[str], bool] | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -146,6 +154,7 @@ class TestCaseService:
         self._issue_syncer = issue_syncer
         self._notifier = notifier
         self._users = users
+        self._has_results = has_results
         self._screen_names: dict[str, str] | None = None
 
     @property
@@ -248,11 +257,15 @@ class TestCaseService:
         }
         # lấy từng trường (không dùng model_dump) để `steps` vẫn là TestStep chứ không thành dict
         changes: dict[str, Any] = {field: getattr(content, field) for field in _CONTENT_FIELDS}
-        if case.status in (TestCaseStatus.IN_REVIEW, TestCaseStatus.APPROVED):
+        keep_status = not self.review_enabled and case.status == TestCaseStatus.APPROVED
+        if case.status in (TestCaseStatus.IN_REVIEW, TestCaseStatus.APPROVED) and not keep_status:
             # Nội dung đã đổi thì phải duyệt lại từ đầu.
             diff["status"] = [case.status.value, TestCaseStatus.DRAFT.value]
             changes["status"] = TestCaseStatus.DRAFT
-        return self._save(user, case, changes, version, "UPDATE", diff)
+        saved = self._save(user, case, changes, version, "UPDATE", diff)
+        if keep_status:
+            self._note_edited(saved, [field for field in _CONTENT_FIELDS if field in diff])
+        return saved
 
     def transition(
         self, user: User, case_id: str, action: CaseAction, *, version: int, comment: str = ""
@@ -450,6 +463,24 @@ class TestCaseService:
         if refresh and "status" in changes:
             self._refresh_status(saved.screen_id)
         return saved
+
+    def _note_edited(self, case: TestCase, changed_fields: list[str]) -> None:
+        """Báo lên issue là case đã sửa tại chỗ; cần chạy lại nếu đổi phần ảnh hưởng kết quả cũ."""
+        if self._issue_sync is None or self._project is None:
+            return
+        try:
+            affects_results = any(name in RERUN_FIELDS for name in changed_fields)
+            needs_rerun = (
+                affects_results and self._has_results is not None and self._has_results(case.id)
+            )
+            self._issue_sync.note_case_edited(
+                self._project,
+                case,
+                changed=[CHANGED_FIELD_LABELS[name] for name in changed_fields],
+                needs_rerun=needs_rerun,
+            )
+        except Exception:
+            logger.warning("Không báo được case %s đã sửa lên issue", case.id, exc_info=True)
 
     def _sync_issue(self, case: TestCase) -> None:
         if self._issue_sync is None or self._project is None:

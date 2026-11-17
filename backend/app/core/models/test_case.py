@@ -69,6 +69,29 @@ class TestCaseContent(BaseModel):
     requirement_ref: str = Field(default="", max_length=200)
 
 
+# Tên tiếng Việt của từng trường nội dung, dùng khi báo "đã sửa gì" trên issue và lịch sử
+CHANGED_FIELD_LABELS: dict[str, str] = {
+    "title": "Tiêu đề",
+    "precondition": "Điều kiện trước",
+    "test_data": "Dữ liệu test",
+    "steps": "Các bước",
+    "expected_result": "Kết quả mong đợi",
+    "severity": "Mức độ nghiêm trọng",
+    "priority": "Độ ưu tiên",
+    "platform": "Nền tảng",
+    "test_type": "Loại test",
+    "regression": "Regression",
+    "start_point": "Điểm bắt đầu",
+    "guide_media": "Ảnh/video hướng dẫn",
+    "postcondition": "Điều kiện sau",
+    "requirement_ref": "Mã yêu cầu",
+}
+
+# Đổi các trường này thì kết quả chạy cũ không còn đúng với case: cần chạy lại.
+# (guide_media trong từng bước nằm trong `steps` nên cũng được tính.)
+RERUN_FIELDS = {"steps", "expected_result", "start_point", "platform", "guide_media"}
+
+
 def media_of(case: TestCaseContent) -> list[Media]:
     """Mọi ảnh/video của case (cả case và từng bước), dùng để kiểm tra cloud và dọn file."""
     return [*case.guide_media, *(media for step in case.steps for media in step.guide_media)]

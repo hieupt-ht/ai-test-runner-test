@@ -111,7 +111,21 @@ def service_for(services: Services, project: Project) -> TestCaseService:
         ),
         notifier=Notifier(services.notifications),
         users=services.users,
+        has_results=_has_results_checker(services, project),
     )
+
+
+def _has_results_checker(services: Services, project: Project) -> Callable[[str], bool]:
+    """Hàm "case này đã có kết quả chạy chưa"; chỉ đọc Sheet Results một lần, khi cần."""
+    case_ids: set[str] | None = None
+
+    def has_results(case_id: str) -> bool:
+        nonlocal case_ids
+        if case_ids is None:
+            case_ids = {r.test_case_id for r in scope_for(services, project).results.list_all()}
+        return case_id in case_ids
+
+    return has_results
 
 
 def _content_of(body: TestCaseContent) -> TestCaseContent:
