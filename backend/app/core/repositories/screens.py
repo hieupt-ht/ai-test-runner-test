@@ -74,7 +74,15 @@ class ScreenRepository:
     def get(self, screen_id: str) -> Screen | None:
         return next((screen for screen in self.list_all() if screen.id == screen_id), None)
 
-    def create(self, *, name: str, description: str, route: str, code_paths: list[str]) -> Screen:
+    def create(
+        self,
+        *,
+        name: str,
+        description: str,
+        route: str,
+        code_paths: list[str],
+        dev_owner: str = "",
+    ) -> Screen:
         screen = Screen(
             id=self._ids.next_id("screen", "SC"),
             name=name,
@@ -82,6 +90,7 @@ class ScreenRepository:
             route=route,
             code_paths=code_paths,
             created_at=utc_now(),
+            dev_owner=dev_owner,
         )
         with self._lock():
             self._table.append(_to_record(screen))

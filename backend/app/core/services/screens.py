@@ -35,10 +35,21 @@ class ScreenService:
         return self._screens.list_all()
 
     def create_screen(
-        self, actor: User, *, name: str, description: str, route: str, code_paths: list[str]
+        self,
+        actor: User,
+        *,
+        name: str,
+        description: str,
+        route: str,
+        code_paths: list[str],
+        dev_owner: str = "",
     ) -> Screen:
         screen = self._screens.create(
-            name=name, description=description, route=route, code_paths=code_paths
+            name=name,
+            description=description,
+            route=route,
+            code_paths=code_paths,
+            dev_owner=dev_owner,
         )
         self._record(actor, "CREATE", screen.id, screen.model_dump(mode="json"))
         return screen
@@ -52,6 +63,7 @@ class ScreenService:
         description: str | None = None,
         route: str | None = None,
         code_paths: list[str] | None = None,
+        dev_owner: str | None = None,
     ) -> Screen:
         current = self._screens.get(screen_id)
         if current is None:
@@ -61,6 +73,7 @@ class ScreenService:
             "description": description,
             "route": route,
             "code_paths": code_paths,
+            "dev_owner": dev_owner,
         }
         updated = current.model_copy(
             update={field: value for field, value in changes.items() if value is not None}

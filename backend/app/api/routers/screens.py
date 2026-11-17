@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Response, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.project_access import load_project
@@ -21,6 +21,20 @@ Description = Annotated[str, Field(max_length=2000)]
 Route = Annotated[str, Field(max_length=200)]
 CodePaths = Annotated[list[CodePath], Field(max_length=MAX_CODE_PATHS)]
 
+
+def _strip_at(value: object) -> object:
+    """Người dùng hay gõ `@tên`; GitHub cần tên trần nên bỏ `@` ở đầu trước khi kiểm tra."""
+    return value.strip().removeprefix("@") if isinstance(value, str) else value
+
+
+# Tên tài khoản GitHub: chữ/số/dấu gạch, không bắt đầu hay kết thúc bằng "-", tối đa 39 ký tự.
+# Chuỗi rỗng nghĩa là chưa có dev phụ trách.
+GitHubUsername = Annotated[
+    str,
+    BeforeValidator(_strip_at),
+    Field(max_length=39, pattern=r"^$|^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$"),
+]
+
 NOT_FOUND = "Không tìm thấy màn hình"
 
 
@@ -31,6 +45,7 @@ class CreateScreenRequest(BaseModel):
     description: Description = ""
     route: Route = ""
     code_paths: CodePaths = []
+    dev_owner: GitHubUsername = ""
 
 
 class UpdateScreenRequest(BaseModel):
@@ -40,6 +55,7 @@ class UpdateScreenRequest(BaseModel):
     description: Description | None = None
     route: Route | None = None
     code_paths: CodePaths | None = None
+    dev_owner: GitHubUsername | None = None
 
 
 def _service(services: Services, user: User, project_id: str, action: Action) -> ScreenService:
@@ -69,6 +85,7 @@ def create_screen(
             description=body.description,
             route=body.route,
             code_paths=body.code_paths,
+            dev_owner=body.dev_owner,
         )
     except LockTimeout:
         raise _busy() from None
@@ -91,6 +108,7 @@ def update_screen(
             description=body.description,
             route=body.route,
             code_paths=body.code_paths,
+            dev_owner=body.dev_owner,
         )
     except ScreenNotFoundError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None

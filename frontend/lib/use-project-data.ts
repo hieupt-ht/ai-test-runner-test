@@ -26,7 +26,13 @@ function useRefresh(projectId: string) {
 
 // ----- Màn hình -----
 
-export type ScreenInput = { name: string; description: string; route: string; code_paths: string[] }
+export type ScreenInput = {
+  name: string
+  description: string
+  route: string
+  code_paths: string[]
+  dev_owner: string
+}
 
 export function useScreens(projectId: string) {
   return useQuery({

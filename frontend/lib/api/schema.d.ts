@@ -930,6 +930,11 @@ export interface components {
              * @default []
              */
             code_paths: string[];
+            /**
+             * Dev Owner
+             * @default
+             */
+            dev_owner: string;
         };
         /** CreateTestCaseRequest */
         CreateTestCaseRequest: {
@@ -1623,6 +1628,8 @@ export interface components {
             route?: string | null;
             /** Code Paths */
             code_paths?: string[] | null;
+            /** Dev Owner */
+            dev_owner?: string | null;
         };
         /** UpdateTestCaseRequest */
         UpdateTestCaseRequest: {

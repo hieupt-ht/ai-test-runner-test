@@ -156,3 +156,38 @@ def test_screen_dev_owner_defaults_empty_and_round_trips(
     repo._cache.invalidate()
     old = repo.get(screen.id)
     assert old is not None and old.dev_owner == ""
+
+
+def test_dev_owner_is_saved_without_leading_at(
+    client_as_qa_lead: TestClient, project: Project
+) -> None:
+    created = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(dev_owner="@nguyenvana")
+    )
+    assert created.status_code == 201
+    assert created.json()["dev_owner"] == "nguyenvana"
+
+    updated = client_as_qa_lead.patch(
+        f"{screens_url(project)}/{created.json()['id']}", json={"dev_owner": "@tran-b"}
+    )
+    assert updated.json()["dev_owner"] == "tran-b"
+
+
+def test_dev_owner_can_be_cleared(client_as_qa_lead: TestClient, project: Project) -> None:
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen(dev_owner="abc"))
+    cleared = client_as_qa_lead.patch(
+        f"{screens_url(project)}/{created.json()['id']}", json={"dev_owner": ""}
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["dev_owner"] == ""
+
+
+@pytest.mark.parametrize("bad", ["a b", "-abc", "abc-", "a--b", "x" * 40, "a/b"])
+def test_bad_dev_owner_is_422(client_as_qa_lead: TestClient, project: Project, bad: str) -> None:
+    response = client_as_qa_lead.post(screens_url(project), json=login_screen(dev_owner=bad))
+    assert response.status_code == 422
+
+
+def test_tester_cannot_set_dev_owner(client_as_tester: TestClient, project: Project) -> None:
+    response = client_as_tester.post(screens_url(project), json=login_screen(dev_owner="abc"))
+    assert response.status_code == 403

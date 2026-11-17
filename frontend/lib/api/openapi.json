@@ -2789,6 +2789,12 @@
             "maxItems": 20,
             "title": "Code Paths",
             "default": []
+          },
+          "dev_owner": {
+            "type": "string",
+            "maxLength": 39,
+            "title": "Dev Owner",
+            "default": ""
           }
         },
         "type": "object",
@@ -4313,6 +4319,18 @@
               }
             ],
             "title": "Code Paths"
+          },
+          "dev_owner": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 39
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dev Owner"
           }
         },
         "type": "object",

@@ -22,6 +22,14 @@ import { MAX_CODE_PATHS, codePathError } from "@/components/screens/code-path"
 import type { Screen } from "@/lib/api/types"
 import { useSaveScreen } from "@/lib/use-project-data"
 
+// Tên GitHub: chữ/số, gạch ngang ở giữa, tối đa 39 ký tự (khớp luật của backend)
+const GITHUB_NAME = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/
+
+/** Bỏ khoảng trắng và dấu @ ở đầu, giống backend. */
+function cleanDevOwner(value: string): string {
+  return value.trim().replace(/^@/, "")
+}
+
 type Props = {
   projectId: string
   /** Có thì là sửa, không có thì là thêm mới */
@@ -36,13 +44,19 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
   const [name, setName] = useState(screen?.name ?? "")
   const [description, setDescription] = useState(screen?.description ?? "")
   const [route, setRoute] = useState(screen?.route ?? "")
+  const [devOwner, setDevOwner] = useState(screen?.dev_owner ?? "")
   const [codePaths, setCodePaths] = useState<string[]>(screen?.code_paths ?? [])
   const [submitted, setSubmitted] = useState(false)
   const saveScreen = useSaveScreen(projectId)
 
   const pathErrors = codePaths.map((path) => codePathError(path))
   const nameError = name.trim() ? null : t("screens.nameRequired")
-  const hasErrors = Boolean(nameError) || pathErrors.some(Boolean)
+  const cleanedOwner = cleanDevOwner(devOwner)
+  const ownerError =
+    cleanedOwner === "" || (cleanedOwner.length <= 39 && GITHUB_NAME.test(cleanedOwner))
+      ? null
+      : t("screens.devOwnerInvalid")
+  const hasErrors = Boolean(nameError) || Boolean(ownerError) || pathErrors.some(Boolean)
 
   function updatePath(index: number, value: string) {
     setCodePaths((paths) => paths.map((path, i) => (i === index ? value : path)))
@@ -63,6 +77,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
         description: description.trim(),
         route: route.trim(),
         code_paths: codePaths.map((path) => path.trim()),
+        dev_owner: cleanedOwner,
       })
       toast.success(t("common.saved"))
       setOpen(false)
@@ -70,6 +85,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
         setName("")
         setDescription("")
         setRoute("")
+        setDevOwner("")
         setCodePaths([])
         setSubmitted(false)
       }
@@ -103,6 +119,19 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
               value={route}
               onChange={(e) => setRoute(e.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="screen-dev-owner">{t("screens.fieldDevOwner")}</Label>
+            <Input
+              id="screen-dev-owner"
+              placeholder="nguyenvana"
+              value={devOwner}
+              aria-invalid={submitted && Boolean(ownerError)}
+              onChange={(e) => setDevOwner(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">{t("screens.devOwnerHint")}</p>
+            {submitted && ownerError && <p className="text-xs text-destructive">{ownerError}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
