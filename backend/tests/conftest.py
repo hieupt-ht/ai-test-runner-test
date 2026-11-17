@@ -40,6 +40,16 @@ def make_user(
     )
 
 
+@pytest.fixture(autouse=True)
+def fast_password_hasher(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hạ chi phí argon2 trong test cho chạy nhanh (bản thật vẫn dùng mặc định)."""
+    from argon2 import PasswordHasher
+
+    monkeypatch.setattr(
+        "app.core.passwords._hasher", PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
+    )
+
+
 @pytest.fixture
 def gateway() -> FakeSheetsGateway:
     """Sheet hệ thống giả, đã có đủ các tab với hàng tiêu đề."""
