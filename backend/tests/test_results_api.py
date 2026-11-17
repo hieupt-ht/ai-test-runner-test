@@ -6,8 +6,14 @@ from fastapi.testclient import TestClient
 
 from app.api.project_scope import scope_for
 from app.core.models.project import Project
-from app.core.models.run import Evidence, Result, ResultStatus, RunScope, RunStatus
-from app.core.models.test_case import Priority, Severity, TestCaseContent, TestStep
+from app.core.models.run import Evidence, Result, ResultStatus, RunScope, RunStatus, StepResult
+from app.core.models.test_case import (
+    Platform,
+    Priority,
+    Severity,
+    TestCaseContent,
+    TestStep,
+)
 from app.core.models.user import Role
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
@@ -117,7 +123,7 @@ def test_qa_lead_sees_all_latest_results(
     assert items[first_id]["case_title"] == "Đăng nhập"
     assert items[first_id]["reason"] == "Lỗi đăng nhập"
     assert items[first_id]["failed_step"] == 2
-    assert items[first_id]["evidence"] == "https://example.com/evidence"
+    assert items[first_id]["evidence"]["legacy_url"] == "https://example.com/evidence"
     assert items[first_id]["run_id"] == "RUN-0002"
     assert items[first_id]["finished_at"]
     assert items[first_id]["screen_id"] == "SC-0001"
@@ -254,3 +260,99 @@ def test_archived_project_results_remain_visible(
 
     assert response.status_code == 200
     assert len(response.json()) == 2
+
+
+# ---------- Task 19: thông tin đầy đủ và bộ lọc mới ----------
+
+
+def seed_mixed(app: FastAPI, project: Project) -> tuple[str, str]:
+    """Hai Run: RUN-0001 có case web và case Android (regression); RUN-0002 chỉ có case web."""
+    scope = scope_for(app.state.services, project)
+    screen = scope.screens.create(name="Đăng nhập", description="", route="/", code_paths=[])
+    content = TestCaseContent(
+        title="Web",
+        steps=[TestStep(action="Mở trang")],
+        expected_result="Ok",
+        severity=Severity.HIGH,
+        priority=Priority.P1,
+    )
+    web = scope.test_cases.create(screen_id=screen.id, content=content, actor="an@x.com")
+    android = scope.test_cases.create(
+        screen_id=screen.id,
+        content=content.model_copy(
+            update={"title": "Android", "platform": Platform.ANDROID, "regression": True}
+        ),
+        actor="an@x.com",
+    )
+    for index, rows in enumerate([[web.id, android.id], [web.id]]):
+        run = scope.runs.create(
+            triggered_by="agent", scope=RunScope(), branch="main", total=len(rows),
+            build_version=f"1.0.{index}",
+        )
+        run.status = RunStatus.COMPLETED
+        run.finished_at = utc_now() + timedelta(seconds=index)
+        scope.runs.save(run)
+        scope.results.append_batch(
+            [
+                Result(
+                    id=f"{run.id}-{case_id}", run_id=run.id, test_case_id=case_id,
+                    status=ResultStatus.FAIL, reason="Lỗi", failed_step=1,
+                    created_at=run.finished_at,
+                    step_results=[StepResult(step_no=1, status="FAIL", actual="Sai")],
+                    actual_result="Thấy lỗi", environment="Pixel 7", executed_by="codex-win",
+                    case_version=1, dev_owner="nguyenvana",
+                )
+                for case_id in rows
+            ]
+        )
+    return web.id, android.id
+
+
+def lead_get(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project, query: str = ""
+) -> list[dict[str, object]]:
+    client = browser(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+    response = client.get(path(project, query))
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_item_has_full_detail(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+) -> None:
+    web, _ = seed_mixed(app, project)
+    item = next(i for i in lead_get(app, oauth, users, project) if i["case_id"] == web)
+    assert item["platform"] == "WEB" and item["regression"] is False
+    assert item["case_version"] == 1 and item["environment"] == "Pixel 7"
+    assert item["executed_by"] == "codex-win" and item["dev_owner"] == "nguyenvana"
+    assert item["actual_result"] == "Thấy lỗi"
+    assert item["step_results"][0]["actual"] == "Sai"
+    assert item["build_version"] == "1.0.1"
+    assert item["issue_url"] == (
+        f"https://github.com/{project.repo_full_name}/issues?q=label%3Atc%3A{web}"
+    )
+
+
+def test_filter_by_platform(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+) -> None:
+    _, android = seed_mixed(app, project)
+    items = lead_get(app, oauth, users, project, "?platform=ANDROID")
+    assert [i["case_id"] for i in items] == [android]
+
+
+def test_run_id_filter_returns_that_run_even_if_newer_exists(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+) -> None:
+    web, android = seed_mixed(app, project)
+    items = lead_get(app, oauth, users, project, "?run_id=RUN-0001")
+    assert {i["case_id"] for i in items} == {web, android}
+    assert {i["run_id"] for i in items} == {"RUN-0001"}
+
+
+def test_regression_only_filter(
+    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+) -> None:
+    _, android = seed_mixed(app, project)
+    items = lead_get(app, oauth, users, project, "?regression_only=true")
+    assert [i["case_id"] for i in items] == [android]

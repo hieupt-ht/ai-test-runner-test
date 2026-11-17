@@ -732,6 +732,15 @@ export interface components {
             /** Email */
             email: string;
         };
+        /**
+         * AgentEvidence
+         * @description Bằng chứng dạng mới: một video và các ảnh chụp (đã đẩy lên Cloudinary).
+         */
+        AgentEvidence: {
+            video?: components["schemas"]["Media"] | null;
+            /** Screenshots */
+            screenshots?: components["schemas"]["Media"][];
+        };
         /** AgentResult */
         AgentResult: {
             /** Test Case Id */
@@ -748,12 +757,36 @@ export interface components {
              * Evidence
              * @default
              */
-            evidence: string;
+            evidence: string | components["schemas"]["AgentEvidence"];
+            /** Step Results */
+            step_results?: components["schemas"]["StepResult"][];
+            /**
+             * Actual Result
+             * @default
+             */
+            actual_result: string;
+            /**
+             * Environment
+             * @default
+             */
+            environment: string;
+            /**
+             * Executed By
+             * @default
+             */
+            executed_by: string;
+            /** Case Version */
+            case_version?: number | null;
         };
         /** AgentResultsRequest */
         AgentResultsRequest: {
             /** Results */
             results: components["schemas"]["AgentResult"][];
+            /**
+             * Build Version
+             * @default
+             */
+            build_version: string;
             /**
              * Duration Seconds
              * @default 0
@@ -957,6 +990,22 @@ export interface components {
             /** Name */
             name: string;
             role: components["schemas"]["Role"];
+        };
+        /**
+         * Evidence
+         * @description Bằng chứng của một kết quả: video cả lần chạy và ảnh các bước.
+         */
+        Evidence: {
+            video?: components["schemas"]["Media"] | null;
+            /** Screenshots */
+            screenshots?: components["schemas"]["Media"][];
+            /** Legacy Url */
+            legacy_url?: string | null;
+            /**
+             * Pruned
+             * @default false
+             */
+            pruned: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1175,8 +1224,7 @@ export interface components {
             reason: string;
             /** Failed Step */
             failed_step: number | null;
-            /** Evidence */
-            evidence: string;
+            evidence: components["schemas"]["Evidence"];
             /** Run Id */
             run_id: string;
             /**
@@ -1184,6 +1232,25 @@ export interface components {
              * Format: date-time
              */
             finished_at: string;
+            platform: components["schemas"]["Platform"];
+            /** Regression */
+            regression: boolean;
+            /** Case Version */
+            case_version: number | null;
+            /** Environment */
+            environment: string;
+            /** Executed By */
+            executed_by: string;
+            /** Dev Owner */
+            dev_owner: string;
+            /** Actual Result */
+            actual_result: string;
+            /** Step Results */
+            step_results: components["schemas"]["StepResult"][];
+            /** Build Version */
+            build_version: string;
+            /** Issue Url */
+            issue_url: string;
         };
         /**
          * ResultStatus
@@ -1296,6 +1363,25 @@ export interface components {
             case_id: string;
             /** Reason */
             reason: string;
+        };
+        /**
+         * StepResult
+         * @description Kết quả của riêng một bước trong case.
+         */
+        StepResult: {
+            /** Step No */
+            step_no: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PASS" | "FAIL" | "SKIPPED";
+            /**
+             * Actual
+             * @default
+             */
+            actual: string;
+            screenshot?: components["schemas"]["Media"] | null;
         };
         /** SyncIssuesResult */
         SyncIssuesResult: {
@@ -3156,6 +3242,9 @@ export interface operations {
             query?: {
                 status?: components["schemas"]["ResultStatus"] | null;
                 screen_id?: string | null;
+                platform?: components["schemas"]["Platform"] | null;
+                run_id?: string | null;
+                regression_only?: boolean;
             };
             header?: never;
             path: {

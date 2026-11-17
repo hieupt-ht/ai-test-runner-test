@@ -2229,6 +2229,48 @@
               ],
               "title": "Screen Id"
             }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Platform"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "regression_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Regression Only"
+            }
           }
         ],
         "responses": {
@@ -2291,6 +2333,31 @@
         ],
         "title": "AddMemberRequest"
       },
+      "AgentEvidence": {
+        "properties": {
+          "video": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Media"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screenshots": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Screenshots"
+          }
+        },
+        "type": "object",
+        "title": "AgentEvidence",
+        "description": "Bằng chứng dạng mới: một video và các ảnh chụp (đã đẩy lên Cloudinary)."
+      },
       "AgentResult": {
         "properties": {
           "test_case_id": {
@@ -2319,10 +2386,54 @@
             "title": "Failed Step"
           },
           "evidence": {
-            "type": "string",
-            "maxLength": 2000,
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/AgentEvidence"
+              }
+            ],
             "title": "Evidence",
             "default": ""
+          },
+          "step_results": {
+            "items": {
+              "$ref": "#/components/schemas/StepResult"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Step Results"
+          },
+          "actual_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Actual Result",
+            "default": ""
+          },
+          "environment": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Environment",
+            "default": ""
+          },
+          "executed_by": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Executed By",
+            "default": ""
+          },
+          "case_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Version"
           }
         },
         "type": "object",
@@ -2341,6 +2452,12 @@
             "type": "array",
             "maxItems": 200,
             "title": "Results"
+          },
+          "build_version": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Build Version",
+            "default": ""
           },
           "duration_seconds": {
             "type": "number",
@@ -2801,6 +2918,47 @@
         ],
         "title": "CreateUserRequest"
       },
+      "Evidence": {
+        "properties": {
+          "video": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Media"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screenshots": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Screenshots"
+          },
+          "legacy_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Url"
+          },
+          "pruned": {
+            "type": "boolean",
+            "title": "Pruned",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Evidence",
+        "description": "Bằng chứng của một kết quả: video cả lần chạy và ảnh các bước."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3258,8 +3416,7 @@
             "title": "Failed Step"
           },
           "evidence": {
-            "type": "string",
-            "title": "Evidence"
+            "$ref": "#/components/schemas/Evidence"
           },
           "run_id": {
             "type": "string",
@@ -3269,6 +3426,55 @@
             "type": "string",
             "format": "date-time",
             "title": "Finished At"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression"
+          },
+          "case_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Version"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "executed_by": {
+            "type": "string",
+            "title": "Executed By"
+          },
+          "dev_owner": {
+            "type": "string",
+            "title": "Dev Owner"
+          },
+          "actual_result": {
+            "type": "string",
+            "title": "Actual Result"
+          },
+          "step_results": {
+            "items": {
+              "$ref": "#/components/schemas/StepResult"
+            },
+            "type": "array",
+            "title": "Step Results"
+          },
+          "build_version": {
+            "type": "string",
+            "title": "Build Version"
+          },
+          "issue_url": {
+            "type": "string",
+            "title": "Issue Url"
           }
         },
         "type": "object",
@@ -3282,7 +3488,17 @@
           "failed_step",
           "evidence",
           "run_id",
-          "finished_at"
+          "finished_at",
+          "platform",
+          "regression",
+          "case_version",
+          "environment",
+          "executed_by",
+          "dev_owner",
+          "actual_result",
+          "step_results",
+          "build_version",
+          "issue_url"
         ],
         "title": "ResultItem"
       },
@@ -3521,6 +3737,47 @@
           "reason"
         ],
         "title": "SkippedItem"
+      },
+      "StepResult": {
+        "properties": {
+          "step_no": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Step No"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "SKIPPED"
+            ],
+            "title": "Status"
+          },
+          "actual": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Actual",
+            "default": ""
+          },
+          "screenshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Media"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_no",
+          "status"
+        ],
+        "title": "StepResult",
+        "description": "Kết quả của riêng một bước trong case."
       },
       "SyncIssuesResult": {
         "properties": {
