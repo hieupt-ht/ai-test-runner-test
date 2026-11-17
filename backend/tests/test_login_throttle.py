@@ -47,3 +47,10 @@ def test_counter_has_ttl(redis: fakeredis.FakeRedis) -> None:
 
     ttl = redis.ttl("login_fail:an@x.com")
     assert 0 < ttl <= 900
+
+
+def test_max_failures_bang_0_thi_khong_bao_gio_khoa(redis: fakeredis.FakeRedis) -> None:
+    throttle = LoginThrottle(redis, max_failures=0)
+    for _ in range(20):
+        throttle.record_failure("a@x.com")
+    assert not throttle.is_locked("a@x.com")

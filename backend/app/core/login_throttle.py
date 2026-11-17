@@ -25,10 +25,14 @@ class LoginThrottle:
         self._lock_seconds = lock_seconds
 
     def is_locked(self, email: str) -> bool:
+        if self._max_failures <= 0:  # 0 = tắt chế độ khoá (dùng khi đang test)
+            return False
         count = self._redis.get(self._key(email))
         return count is not None and int(count) >= self._max_failures
 
     def record_failure(self, email: str) -> None:
+        if self._max_failures <= 0:
+            return
         key = self._key(email)
         count = self._redis.incr(key)
         if count == 1 or count == self._max_failures:

@@ -47,6 +47,8 @@ class Settings(BaseSettings):
 
     # Thời gian sống
     session_ttl_seconds: int = 7 * 24 * 60 * 60  # 7 ngày
+    # Sai mật khẩu bao nhiêu lần thì khoá 15 phút. Đặt 0 để tắt khoá (chỉ khi đang test).
+    login_max_failures: int = 5
     user_cache_ttl_seconds: int = 5 * 60  # 5 phút
     # Cache danh sách case/việc/màn hình của dự án. Ngắn, vì ghi xong là xoá cache ngay.
     # Chỉ bị "cũ" khi có người sửa thẳng trên Google Sheet (không qua app).

@@ -90,7 +90,7 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         ),
         audit_log=AuditLogRepository(gateway, system_sheet),
         sessions=SessionStore(redis, ttl_seconds=settings.session_ttl_seconds),
-        login_throttle=LoginThrottle(redis),
+        login_throttle=LoginThrottle(redis, max_failures=settings.login_max_failures),
         gateway=gateway,
         system_spreadsheet_id=system_sheet,
         service_account_email=gateway.service_account_email,
