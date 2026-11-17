@@ -15,7 +15,7 @@ Dành cho người tiếp nhận dự án và muốn tự cấu hình mọi th�
 ## Trước khi bắt đầu
 
 Bạn cần có:
-- Tài khoản Google (Gmail)
+- Tài khoản Google (Gmail) — chỉ để tạo Service Account và Google Sheet, **không** dùng để đăng nhập app
 - Tài khoản GitHub (cá nhân hoặc organization)
 - Docker Desktop đã cài ([tải tại đây](https://www.docker.com/products/docker-desktop/))
 
@@ -26,7 +26,7 @@ Toàn bộ cài đặt bên dưới làm **một lần duy nhất**. Sau đó ch
 ## Phần 1 — Google Cloud
 
 > **Tại sao cần Google Cloud?**
-> App dùng Google theo hai cách: (1) để người dùng đăng nhập bằng tài khoản Google thay vì phải tạo mật khẩu riêng, và (2) để đọc/ghi Google Sheets làm cơ sở dữ liệu. Cả hai đều cần bạn đăng ký một "project" trên Google Cloud Console.
+> App dùng Google để đọc/ghi Google Sheets làm cơ sở dữ liệu, và việc đó cần bạn đăng ký một "project" trên Google Cloud Console. Người dùng **không** đăng nhập bằng Google: mỗi người có email và mật khẩu do Admin cấp.
 
 ### 1.1 Tạo project Google Cloud
 
@@ -43,35 +43,7 @@ Toàn bộ cài đặt bên dưới làm **một lần duy nhất**. Sau đó ch
 
 > Mặc định Google Cloud chặn tất cả API. Phải bật thủ công thì backend mới được phép đọc/ghi Sheets.
 
-### 1.3 Cài đặt màn hình đăng nhập (OAuth Consent Screen)
-
-> **Tại sao?** Khi người dùng bấm "Đăng nhập bằng Google", Google sẽ hiện một màn hình xin quyền. Màn hình đó cần được cấu hình trước.
-
-1. Vào **APIs & Services → OAuth consent screen**.
-2. Chọn **External** (dùng được cho mọi Gmail), bấm **Create**.
-3. Điền thông tin:
-   - App name: `AI Test Runner`
-   - User support email: Gmail của bạn
-   - Developer contact: Gmail của bạn
-4. Bấm **Save and Continue** qua các bước tiếp theo (không cần thêm scope hay domain).
-5. Ở bước **Test users**: thêm Gmail của **tất cả người sẽ dùng app** (kể cả Gmail của bạn).
-
-> **Quan trọng:** Khi app đang ở chế độ "Testing" (chưa publish), chỉ những Gmail trong danh sách Test users mới qua được bước đăng nhập Google. Gmail nào không có trong danh sách sẽ bị Google chặn ngay, không vào được app. Thêm người mới = thêm Gmail của họ vào đây.
-
-### 1.4 Tạo OAuth Client ID (cho đăng nhập)
-
-1. Vào **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
-2. Chọn **Web application**.
-3. Ở mục **Authorized redirect URIs**, bấm **Add URI** và điền:
-   ```
-   http://localhost:3000/api/auth/callback
-   ```
-   (Nếu sau này deploy lên server thật thì thêm URI của server vào đây.)
-4. Bấm **Create**. Cửa sổ hiện **Client ID** và **Client Secret** — lưu lại ngay, dùng ở bước `.env`.
-
-> Client ID/Secret là "chìa khóa" để app chứng minh với Google rằng request đăng nhập đến từ đúng app này, không phải ai khác giả mạo.
-
-### 1.5 Tạo Service Account (để backend đọc/ghi Sheets)
+### 1.3 Tạo Service Account (để backend đọc/ghi Sheets)
 
 > **Tại sao dùng Service Account thay vì đăng nhập bằng người?** Vì backend cần đọc/ghi Sheets tự động, không có người ngồi nhấp "Cho phép" mỗi lần. Service Account là "tài khoản robot" của Google, dùng file key thay vì mật khẩu.
 
@@ -92,7 +64,7 @@ Toàn bộ cài đặt bên dưới làm **một lần duy nhất**. Sau đó ch
 
 1. Mở [https://sheets.google.com](https://sheets.google.com), tạo một sheet mới **để trống**.
 2. Đặt tên dễ nhận ra, ví dụ `AI Test Runner — System`.
-3. Bấm **Share**, dán **email của service account** (từ bước 1.5), chọn quyền **Editor**, bỏ chọn "Notify people", bấm **Share**.
+3. Bấm **Share**, dán **email của service account** (từ bước 1.3), chọn quyền **Editor**, bỏ chọn "Notify people", bấm **Share**.
 4. Lấy **Spreadsheet ID** từ link trình duyệt:
    ```
    https://docs.google.com/spreadsheets/d/[ĐÂY LÀ ID CỦA BẠN]/edit
@@ -151,11 +123,10 @@ Mở file `.env` và điền:
 
 | Biến | Lấy từ đâu | Dùng để làm gì |
 |---|---|---|
-| `GOOGLE_CLIENT_ID` | Bước 1.4 | Xác thực người dùng đăng nhập |
-| `GOOGLE_CLIENT_SECRET` | Bước 1.4 | Xác thực người dùng đăng nhập |
 | `SESSION_SECRET` | Tự tạo (xem bên dưới) | Mã hóa cookie phiên đăng nhập |
-| `BOOTSTRAP_ADMIN_EMAIL` | Gmail của bạn | App thêm email này làm Admin đầu tiên khi khởi động |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Nội dung file `.json` ở bước 1.5 | Backend đọc/ghi Google Sheets |
+| `BOOTSTRAP_ADMIN_EMAIL` | Email công ty của bạn | App thêm email này làm Admin đầu tiên khi khởi động |
+| `BOOTSTRAP_ADMIN_PASSWORD` | Bạn tự đặt (tối thiểu 8 ký tự) | Mật khẩu đăng nhập của Admin đầu tiên. **Đừng dùng mật khẩu Gmail thật** |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Nội dung file `.json` ở bước 1.3 | Backend đọc/ghi Google Sheets |
 | `SYSTEM_SPREADSHEET_ID` | Bước 2.1 | Trỏ vào Sheet hệ thống |
 | `GITHUB_APP_ID` | Bước 3 | App ID của GitHub App |
 | `GITHUB_APP_PRIVATE_KEY` | Bước 3 (đã chuyển sang một dòng) | Ký request tới GitHub |
@@ -188,7 +159,7 @@ Codex cần hai token khác nhau với mục đích khác nhau:
 | `AGENT_API_TOKEN` | Gọi API của app để ghi kết quả vào Sheet | **Không** — cả nhóm dùng chung một giá trị duy nhất; admin gửi riêng qua tin nhắn bảo mật |
 | `GITHUB_PAT_TOKEN` | Đọc Issue và comment kết quả lên GitHub | **Có** — mỗi người tạo token GitHub của riêng mình (xem bên dưới) |
 
-> **Không copy nguyên file `.env` cho nhau.** File `.env` chứa Service Account key, OAuth secret, session secret — ai có những thứ này có thể đọc/ghi toàn bộ dữ liệu hoặc giả mạo đăng nhập. Chỉ chia sẻ đúng giá trị `AGENT_API_TOKEN` qua kênh bảo mật (Zalo, email nội bộ...).
+> **Không copy nguyên file `.env` cho nhau.** File `.env` chứa Service Account key, mật khẩu Admin, session secret — ai có những thứ này có thể đọc/ghi toàn bộ dữ liệu hoặc giả mạo đăng nhập. Chỉ chia sẻ đúng giá trị `AGENT_API_TOKEN` qua kênh bảo mật (Zalo, email nội bộ...).
 
 ### Tạo `GITHUB_PAT_TOKEN` cá nhân
 
@@ -211,7 +182,7 @@ docker compose up --build
 ```
 
 - Mở trình duyệt vào `http://localhost:3000`.
-- Đăng nhập bằng Gmail đã điền vào `BOOTSTRAP_ADMIN_EMAIL`.
+- Đăng nhập bằng email và mật khẩu đã điền vào `BOOTSTRAP_ADMIN_EMAIL` và `BOOTSTRAP_ADMIN_PASSWORD`.
 - Kiểm tra API còn sống: `http://localhost:3000/api/health` phải trả `{"status":"ok"}`.
 
 Lần đầu khởi động, app tự tạo các tab trong Sheet hệ thống và thêm Admin đầu tiên.
@@ -220,14 +191,16 @@ Lần đầu khởi động, app tự tạo các tab trong Sheet hệ thống v�
 
 ## Thêm người dùng mới
 
-Có **hai bước**, thiếu một là người đó không vào được:
+Chỉ cần **một bước**, làm trong app (không phải vào Google Cloud):
 
-| Bước | Làm ở đâu | Tại sao |
-|---|---|---|
-| 1. Thêm Gmail vào Test users | Google Cloud Console → OAuth consent screen → Test users | Google cần biết Gmail đó được phép qua bước xác thực |
-| 2. Thêm vào tab Users của Sheet | App: trang Admin → Người dùng | App kiểm tra email có trong tab Users không trước khi cho vào |
+1. Đăng nhập bằng Admin → **Admin → Người dùng → Thêm người dùng**.
+2. Nhập email công ty, tên, vai trò và **mật khẩu** (tối thiểu 8 ký tự).
+3. Gửi email và mật khẩu đó cho người mới qua kênh riêng (không gửi công khai).
 
-> Khi nào cần thêm vào Google Cloud: **chỉ khi app vẫn ở chế độ "Testing"** (chưa publish). Nếu sau này publish app lên Production, bước 1 không cần nữa — chỉ cần bước 2.
+> Người dùng tự đổi mật khẩu được trong menu tên của họ ở thanh trên → **Đổi mật khẩu**.
+>
+> Quên mật khẩu: Admin bấm nút chìa khoá cuối dòng của người đó trong trang Người dùng để đặt mật khẩu mới. Người đó bị đăng xuất khỏi mọi nơi.
+> Nhập sai mật khẩu 5 lần thì bị khoá đăng nhập 15 phút.
 
 ---
 
@@ -245,9 +218,8 @@ Nếu bạn muốn chuyển toàn bộ cho người khác quản lý Google Clou
 
 | Lỗi | Nguyên nhân |
 |---|---|
-| Google báo "app chưa được xác minh" hoặc chặn đăng nhập | Gmail chưa có trong **Test users** (Phần 1.3) |
-| Đăng nhập xong bị về `/login?error=not_allowed` | Gmail chưa có trong tab **Users** của Sheet hệ thống |
-| `redirect_uri_mismatch` | URI ở bước 1.4 phải khớp chính xác với `http://localhost:3000/api/auth/callback` |
+| Backend báo "Thiếu BOOTSTRAP_ADMIN_PASSWORD" | Chưa điền `BOOTSTRAP_ADMIN_PASSWORD` trong `.env` |
+| Đăng nhập báo "Email hoặc mật khẩu không đúng" | Sai email hoặc mật khẩu, hoặc người đó chưa được Admin thêm, hoặc đã bị tắt `active` |
 | Backend báo 403 / `PERMISSION_DENIED` lúc khởi động | Chưa share Sheet cho email service account với quyền **Editor** |
 | "Chưa cấu hình GitHub App" | `GITHUB_APP_ID` hoặc `GITHUB_APP_PRIVATE_KEY` còn trống trong `.env` |
 | "GitHub trả lỗi 401" | Private key sai định dạng — phải một dòng, có `\n`, trong dấu nháy đơn |
@@ -258,26 +230,20 @@ Nếu bạn muốn chuyển toàn bộ cho người khác quản lý Google Clou
 
 # Phần B — Hướng dẫn cho Tester / QA Lead
 
-Bạn không cần cài đặt gì cả. Admin đã lo toàn bộ phần kỹ thuật. Bạn chỉ cần một Gmail và được admin thêm vào hệ thống.
+Bạn không cần cài đặt gì cả. Admin đã lo toàn bộ phần kỹ thuật. Bạn chỉ cần email công ty và mật khẩu do admin cấp.
 
 ---
 
-## Bước 0 — Nhờ admin thêm bạn vào
+## Bước 0 — Nhờ admin cấp tài khoản
 
-Trước khi làm bất cứ điều gì, nhắn cho admin Gmail của bạn. Admin cần làm **hai việc**:
-
-1. Thêm Gmail của bạn vào danh sách cho phép đăng nhập trên Google Cloud
-2. Thêm bạn vào tab Users trong hệ thống, gán đúng vai trò (Tester, QA Lead, hay Viewer)
-
-Thiếu một trong hai là bạn không vào được — xem mục "Lỗi thường gặp" ở cuối.
+Nhắn cho admin email công ty của bạn. Admin sẽ thêm bạn vào hệ thống với đúng vai trò (Tester, QA Lead, hay Viewer) và gửi lại **mật khẩu** cho bạn. Sau khi đăng nhập, bạn nên đổi mật khẩu ngay trong menu tên của bạn → **Đổi mật khẩu**.
 
 ---
 
 ## Bước 1 — Đăng nhập
 
 1. Mở trình duyệt, vào địa chỉ app (admin cho bạn địa chỉ này).
-2. Bấm **Đăng nhập bằng Google**.
-3. Chọn đúng Gmail mà bạn đã báo cho admin.
+2. Nhập email công ty và mật khẩu admin đã gửi, bấm **Đăng nhập**.
 
 Nếu đăng nhập thành công, bạn sẽ thấy trang chính của app tương ứng với vai trò của mình.
 
@@ -353,8 +319,9 @@ Chuông 🔔 trên thanh đầu trang hiện số thông báo chưa đọc. Bạ
 
 | Hiện tượng | Cách xử lý |
 |---|---|
-| Google chặn đăng nhập, báo app chưa xác minh | Nhắn admin thêm Gmail của bạn vào Google Cloud Test users |
-| Đăng nhập xong bị về trang lỗi "không được phép" | Nhắn admin thêm bạn vào tab Users và kiểm tra cột `active` |
+| Báo "Email hoặc mật khẩu không đúng" | Kiểm tra lại email và mật khẩu; nếu quên, nhắn admin đặt lại mật khẩu cho bạn |
+| Báo "Bạn đã nhập sai quá nhiều lần" | Chờ 15 phút rồi thử lại, hoặc nhắn admin |
+| Không vào được dù mật khẩu đúng | Nhắn admin kiểm tra bạn có trong trang Người dùng và cột `active` đang bật |
 | Không thấy dự án nào | Admin chưa thêm bạn vào dự án với vai trò phù hợp |
 | Không thấy màn hình nào trong "Việc của tôi" | QA Lead chưa phân công màn hình cho bạn |
 | Bấm "Gửi duyệt" nhưng không được | Kiểm tra case có đủ bước chưa; vai trò của bạn phải là Tester hoặc cao hơn |

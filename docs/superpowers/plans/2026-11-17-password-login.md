@@ -233,15 +233,15 @@
 **Files:**
 - Modify: `SETUP.md` (bỏ bước 1.3 và 1.4, bỏ biến Google OAuth, thêm `BOOTSTRAP_ADMIN_PASSWORD` và cách cấp mật khẩu cho thành viên), `README.md`, `docs/architecture.md`, `HANDOFF.md` (ghi đã đổi sang mật khẩu, bỏ OAuth), `.env.example` (bỏ `GOOGLE_CLIENT_ID/SECRET`, thêm `BOOTSTRAP_ADMIN_PASSWORD=`), `docker-compose*.yml` nếu truyền các biến Google (kiểm bằng Grep)
 
-- [ ] **Step 1:** Grep `GOOGLE_CLIENT|OAuth|đăng nhập Google|authlib` trong các file `.md`, `.example`, compose; liệt kê chỗ cần sửa.
-- [ ] **Step 2:** Sửa từng chỗ; giữ mọi nội dung về Service Account.
-- [ ] **Step 3:** Chạy lại Grep bước 1 → chỉ còn nhắc tới OAuth ở tài liệu lịch sử (`docs/superpowers/specs|plans` cũ, không sửa).
-- [ ] **Step 4:** Chạy đủ hai bộ kiểm tra (Global Constraints) → sạch.
-- [ ] **Step 5: Commit** `docs: đổi hướng dẫn sang đăng nhập bằng mật khẩu`.
+- [x] **Step 1:** Grep `GOOGLE_CLIENT|OAuth|đăng nhập Google|authlib` trong các file `.md`, `.example`, compose; liệt kê chỗ cần sửa.
+- [x] **Step 2:** Sửa từng chỗ; giữ mọi nội dung về Service Account.
+- [x] **Step 3:** Chạy lại Grep bước 1 → chỉ còn nhắc tới OAuth ở tài liệu lịch sử (`docs/superpowers/specs|plans` cũ, không sửa).
+- [x] **Step 4:** Chạy đủ hai bộ kiểm tra (Global Constraints) → sạch.
+- [x] **Step 5: Commit** `docs: đổi hướng dẫn sang đăng nhập bằng mật khẩu`.
 
 ### Task 12: Kiểm tra cuối và bàn giao
 
-- [ ] **Step 1:** Chạy đủ `pytest`, `mypy`, `ruff`, `vitest`, `typecheck`, `lint`; ghi số test vào `HANDOFF.md`.
-- [ ] **Step 2:** Grep toàn repo tìm `password_hash` trong `backend/app/api` → chỉ được xuất hiện nếu là tên biến nội bộ, không nằm trong model/response nào.
-- [ ] **Step 3:** Báo chủ dự án: tên biến `.env` đúng (`BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`), không dùng mật khẩu Gmail thật, và Admin cũ sẽ được đặt hash ở lần khởi động đầu. Không push.
-- [ ] **Step 4: Commit** `docs: ghi tiến độ đăng nhập bằng mật khẩu vào HANDOFF`.
+- [x] **Step 1:** Chạy đủ `pytest`, `mypy`, `ruff`, `vitest`, `typecheck`, `lint`; ghi số test vào `HANDOFF.md`.
+- [x] **Step 2:** Grep toàn repo tìm `password_hash` trong `backend/app/api` → chỉ được xuất hiện nếu là tên biến nội bộ, không nằm trong model/response nào.
+- [x] **Step 3:** Báo chủ dự án: tên biến `.env` đúng (`BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`), không dùng mật khẩu Gmail thật, và Admin cũ sẽ được đặt hash ở lần khởi động đầu. Không push.
+- [x] **Step 4: Commit** `docs: ghi tiến độ đăng nhập bằng mật khẩu vào HANDOFF`.
