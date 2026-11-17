@@ -292,6 +292,26 @@ export interface paths {
         patch: operations["change_deadline_api_projects__project_id__assignments__assignment_id__patch"];
         trace?: never;
     };
+    "/api/agent/projects/{project_id}/media/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign Agent Upload
+         * @description Codex xin chữ ký để đẩy ảnh/video bằng chứng thẳng lên Cloudinary (thư mục `evidence`).
+         */
+        post: operations["sign_agent_upload_api_agent_projects__project_id__media_sign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/projects/{project_id}/results": {
         parameters: {
             query?: never;
@@ -303,6 +323,23 @@ export interface paths {
         put?: never;
         /** Write Agent Results */
         post: operations["write_agent_results_api_agent_projects__project_id__results_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/media/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign Upload */
+        post: operations["sign_upload_api_projects__project_id__media_sign_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -731,6 +768,10 @@ export interface components {
             written: number;
             /** Ignored */
             ignored: components["schemas"]["IgnoredResult"][];
+        };
+        /** AgentSignRequest */
+        AgentSignRequest: {
+            kind: components["schemas"]["MediaKind"];
         };
         /** ApproveItem */
         ApproveItem: {
@@ -1201,6 +1242,44 @@ export interface components {
          * @enum {string}
          */
         Severity: "LOW" | "MEDIUM" | "HIGH";
+        /** SignRequest */
+        SignRequest: {
+            kind: components["schemas"]["MediaKind"];
+            /**
+             * Purpose
+             * @constant
+             */
+            purpose: "guide";
+        };
+        /**
+         * SignedUpload
+         * @description Mọi thứ client cần để đẩy thẳng một file lên Cloudinary (không có secret).
+         */
+        SignedUpload: {
+            /** Cloud Name */
+            cloud_name: string;
+            /** Api Key */
+            api_key: string;
+            /** Timestamp */
+            timestamp: number;
+            /** Signature */
+            signature: string;
+            /** Folder */
+            folder: string;
+            /** Public Id */
+            public_id: string;
+            /** Allowed Formats */
+            allowed_formats: string;
+            /**
+             * Resource Type
+             * @enum {string}
+             */
+            resource_type: "image" | "video";
+            /** Max Bytes */
+            max_bytes: number;
+            /** Upload Url */
+            upload_url: string;
+        };
         /**
          * SkippedCase
          * @description Một case bị bỏ qua khi duyệt hàng loạt, kèm lý do để hiện cho người duyệt.
@@ -2198,6 +2277,41 @@ export interface operations {
             };
         };
     };
+    sign_agent_upload_api_agent_projects__project_id__media_sign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedUpload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     write_agent_results_api_agent_projects__project_id__results_post: {
         parameters: {
             query?: never;
@@ -2220,6 +2334,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentResultsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sign_upload_api_projects__project_id__media_sign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedUpload"];
                 };
             };
             /** @description Validation Error */

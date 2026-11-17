@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 from app.api.project_scope import scope_for
 from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
+from app.core.media.cloudinary import SignedUpload
+from app.core.models.media import NOT_CONFIGURED, MediaKind
 from app.core.models.run import Evidence, Result, ResultStatus, RunScope, RunStatus
 from app.core.models.test_case import TestCaseStatus
 from app.core.models.user import Role
@@ -55,6 +57,28 @@ def _check_token(request: Request) -> None:
     supplied = bearer.removeprefix("Bearer ") if bearer.startswith("Bearer ") else ""
     if not supplied or not secrets.compare_digest(supplied, settings.agent_api_token):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token không hợp lệ")
+
+
+class AgentSignRequest(BaseModel):
+    kind: MediaKind
+
+
+@router.post(
+    "/media/sign", response_model=SignedUpload, dependencies=[Depends(_check_token)]
+)
+def sign_agent_upload(project_id: str, body: AgentSignRequest, request: Request) -> SignedUpload:
+    """Codex xin chữ ký để đẩy ảnh/video bằng chứng thẳng lên Cloudinary (thư mục `evidence`)."""
+    services: Services | None = request.app.state.services
+    if services is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Dịch vụ chưa sẵn sàng")
+    project = services.projects.get(project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy dự án")
+    if project.archived:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Dự án đã lưu trữ")
+    if services.cloudinary_signer is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, NOT_CONFIGURED)
+    return services.cloudinary_signer.sign(project.id, "evidence", body.kind)
 
 
 @router.post("/results", response_model=AgentResultsResponse, dependencies=[Depends(_check_token)])

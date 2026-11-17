@@ -13,6 +13,7 @@ from redis import Redis
 from app.api.oauth import GoogleOAuth, OAuthClient
 from app.api.sessions import SessionStore
 from app.core.github.client import GitHubAppClient, GitHubClient
+from app.core.media.cloudinary import CloudinaryClient, CloudinarySigner, MediaJanitor
 from app.core.notifications import NotificationStore
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
@@ -38,6 +39,9 @@ class Services:
     members: ProjectMemberRepository
     github: GitHubClient | None  # None khi chưa cấu hình GitHub App
     issue_sync: IssueSink | None = None
+    cloudinary_signer: CloudinarySigner | None = None  # None khi chưa cấu hình Cloudinary
+    media_janitor: MediaJanitor | None = None
+    cloud_name: str = ""
     app_base_url: str = "http://localhost:3000"
     lock_wait_seconds: float = 5.0
     sheet_cache_ttl_seconds: int = 60
@@ -64,6 +68,14 @@ def build_github(settings: Settings) -> GitHubClient | None:
     if not (settings.github_app_id and settings.github_app_private_key):
         return None
     return GitHubAppClient(settings.github_app_id, settings.github_app_private_key)
+
+
+def _cloudinary_configured(settings: Settings) -> bool:
+    return bool(
+        settings.cloudinary_cloud_name
+        and settings.cloudinary_api_key
+        and settings.cloudinary_api_secret
+    )
 
 
 def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services:
@@ -94,6 +106,25 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
             if github
             else None
         ),
+        cloudinary_signer=(
+            CloudinarySigner(
+                settings.cloudinary_cloud_name,
+                settings.cloudinary_api_key,
+                settings.cloudinary_api_secret,
+            )
+            if _cloudinary_configured(settings)
+            else None
+        ),
+        media_janitor=MediaJanitor(
+            CloudinaryClient(
+                settings.cloudinary_cloud_name,
+                settings.cloudinary_api_key,
+                settings.cloudinary_api_secret,
+            )
+            if _cloudinary_configured(settings)
+            else None
+        ),
+        cloud_name=settings.cloudinary_cloud_name,
         app_base_url=settings.app_base_url,
         sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,
     )

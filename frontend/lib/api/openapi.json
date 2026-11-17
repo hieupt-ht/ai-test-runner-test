@@ -882,6 +882,59 @@
         }
       }
     },
+    "/api/agent/projects/{project_id}/media/sign": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Sign Agent Upload",
+        "description": "Codex xin chữ ký để đẩy ảnh/video bằng chứng thẳng lên Cloudinary (thư mục `evidence`).",
+        "operationId": "sign_agent_upload_api_agent_projects__project_id__media_sign_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentSignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedUpload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agent/projects/{project_id}/results": {
       "post": {
         "tags": [
@@ -917,6 +970,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentResultsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/media/sign": {
+      "post": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Sign Upload",
+        "operationId": "sign_upload_api_projects__project_id__media_sign_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedUpload"
                 }
               }
             }
@@ -2277,6 +2382,18 @@
         ],
         "title": "AgentResultsResponse"
       },
+      "AgentSignRequest": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MediaKind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "AgentSignRequest"
+      },
       "ApproveItem": {
         "properties": {
           "case_id": {
@@ -3286,6 +3403,87 @@
           "HIGH"
         ],
         "title": "Severity"
+      },
+      "SignRequest": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MediaKind"
+          },
+          "purpose": {
+            "type": "string",
+            "const": "guide",
+            "title": "Purpose"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "purpose"
+        ],
+        "title": "SignRequest"
+      },
+      "SignedUpload": {
+        "properties": {
+          "cloud_name": {
+            "type": "string",
+            "title": "Cloud Name"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key"
+          },
+          "timestamp": {
+            "type": "integer",
+            "title": "Timestamp"
+          },
+          "signature": {
+            "type": "string",
+            "title": "Signature"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "public_id": {
+            "type": "string",
+            "title": "Public Id"
+          },
+          "allowed_formats": {
+            "type": "string",
+            "title": "Allowed Formats"
+          },
+          "resource_type": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ],
+            "title": "Resource Type"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "title": "Max Bytes"
+          },
+          "upload_url": {
+            "type": "string",
+            "title": "Upload Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cloud_name",
+          "api_key",
+          "timestamp",
+          "signature",
+          "folder",
+          "public_id",
+          "allowed_formats",
+          "resource_type",
+          "max_bytes",
+          "upload_url"
+        ],
+        "title": "SignedUpload",
+        "description": "Mọi thứ client cần để đẩy thẳng một file lên Cloudinary (không có secret)."
       },
       "SkippedCase": {
         "properties": {
