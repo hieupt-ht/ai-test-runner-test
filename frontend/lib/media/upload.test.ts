@@ -163,6 +163,14 @@ describe("uploadMedia", () => {
     expect(form.get("api_secret")).toBeNull()
   })
 
+  it("purpose evidence được gửi lên khi ký Cloudinary", async () => {
+    await uploadMedia(fileOf("a.png", "image/png"), { projectId: "PRJ-0001", purpose: "evidence" })
+    expect(post).toHaveBeenCalledWith("/api/projects/{project_id}/media/sign", {
+      params: { path: { project_id: "PRJ-0001" } },
+      body: { kind: "image", purpose: "evidence" },
+    })
+  })
+
   it("file sai thì không gọi API ký", async () => {
     await expect(
       uploadMedia(fileOf("a.exe", "application/octet-stream"), { projectId: "PRJ-0001" }),
@@ -221,6 +229,16 @@ describe("uploadMedia với kho Google Drive", () => {
     expect(form.get("file")).toBeInstanceOf(File)
     expect(progress).toContain(50)
     expect(media).toEqual(DRIVE_MEDIA)
+  })
+
+  it("purpose evidence được gửi lên khi tải qua Drive", async () => {
+    vi.stubGlobal("XMLHttpRequest", driveXhr(200))
+    await uploadMedia(fileOf("a.png", "image/png"), {
+      projectId: "PRJ-0001",
+      storage: "drive",
+      purpose: "evidence",
+    })
+    expect((FakeXhr.instance.sent as FormData).get("purpose")).toBe("evidence")
   })
 
   it.each([

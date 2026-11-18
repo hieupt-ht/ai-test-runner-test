@@ -103,6 +103,25 @@ describe("MediaPicker", () => {
       expect(container.querySelector("video")).toBeNull()
     })
 
+    it("truyền mục đích tải lên (bằng chứng) xuống uploadMedia", async () => {
+      vi.mocked(uploadMedia).mockResolvedValue(driveMedia("image"))
+      const { container } = render(
+        <NextIntlClientProvider locale="vi" messages={messages}>
+          <MediaPicker value={[]} onChange={vi.fn()} projectId="PRJ-0001" purpose="evidence" />
+        </NextIntlClientProvider>,
+      )
+      const file = new File(["x"], "image.png", { type: "image/png" })
+      fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
+        target: { files: [file] },
+      })
+      await waitFor(() =>
+        expect(uploadMedia).toHaveBeenCalledWith(
+          file,
+          expect.objectContaining({ purpose: "evidence" }),
+        ),
+      )
+    })
+
     it("tải lên theo nơi lưu của dự án", async () => {
       vi.mocked(uploadMedia).mockResolvedValue(driveMedia("image"))
       const onChange = vi.fn()

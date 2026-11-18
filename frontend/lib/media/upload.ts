@@ -64,6 +64,8 @@ type Options = {
   projectId: string
   /** Nơi lưu của dự án; mặc định Cloudinary. */
   storage?: Storage
+  /** Ảnh hướng dẫn (guide, mặc định) hay bằng chứng chạy test (evidence). */
+  purpose?: "guide" | "evidence"
   onProgress?: (percent: number) => void
   signal?: AbortSignal
 }
@@ -119,7 +121,7 @@ export async function uploadMedia(file: File, options: Options): Promise<Media> 
   if (options.storage === "drive") {
     const form = new FormData()
     form.set("file", file)
-    form.set("purpose", "guide")
+    form.set("purpose", options.purpose ?? "guide")
     return sendForm<Media>(
       `/api/projects/${encodeURIComponent(options.projectId)}/media/upload`,
       form,
@@ -131,7 +133,7 @@ export async function uploadMedia(file: File, options: Options): Promise<Media> 
   const signed = unwrap(
     await api.POST("/api/projects/{project_id}/media/sign", {
       params: { path: { project_id: options.projectId } },
-      body: { kind, purpose: "guide" },
+      body: { kind, purpose: options.purpose ?? "guide" },
     }),
   )
 

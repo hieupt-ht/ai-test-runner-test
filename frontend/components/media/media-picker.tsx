@@ -20,6 +20,8 @@ type Props = {
   projectId: string
   /** Nơi lưu của dự án (mặc định Cloudinary). */
   storage?: Storage
+  /** Ảnh hướng dẫn (mặc định) hay bằng chứng chạy test. */
+  purpose?: "guide" | "evidence"
   disabled?: boolean
   /** Báo cho form biết đang tải lên (để khoá nút Lưu/Gửi). */
   onBusyChange?: (busy: boolean) => void
@@ -34,6 +36,7 @@ export function MediaPicker({
   max = 5,
   projectId,
   storage = "cloudinary",
+  purpose,
   disabled,
   onBusyChange,
 }: Props) {
@@ -62,6 +65,7 @@ export function MediaPicker({
       const uploaded = await uploadMedia(file, {
         projectId,
         storage,
+        purpose,
         onProgress: (percent) =>
           setPending((list) => list.map((item) => (item.id === id ? { ...item, percent } : item))),
       })
