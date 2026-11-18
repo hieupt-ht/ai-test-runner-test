@@ -90,7 +90,12 @@ export default function ScreensPage() {
               <TableRow key={screen.id}>
                 <TableCell className="font-mono text-xs text-muted-foreground">{screen.id}</TableCell>
                 <TableCell>
-                  <div className="font-medium">{screen.name}</div>
+                  <Link
+                    href={`/projects/${projectId}/screens/${screen.id}`}
+                    className="font-medium underline-offset-2 hover:underline"
+                  >
+                    {screen.name}
+                  </Link>
                   {screen.description && (
                     <div className="line-clamp-1 text-xs text-muted-foreground">
                       {screen.description}
