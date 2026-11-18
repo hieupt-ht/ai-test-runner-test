@@ -494,7 +494,7 @@ class TestCaseService:
         return saved
 
     def _require_own_media(self, content: TestCaseContent) -> None:
-        """Mọi ảnh/video phải nằm trong kho của app (Cloudinary/Drive), nếu không thì không ghi gì."""
+        """Mọi ảnh/video phải nằm trong kho của app (Cloudinary/Drive), không thì không ghi gì."""
         try:
             ensure_own_media(media_of(content), self._cloud_name, self._drive_enabled)
         except ForeignMediaError as error:
