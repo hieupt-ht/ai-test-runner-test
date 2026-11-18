@@ -72,6 +72,21 @@ def build_github(settings: Settings) -> GitHubClient | None:
     return GitHubAppClient(settings.github_app_id, settings.github_app_private_key)
 
 
+def build_drive(settings: Settings) -> DriveClient | None:
+    if not (
+        settings.google_oauth_client_id
+        and settings.google_oauth_client_secret
+        and settings.google_oauth_refresh_token
+    ):
+        return None
+    return DriveClient(
+        settings.google_oauth_client_id,
+        settings.google_oauth_client_secret,
+        settings.google_oauth_refresh_token,
+        settings.google_drive_root_folder_id,
+    )
+
+
 def _cloudinary_configured(settings: Settings) -> bool:
     return bool(
         settings.cloudinary_cloud_name
@@ -84,6 +99,7 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
     redis = Redis.from_url(settings.redis_url)
     system_sheet = settings.system_spreadsheet_id
     github = build_github(settings)
+    drive = build_drive(settings)
     return Services(
         redis=redis,
         notifications=NotificationStore(redis),
@@ -124,8 +140,10 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
                 settings.cloudinary_api_secret,
             )
             if _cloudinary_configured(settings)
-            else None
+            else None,
+            drive=drive,
         ),
+        drive=drive,
         cloud_name=settings.cloudinary_cloud_name,
         app_base_url=settings.app_base_url,
         sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,

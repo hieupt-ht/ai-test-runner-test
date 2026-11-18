@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     cloudinary_api_key: str = ""
     cloudinary_api_secret: str = ""
 
+    # Google Drive: nơi lưu ảnh/video (đăng nhập OAuth bằng Gmail của chủ dự án).
+    # Lấy refresh token bằng `python -m app.tools.drive_auth`. Thiếu một biến là tắt Drive.
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    google_oauth_refresh_token: str = ""
+    google_drive_root_folder_id: str = ""  # trống thì app tự tạo thư mục "ai-test-runner"
+
     # AI (từ M4)
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-5-5"

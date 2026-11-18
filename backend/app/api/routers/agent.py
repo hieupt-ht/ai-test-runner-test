@@ -3,9 +3,10 @@
 import logging
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
 
+from app.api.media_upload import require_storage, upload_to_drive
 from app.api.project_scope import scope_for
 from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
@@ -17,6 +18,7 @@ from app.core.models.media import (
     MediaKind,
     ensure_own_media,
 )
+from app.core.models.project import Project
 from app.core.models.run import (
     Evidence,
     Result,
@@ -110,6 +112,19 @@ def _check_token(request: Request) -> None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token không hợp lệ")
 
 
+def _open_project(project_id: str, request: Request) -> tuple[Services, Project]:
+    """Lấy dịch vụ và dự án đang mở (chưa lưu trữ) cho các endpoint media của agent."""
+    services: Services | None = request.app.state.services
+    if services is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Dịch vụ chưa sẵn sàng")
+    project = services.projects.get(project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy dự án")
+    if project.archived:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Dự án đã lưu trữ")
+    return services, project
+
+
 class AgentSignRequest(BaseModel):
     kind: MediaKind
 
@@ -119,17 +134,25 @@ class AgentSignRequest(BaseModel):
 )
 def sign_agent_upload(project_id: str, body: AgentSignRequest, request: Request) -> SignedUpload:
     """Codex xin chữ ký để đẩy ảnh/video bằng chứng thẳng lên Cloudinary (thư mục `evidence`)."""
-    services: Services | None = request.app.state.services
-    if services is None:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Dịch vụ chưa sẵn sàng")
-    project = services.projects.get(project_id)
-    if project is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy dự án")
-    if project.archived:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Dự án đã lưu trữ")
+    services, project = _open_project(project_id, request)
+    require_storage(project, "cloudinary")
     if services.cloudinary_signer is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, NOT_CONFIGURED)
     return services.cloudinary_signer.sign(project.id, "evidence", body.kind)
+
+
+@router.post("/media/upload", response_model=Media, dependencies=[Depends(_check_token)])
+def upload_agent_media(project_id: str, file: UploadFile, request: Request) -> Media:
+    """Dự án lưu ở Google Drive: Codex gửi file bằng chứng cho app, app đẩy lên Drive."""
+    services, project = _open_project(project_id, request)
+    return upload_to_drive(services, project, "evidence", file)
+
+
+@router.get("/media/storage", dependencies=[Depends(_check_token)])
+def agent_media_storage(project_id: str, request: Request) -> dict[str, str]:
+    """Codex hỏi dự án lưu ảnh/video ở đâu để chọn đúng cách tải lên."""
+    _, project = _open_project(project_id, request)
+    return {"storage": project.storage}
 
 
 @router.post("/results", response_model=AgentResultsResponse, dependencies=[Depends(_check_token)])

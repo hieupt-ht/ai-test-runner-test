@@ -243,3 +243,34 @@ class FakeGitHub:
                 items[index] = (old.model_copy(update={"state": state, "labels": labels}), body)
                 return
         raise GitHubError("Không tìm thấy issue")
+
+
+class FakeDrive:
+    """Bản giả của DriveClient: ghi lại lần gọi, không gọi Google thật."""
+
+    def __init__(self) -> None:
+        self.uploads: list[dict[str, object]] = []
+        self.error: Exception | None = None
+
+    def upload(
+        self,
+        project_id: str,
+        purpose: str,
+        kind: object,
+        filename: str,
+        content_type: str,
+        data: object,
+        size: int,
+    ) -> object:
+        from app.core.models.media import Media
+
+        if self.error is not None:
+            raise self.error
+        content = data.read()  # type: ignore[attr-defined]
+        self.uploads.append(
+            {"project_id": project_id, "purpose": purpose, "kind": kind, "bytes": content}
+        )
+        return Media(kind=kind, url="https://drive.google.com/file/d/F1/view", public_id="F1")  # type: ignore[arg-type]
+
+    def destroy(self, public_id: str, kind: object) -> None:
+        pass
