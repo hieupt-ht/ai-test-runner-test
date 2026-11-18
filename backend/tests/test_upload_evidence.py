@@ -22,9 +22,27 @@ SIGN = {
 }
 
 
-def make_http(seen: list[httpx.Request], sign_status: int = 200) -> httpx.Client:
+DRIVE_MEDIA = {
+    "kind": "image",
+    "url": "https://drive.google.com/file/d/FILE1/view",
+    "public_id": "FILE1",
+    "note": "",
+}
+
+
+def make_http(
+    seen: list[httpx.Request],
+    sign_status: int = 200,
+    storage: str = "cloudinary",
+    upload_status: int = 200,
+) -> httpx.Client:
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/media/storage"):
+            return httpx.Response(200, json={"storage": storage})  # lần dò không tính vào `seen`
         seen.append(request)
+        if request.url.path.endswith("/media/upload"):
+            body = DRIVE_MEDIA if upload_status == 200 else {"detail": "x"}
+            return httpx.Response(upload_status, json=body)
         if request.url.path.endswith("/media/sign"):
             return httpx.Response(sign_status, json=SIGN if sign_status == 200 else {"detail": "x"})
         return httpx.Response(
@@ -102,3 +120,33 @@ def test_main_prints_one_json_line(
     out = capsys.readouterr().out
     assert code == 0
     assert json.loads(out)["kind"] == "image" and out.count("\n") == 1
+
+
+def test_drive_project_uploads_multipart_to_app_without_signing(shot: Path) -> None:
+    seen: list[httpx.Request] = []
+    media = upload(
+        shot, project_id="PRJ-0001", note="Bước 2", base_url="http://app/", token="t",
+        http=make_http(seen, storage="drive"),
+    )
+    (post,) = seen
+    assert post.url.path == "/api/agent/projects/PRJ-0001/media/upload"
+    assert post.headers["Authorization"] == "Bearer t"
+    assert b"shot.png" in post.content
+    assert media == {
+        "kind": "image",
+        "url": "https://drive.google.com/file/d/FILE1/view",
+        "public_id": "FILE1",
+        "note": "Bước 2",
+    }
+
+
+@pytest.mark.parametrize(
+    ("status", "text"), [(503, "chưa cấu hình"), (502, "Google Drive"), (413, "quá lớn")]
+)
+def test_drive_errors_are_vietnamese_and_hide_token(shot: Path, status: int, text: str) -> None:
+    with pytest.raises(UploadError) as error:
+        upload(
+            shot, project_id="P", note="", base_url="http://app", token="SECRET-TOKEN",
+            http=make_http([], storage="drive", upload_status=status),
+        )
+    assert text in str(error.value) and "SECRET-TOKEN" not in str(error.value)
