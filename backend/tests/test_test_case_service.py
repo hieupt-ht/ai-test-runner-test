@@ -588,7 +588,7 @@ def test_foreign_cloud_media_is_invalid_and_sheet_unchanged(env: Env) -> None:
     service = with_media(env, janitor)
     rows_before = len(env.gateway.data[env.project.spreadsheet_id]["TestCases"])
 
-    with pytest.raises(InvalidTestCaseError, match="không thuộc kho Cloudinary"):
+    with pytest.raises(InvalidTestCaseError, match="không thuộc kho lưu trữ"):
         service.create(
             TESTER_A,
             screen_id="SC-0001",

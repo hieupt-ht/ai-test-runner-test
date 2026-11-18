@@ -113,6 +113,7 @@ def service_for(services: Services, project: Project) -> TestCaseService:
         users=services.users,
         has_results=_has_results_checker(services, project),
         cloud_name=services.cloud_name,
+        drive_enabled=services.drive is not None,
         janitor=services.media_janitor,
     )
 

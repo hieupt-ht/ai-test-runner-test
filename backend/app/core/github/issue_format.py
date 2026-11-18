@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from app.core.media.frames import video_frame_urls
-from app.core.models.media import Media, MediaKind
+from app.core.models.media import Media, MediaKind, display_url, thumbnail_url
 from app.core.models.project import Project
 from app.core.models.screen import Screen
 from app.core.models.test_case import Platform, TestCase, TestCaseStatus
@@ -49,11 +49,14 @@ def _media_lines(items: list[Media], indent: str) -> list[str]:
     lines: list[str] = []
     for item in items:
         if item.kind == MediaKind.IMAGE:
-            lines.append(f"{indent}![{_safe_text(item.note)}]({item.url})")
+            lines.append(f"{indent}![{_safe_text(item.note)}]({display_url(item)})")
         else:
             lines.append(f"{indent}Video: {item.url}")
-            frames = " ".join(video_frame_urls(item))
-            lines.append(f"{indent}Ảnh cắt: {frames}")
+            frames = video_frame_urls(item)
+            if frames:
+                lines.append(f"{indent}Ảnh cắt: {' '.join(frames)}")
+            elif (cover := thumbnail_url(item)) is not None:
+                lines.append(f"{indent}Ảnh đại diện: {cover}")
             if item.note:
                 lines.append(f"{indent}Ghi chú video: {_safe_text(item.note)}")
     return lines

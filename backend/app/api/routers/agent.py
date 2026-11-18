@@ -15,7 +15,7 @@ from app.core.models.media import (
     ForeignMediaError,
     Media,
     MediaKind,
-    ensure_own_cloud,
+    ensure_own_media,
 )
 from app.core.models.run import (
     Evidence,
@@ -183,7 +183,7 @@ def write_agent_results(
     # Link sai kho Cloudinary thì từ chối cả request, chưa tạo Run nào
     try:
         for item in accepted:
-            ensure_own_cloud(_all_media(item), services.cloud_name)
+            ensure_own_media(_all_media(item), services.cloud_name, services.drive is not None)
     except ForeignMediaError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
 

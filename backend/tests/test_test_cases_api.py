@@ -420,7 +420,7 @@ def test_case_with_foreign_cloud_image_is_422_and_own_cloud_is_ok(
     own = create(an, project, guide_media=[media_json("mine")])
 
     assert foreign.status_code == 422
-    assert "không thuộc kho Cloudinary" in foreign.json()["detail"]
+    assert "không thuộc kho lưu trữ" in foreign.json()["detail"]
     assert own.status_code == 201
     assert own.json()["guide_media"][0]["public_id"] == "a"
 

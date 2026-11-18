@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
 from app.core.media.cloudinary import MediaJanitor
-from app.core.models.media import ForeignMediaError, ensure_own_cloud
+from app.core.models.media import ForeignMediaError, ensure_own_media
 from app.core.models.project import Project
 from app.core.models.screen import Screen
 from app.core.models.test_case import (
@@ -157,6 +157,7 @@ class TestCaseService:
         users: UserRepository | None = None,
         has_results: Callable[[str], bool] | None = None,
         cloud_name: str = "",
+        drive_enabled: bool = False,
         janitor: MediaJanitor | None = None,
     ) -> None:
         self._project_id = project_id
@@ -173,6 +174,7 @@ class TestCaseService:
         self._users = users
         self._has_results = has_results
         self._cloud_name = cloud_name
+        self._drive_enabled = drive_enabled
         self._janitor = janitor
         self._screens_by_id: dict[str, Screen] | None = None
 
@@ -492,9 +494,9 @@ class TestCaseService:
         return saved
 
     def _require_own_media(self, content: TestCaseContent) -> None:
-        """Mọi ảnh/video phải nằm trong cloud Cloudinary của app, nếu không thì không ghi gì."""
+        """Mọi ảnh/video phải nằm trong kho của app (Cloudinary/Drive), nếu không thì không ghi gì."""
         try:
-            ensure_own_cloud(media_of(content), self._cloud_name)
+            ensure_own_media(media_of(content), self._cloud_name, self._drive_enabled)
         except ForeignMediaError as error:
             raise InvalidTestCaseError(str(error)) from None
 

@@ -216,3 +216,27 @@ def test_media_note_with_email_or_mention_is_neutralised() -> None:
     body = render_issue(make_case(steps=[step])).body
     assert "@admin" not in body
     assert "@​admin" in body
+
+
+def drive_image(note: str = "") -> Media:
+    return Media(
+        kind="image", url="https://drive.google.com/file/d/img1/view", public_id="img1", note=note
+    )
+
+
+def drive_video() -> Media:
+    return Media(kind="video", url="https://drive.google.com/file/d/vid1/view", public_id="vid1")
+
+
+def test_drive_image_in_issue_uses_thumbnail_link() -> None:
+    step = TestStep(action="Bấm", expected="", guide_media=[drive_image("nút")])
+    body = render_issue(make_case(steps=[step])).body
+    assert "![nút](https://drive.google.com/thumbnail?id=img1&sz=w1600)" in body
+
+
+def test_drive_video_in_issue_has_link_and_cover_but_no_cut_frames() -> None:
+    step = TestStep(action="Vuốt", expected="", guide_media=[drive_video()])
+    body = render_issue(make_case(steps=[step])).body
+    assert "Video: https://drive.google.com/file/d/vid1/view" in body
+    assert "Ảnh đại diện: https://drive.google.com/thumbnail?id=vid1&sz=w1600" in body
+    assert "Ảnh cắt" not in body
