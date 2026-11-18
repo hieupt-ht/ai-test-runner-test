@@ -142,13 +142,13 @@ def test_screen_blocked_from_delete_keeps_media(app, client_as_qa_lead, project,
 - Consumes: API mới từ Task 1 (`Screen.media`, `ScreenInput.media`).
 - Produces: `ScreenFormDialog` gửi `media: Media[]` trong `useSaveScreen().mutateAsync(...)`. Lấy `storage` bằng `useProject(projectId).data?.storage ?? "cloudinary"` (như `case-form.tsx:133`). Nhãn mới `screens.fieldMedia` = "Ảnh/video màn hình", `screens.mediaHint` = "Để tester hình dung màn hình khi viết test case. Có thể dán ảnh (Ctrl+V)."
 
-- [ ] **Step 1: Viết test đỏ** (mock thêm `@/lib/use-projects` → `useProject: () => ({ data: { storage: "cloudinary" } })`; mock `@/components/media/media-picker` thành component giả có nút "Thêm ảnh giả" gọi `onChange([...value, ảnhGiả])` và nút "Đang tải giả" gọi `onBusyChange(true)`):
+- [x] **Step 1: Viết test đỏ** (mock thêm `@/lib/use-projects` → `useProject: () => ({ data: { storage: "cloudinary" } })`; mock `@/components/media/media-picker` thành component giả có nút "Thêm ảnh giả" gọi `onChange([...value, ảnhGiả])` và nút "Đang tải giả" gọi `onBusyChange(true)`):
   - `"hiện ảnh sẵn có khi sửa và gửi media khi lưu"` → `mutateAsync.mock.calls[0][0]` `toMatchObject({ media: [existingMedia, ảnhGiả] })`.
   - `"khoá nút Lưu khi đang tải ảnh lên"` → sau "Đang tải giả", `getByRole("button", { name: "Lưu" })` `toBeDisabled()`.
-- [ ] **Step 2: Chạy thấy đỏ** — `cd frontend && npx vitest run components/screens` → FAIL.
-- [ ] **Step 3: Viết code** — state `media` (khởi tạo `screen?.media ?? []`, reset khi tạo mới xong), state `uploading`; đặt `MediaPicker` sau ô mô tả; nút Lưu `disabled={saveScreen.isPending || uploading}`; dialog đổi `sm:max-w-lg` → `sm:max-w-2xl` và thân form cuộn được (`max-h-[80dvh] overflow-y-auto`) để vừa màn 1366×768.
-- [ ] **Step 4: Chạy thấy xanh** — `npx vitest run && npm run typecheck` → PASS.
-- [ ] **Step 5: Commit** — `feat(frontend): form màn hình có ảnh/video tham khảo`.
+- [x] **Step 2: Chạy thấy đỏ** — `cd frontend && npx vitest run components/screens` → FAIL.
+- [x] **Step 3: Viết code** — state `media` (khởi tạo `screen?.media ?? []`, reset khi tạo mới xong), state `uploading`; đặt `MediaPicker` sau ô mô tả; nút Lưu `disabled={saveScreen.isPending || uploading}`; dialog đổi `sm:max-w-lg` → `sm:max-w-2xl` và thân form cuộn được (`max-h-[80dvh] overflow-y-auto`) để vừa màn 1366×768.
+- [x] **Step 4: Chạy thấy xanh** — `npx vitest run && npm run typecheck` → PASS.
+- [x] **Step 5: Commit** — `feat(frontend): form màn hình có ảnh/video tham khảo`.
 
 ### Task 4: `ScreenMediaStrip` + trang chi tiết màn hình
 
@@ -167,16 +167,16 @@ def test_screen_blocked_from_delete_keeps_media(app, client_as_qa_lead, project,
   - Bảng case lọc `case.screen_id === screenId`, sắp theo `id`: cột Mã (link), Tiêu đề, Trạng thái (`CaseStatusBadge`), Mức độ (`testCases.severity.*`), Nền tảng (`testCases.platform.*`); bấm dòng → `router.push` tới case (giống `test-cases/page.tsx:200-207`). Không có case → `screens.noCases` = "Màn hình này chưa có test case nào."
   - Tiêu đề bảng: `screens.casesTitle` = "Test case ({count})".
 
-- [ ] **Step 1: Viết test đỏ**
+- [x] **Step 1: Viết test đỏ**
   - `screen-media-strip.test.tsx`: `"rỗng thì không hiện gì"`; `"bấm ảnh thì mở ảnh lớn"` (thấy `img` trong dialog); `"video Drive hiện bằng iframe"` (`container.querySelector("iframe")` khác null, không có `img`).
   - `page.test.tsx` (mock như `results/page.test.tsx:22-35`, thêm `useParams: () => ({ screenId: mocks.screenId })`):
     - `"hiện thông tin màn hình và chỉ case của màn hình đó"` — có `TC-000001` (SC-0001), không có case của SC-0002.
     - `"không tìm thấy màn hình"` — `screenId = "SC-9999"` → thấy "Không tìm thấy màn hình" và link về danh sách.
     - `"tester chưa được giao không thấy nút Tạo case và Sửa"`; `"QA Lead thấy cả hai"`; `"tester được giao thấy Tạo case với link ?screen=SC-0001"`.
-- [ ] **Step 2: Chạy thấy đỏ** — `npx vitest run components/screens "app/(app)/projects"` → FAIL (chưa có file).
-- [ ] **Step 3: Viết code** theo Interfaces. Ở `screens/page.tsx`, bọc `screen.name` trong `<Link href={`/projects/${projectId}/screens/${screen.id}`}>`.
-- [ ] **Step 4: Chạy thấy xanh** — `npx vitest run && npm run typecheck && npm run lint` → PASS.
-- [ ] **Step 5: Commit** — `feat(frontend): trang chi tiết màn hình có ảnh và danh sách test case`.
+- [x] **Step 2: Chạy thấy đỏ** — `npx vitest run components/screens "app/(app)/projects"` → FAIL (chưa có file).
+- [x] **Step 3: Viết code** theo Interfaces. Ở `screens/page.tsx`, bọc `screen.name` trong `<Link href={`/projects/${projectId}/screens/${screen.id}`}>`.
+- [x] **Step 4: Chạy thấy xanh** — `npx vitest run && npm run typecheck && npm run lint` → PASS.
+- [x] **Step 5: Commit** — `feat(frontend): trang chi tiết màn hình có ảnh và danh sách test case`.
 
 ### Task 5: Form tạo case hiện ảnh của màn hình đã chọn
 
@@ -188,10 +188,10 @@ def test_screen_blocked_from_delete_keeps_media(app, client_as_qa_lead, project,
 - Consumes: `ScreenMediaStrip` (Task 4); `screens` prop đã có trong `CaseForm`.
 - Produces: dưới ô chọn màn hình (chỉ khi tạo mới) hiện `<ScreenMediaStrip media={screens.find(s => s.id === screenId)?.media ?? []} />`. Đổi `testCases.form.noScreens` thành "Bạn chưa được giao màn hình nào để viết test case. Hãy nhờ QA Lead giao việc."
 
-- [ ] **Step 1: Viết test đỏ** — `"chọn màn hình có ảnh thì hiện ảnh của màn hình đó"` (`defaultScreenId` là màn hình có 1 ảnh → thấy `img` có `src` của ảnh đó); `"danh sách màn hình trống thì nhắc nhờ QA Lead giao việc"`.
-- [ ] **Step 2: Chạy thấy đỏ** — `npx vitest run components/test-cases/case-form` → FAIL.
-- [ ] **Step 3: Viết code** theo Interfaces.
-- [ ] **Step 4: Chạy cả hai bộ đầy đủ** — backend và frontend (lệnh ở Global Constraints) → tất cả PASS, sạch.
-- [ ] **Step 5: Commit** — `feat(frontend): form tạo case hiện ảnh của màn hình đã chọn`.
+- [x] **Step 1: Viết test đỏ** — `"chọn màn hình có ảnh thì hiện ảnh của màn hình đó"` (`defaultScreenId` là màn hình có 1 ảnh → thấy `img` có `src` của ảnh đó); `"danh sách màn hình trống thì nhắc nhờ QA Lead giao việc"`.
+- [x] **Step 2: Chạy thấy đỏ** — `npx vitest run components/test-cases/case-form` → FAIL.
+- [x] **Step 3: Viết code** theo Interfaces.
+- [x] **Step 4: Chạy cả hai bộ đầy đủ** — backend và frontend (lệnh ở Global Constraints) → tất cả PASS, sạch.
+- [x] **Step 5: Commit** — `feat(frontend): form tạo case hiện ảnh của màn hình đã chọn`.
 
 **Hết đợt 2:** đánh dấu `[x]`, ghi tiến độ (số test) vào `HANDOFF.md`, commit `docs: tiến độ ảnh màn hình và trang chi tiết`, dừng cho chủ dự án. Ghi chú: chưa thử trình duyệt thật (1366×768).

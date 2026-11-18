@@ -32,7 +32,8 @@ Thiết kế `docs/superpowers/specs/2026-11-18-google-drive-media-design.md`, k
 Thiết kế `docs/superpowers/specs/2026-11-18-screen-media-and-detail-design.md`, kế hoạch `docs/superpowers/plans/2026-11-18-screen-media-and-detail.md` (5 task / 2 đợt, làm kiểu Native trong một phiên). Giữ nguyên luật: chỉ Admin/QA Lead tạo-sửa-xoá màn hình; tester chỉ viết case trên màn hình được giao nhưng xem được mọi màn hình.
 
 - **Đợt 1 xong** (Task 1–2, backend): `Screen.media` (cột `media_json` cuối tab Screens, Sheet cũ đọc ra rỗng), API tạo/sửa nhận `media` (link sai kho → 422, tối đa 5), bỏ ảnh khỏi màn hình hoặc xoá màn hình thì `MediaJanitor` xoá file; PATCH không gửi `media` thì giữ nguyên. Backend **669 test** qua, mypy/ruff sạch.
-- **Còn lại:** Đợt 2 (Task 3–5, frontend: form màn hình có ô ảnh, trang chi tiết `screens/[screenId]`, `CaseForm` hiện ảnh màn hình), review cả nhánh. Sau đó brainstorm việc 3 (Manual/Automation).
+- **Đợt 2 xong** (Task 3–5, frontend): `ScreenFormDialog` có `MediaPicker` (khoá Lưu khi đang tải, dialog rộng hơn + cuộn), `ScreenMediaStrip`, trang `screens/[screenId]` (thông tin, ảnh/video, bảng case của màn hình, nút Sửa/Tạo case theo quyền, không tìm thấy → báo + link về), tên màn hình ở danh sách thành link, `CaseForm` hiện ảnh của màn hình đã chọn và nhắc "nhờ QA Lead giao việc" khi trống. Frontend **203 test** qua, typecheck + lint sạch. Chưa thử trình duyệt thật (1366×768).
+- **Còn lại:** review cả nhánh (reviewer mới). Sau đó brainstorm việc 3 (Manual/Automation).
 - Lưu ý: không chạy `ruff format` cả thư mục (nó sửa nhầm 40+ file); chỉ `ruff check`.
 
 ## Đã xong (2026-11-17): đăng nhập bằng email + mật khẩu
