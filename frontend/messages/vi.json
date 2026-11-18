@@ -384,7 +384,7 @@
       "created": "Đã tạo {id}",
       "submitted": "Đã lưu và gửi duyệt",
       "resetWarning": "Sửa nội dung sẽ đưa case về Nháp và phải duyệt lại.",
-      "noScreens": "Bạn chưa được giao màn hình nào để viết test case.",
+      "noScreens": "Bạn chưa được giao màn hình nào để viết test case. Hãy nhờ QA Lead giao việc.",
       "errors": {
         "screenRequired": "Hãy chọn màn hình",
         "titleRequired": "Nhập tiêu đề",

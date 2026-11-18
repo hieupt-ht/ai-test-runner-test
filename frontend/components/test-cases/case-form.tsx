@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { EnumSelect } from "@/components/test-cases/enum-select"
 import { ConflictDialog } from "@/components/test-cases/conflict-dialog"
 import { MediaPicker } from "@/components/media/media-picker"
+import { ScreenMediaStrip } from "@/components/screens/screen-media-strip"
 import { StepsEditor } from "@/components/test-cases/steps-editor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -267,6 +268,8 @@ export function CaseForm({
               {screens.length === 0 && (
                 <p className="text-sm text-muted-foreground">{t("form.noScreens")}</p>
               )}
+              {/* Ảnh/video của màn hình đã chọn, để tester hình dung khi viết case */}
+              <ScreenMediaStrip media={screens.find((s) => s.id === screenId)?.media ?? []} />
               {screenMissing && fieldError("screenRequired")}
             </div>
           )}

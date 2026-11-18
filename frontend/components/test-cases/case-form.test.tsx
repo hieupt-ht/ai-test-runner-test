@@ -99,3 +99,45 @@ describe("CaseForm", () => {
     expect(screen.getByRole("button", { name: "Lưu và gửi duyệt" })).toBeDisabled()
   })
 })
+
+describe("CaseForm – màn hình", () => {
+  afterEach(cleanup)
+
+  function renderWithScreens(screens: unknown[], defaultScreenId?: string) {
+    return render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NextIntlClientProvider locale="vi" messages={messages}>
+          <CaseForm
+            projectId="PRJ-0001"
+            screens={screens as never}
+            defaultScreenId={defaultScreenId}
+          />
+        </NextIntlClientProvider>
+      </QueryClientProvider>,
+    )
+  }
+
+  it("chọn màn hình có ảnh thì hiện ảnh của màn hình đó", () => {
+    const url = "https://res.cloudinary.com/demo/image/upload/login.png"
+    renderWithScreens(
+      [
+        {
+          id: "SC-0001",
+          name: "Đăng nhập",
+          media: [{ kind: "image", public_id: "guide/login", url, note: "" }],
+        },
+      ],
+      "SC-0001",
+    )
+    expect(screen.getByRole("img")).toHaveAttribute("src", url)
+  })
+
+  it("danh sách màn hình trống thì nhắc nhờ QA Lead giao việc", () => {
+    renderWithScreens([])
+    expect(
+      screen.getByText(
+        "Bạn chưa được giao màn hình nào để viết test case. Hãy nhờ QA Lead giao việc.",
+      ),
+    ).toBeInTheDocument()
+  })
+})
