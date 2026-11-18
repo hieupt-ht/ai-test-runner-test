@@ -12,6 +12,18 @@
 
 **Chia đợt:** Đợt 1 = Task 1–4 (backend). Đợt 2 = Task 5–7 (frontend). Xong mỗi đợt: ghi tiến độ vào plan + `HANDOFF.md`, dừng cho `/compact`.
 
+## Tiến độ
+
+- **Đợt 1 (backend, Task 1–4) xong** — commit `8f5e010`, `f8ac87f`, `ecafe38`, `b7948af`, `1a21868`. Backend **727 test** qua, mypy và ruff sạch.
+- Ruling (đã quyết khi làm):
+  1. Test cũ viết cho case do agent chạy nên fixture đặt `execution_mode: AUTOMATION` (`BODY` ở `test_test_cases_api`, `content()` ở `test_test_case_service`, `make_case` ở `test_issue_format`); assertion không đổi. Nếu sai: test cũ nhìn như đang kiểm Manual.
+  2. Test "mặc định Manual qua API" nằm ở `test_test_cases_api.py` (fixture dùng chung ở đó), không ở `test_execution_mode.py`.
+  3. `ManualStepResult` dùng lại `StepResult` (cùng trường). `AgentEvidence` vẫn ở `agent.py`, router test tay import từ đó.
+  4. Hai test cũ "tester không được ký/tải vào thư mục evidence" đổi thành "được phép" (đúng yêu cầu spec); `purpose` lạ vẫn 422.
+  5. Ảnh Drive không kiểm thư mục (ID file không có đường dẫn); chỉ Cloudinary kiểm tiền tố `ai-test-runner/{pid}/evidence/`.
+  6. Nhãn `mode: manual` đặt cuối danh sách nhãn để `labels[1]` vẫn là nhãn case.
+- **Đợt 2 (frontend, Task 5–7): chưa làm.**
+
 ## Global Constraints
 
 - TDD: viết test, xem đỏ, rồi mới code. Comment tiếng Việt. Conventional Commits: type tiếng Anh, nội dung tiếng Việt có dấu, message bằng heredoc Git Bash.
@@ -47,17 +59,17 @@
 **Interfaces:**
 - Produces: `class ExecutionMode(StrEnum): MANUAL = "MANUAL"; AUTOMATION = "AUTOMATION"`; `TestCaseContent.execution_mode: ExecutionMode = ExecutionMode.MANUAL`; `CHANGED_FIELD_LABELS["execution_mode"] == "Cách chạy"`.
 
-- [ ] **Step 1: Viết test đỏ** trong `tests/test_execution_mode.py`:
+- [x] **Step 1: Viết test đỏ** trong `tests/test_execution_mode.py`:
   - `test_new_content_defaults_to_manual`: `TestCaseContent(title=..., steps=[...], expected_result=..., severity=..., priority=...)` → `.execution_mode == ExecutionMode.MANUAL`.
   - `test_execution_mode_round_trips_through_sheet`: tạo case `AUTOMATION` qua repository, đọc lại → `AUTOMATION`; ô Sheet cột `execution_mode` là `"AUTOMATION"`.
   - `test_blank_cell_reads_as_automation`: ghi dòng rồi xoá trắng ô `execution_mode` trong `gateway.data` → `get()` trả `AUTOMATION`.
   - `test_api_create_defaults_to_manual`: POST case không có `execution_mode` → 201, `json()["execution_mode"] == "MANUAL"`.
   - `test_execution_mode_has_vietnamese_label`: `CHANGED_FIELD_LABELS["execution_mode"] == "Cách chạy"`.
-- [ ] **Step 2: Chạy** `cd backend && uv run pytest tests/test_execution_mode.py -q` — Expected: FAIL (ImportError `ExecutionMode`).
-- [ ] **Step 3: Code** model + cột + repository. `_from_record`: `ExecutionMode(record["execution_mode"].strip().upper() or ExecutionMode.AUTOMATION)`.
-- [ ] **Step 4: Chạy lại** test mới — Expected: PASS.
-- [ ] **Step 5: Chạy cả bộ** `uv run pytest -q` — Expected: một số test cũ đỏ vì case mới thành Manual (gửi duyệt sẽ bị chặn ở Task 2, nhưng lúc này chủ yếu do so sánh dict/cột). Sửa **fixture** cho `execution_mode: "AUTOMATION"` (ở `BODY` và các factory), **không** sửa assertion. Ghi Ruling vào ledger: "fixture cũ là case viết cho agent nên đặt AUTOMATION". Chạy lại — Expected: PASS hết.
-- [ ] **Step 6: Commit** `feat(backend): thêm trường cách chạy (Manual/Automation) cho test case`.
+- [x] **Step 2: Chạy** `cd backend && uv run pytest tests/test_execution_mode.py -q` — Expected: FAIL (ImportError `ExecutionMode`).
+- [x] **Step 3: Code** model + cột + repository. `_from_record`: `ExecutionMode(record["execution_mode"].strip().upper() or ExecutionMode.AUTOMATION)`.
+- [x] **Step 4: Chạy lại** test mới — Expected: PASS.
+- [x] **Step 5: Chạy cả bộ** `uv run pytest -q` — Expected: một số test cũ đỏ vì case mới thành Manual (gửi duyệt sẽ bị chặn ở Task 2, nhưng lúc này chủ yếu do so sánh dict/cột). Sửa **fixture** cho `execution_mode: "AUTOMATION"` (ở `BODY` và các factory), **không** sửa assertion. Ghi Ruling vào ledger: "fixture cũ là case viết cho agent nên đặt AUTOMATION". Chạy lại — Expected: PASS hết.
+- [x] **Step 6: Commit** `feat(backend): thêm trường cách chạy (Manual/Automation) cho test case`.
 
 ### Task 2: Luật trạng thái case Manual và trạng thái việc
 
@@ -71,7 +83,7 @@
 - Produces: `TestCaseService.mark_tested(user: User, case_id: str, *, version: int) -> TestCase` — đổi `DRAFT` → `TESTED` (đang `TESTED` thì trả nguyên case, không ghi), AuditLog action `"MANUAL_TEST"`, diff `{"status": ["DRAFT", "TESTED"]}`; case không phải Manual hoặc trạng thái khác `DRAFT`/`TESTED` → `InvalidTransitionError`.
 - Produces: hằng `MANUAL_NO_REVIEW = "Case test tay không cần gửi duyệt"`.
 
-- [ ] **Step 1: Viết test đỏ** (dùng service với repo giả như `test_test_case_service.py`):
+- [x] **Step 1: Viết test đỏ** (dùng service với repo giả như `test_test_case_service.py`):
   - `test_manual_case_cannot_be_submitted`: SUBMIT case Manual → `InvalidTransitionError`, `str(error) == MANUAL_NO_REVIEW`.
   - `test_mark_tested_moves_draft_to_tested_with_audit`: → `status == TESTED`, AuditLog cuối có action `MANUAL_TEST`.
   - `test_mark_tested_when_already_tested_keeps_version`.
@@ -81,10 +93,10 @@
   - `test_manual_edit_never_requests_rerun`: dự án tắt duyệt, case Manual `TESTED` có kết quả, sửa `steps` → `issue_sync.note_case_edited` không được gọi.
   - `test_deprecate_allowed_from_tested_for_manual` và `test_deprecate_from_tested_still_rejected_for_automation`.
   - Trong `tests/test_assignment_status.py`: `test_all_manual_tested_is_tested`, `test_mixed_manual_tested_and_automation_approved_is_approved`, `test_manual_draft_is_writing`.
-- [ ] **Step 2: Chạy** `uv run pytest tests/test_manual_case_rules.py tests/test_assignment_status.py -q` — Expected: FAIL.
-- [ ] **Step 3: Code.** `_transition_case`: SUBMIT với case Manual → `InvalidTransitionError(MANUAL_NO_REVIEW)` (trước kiểm tra `allowed_from`); DEPRECATE cho phép thêm `TESTED` khi case Manual. `update_content`: về `DRAFT` khi (a) `execution_mode` đổi, hoặc (b) case cũ Manual và đang `TESTED`, cùng với luật `IN_REVIEW`/`APPROVED` cũ; `keep_status` chỉ áp dụng cho case Automation. `derive_assignment_status`: sau nhánh `IN_REVIEW`, nếu mọi case trong `mine` là Manual `TESTED` → `TESTED`.
-- [ ] **Step 4: Chạy lại** — Expected: PASS; rồi `uv run pytest -q` — Expected: PASS.
-- [ ] **Step 5: Commit** `feat(backend): luật trạng thái cho case test tay`.
+- [x] **Step 2: Chạy** `uv run pytest tests/test_manual_case_rules.py tests/test_assignment_status.py -q` — Expected: FAIL.
+- [x] **Step 3: Code.** `_transition_case`: SUBMIT với case Manual → `InvalidTransitionError(MANUAL_NO_REVIEW)` (trước kiểm tra `allowed_from`); DEPRECATE cho phép thêm `TESTED` khi case Manual. `update_content`: về `DRAFT` khi (a) `execution_mode` đổi, hoặc (b) case cũ Manual và đang `TESTED`, cùng với luật `IN_REVIEW`/`APPROVED` cũ; `keep_status` chỉ áp dụng cho case Automation. `derive_assignment_status`: sau nhánh `IN_REVIEW`, nếu mọi case trong `mine` là Manual `TESTED` → `TESTED`.
+- [x] **Step 4: Chạy lại** — Expected: PASS; rồi `uv run pytest -q` — Expected: PASS.
+- [x] **Step 5: Commit** `feat(backend): luật trạng thái cho case test tay`.
 
 ### Task 3: API gửi kết quả tay + issue cho case Manual
 
@@ -122,7 +134,7 @@ Thứ tự kiểm tra trong endpoint (mỗi lỗi trả về trước khi ghi b�
 9. PASS/FAIL → `service.mark_tested(...)` (BLOCKED bỏ qua). Lỗi ở đây chỉ log.
 10. `notify_results_recorded` (FAIL thêm người tạo case); đồng bộ issue: một hàm gộp `IssueSyncer.sync_case(project, case_mới)` rồi `sync_issues_for_results(..., runner_name=user.name)`; nếu `services.issue_sync` là `BackgroundIssueSync` thì `submit` vào luồng nền (chạy sau lần sync_case mà `mark_tested` đã xếp hàng), không thì chạy ngay. BLOCKED không đụng issue. Rồi `prune_evidence`.
 
-- [ ] **Step 1: Viết test đỏ** `tests/test_manual_results_api.py` (fixture `project`/`lead`/`an` như `test_agent_results_api.py`; case tạo qua API mặc định Manual):
+- [x] **Step 1: Viết test đỏ** `tests/test_manual_results_api.py` (fixture `project`/`lead`/`an` như `test_agent_results_api.py`; case tạo qua API mặc định Manual):
   - `test_tester_submits_pass_marks_tested`: 201; case `TESTED`; Run `COMPLETED`, `triggered_by == "an@x.com"`, `scope.case_ids == ["TC-000001"]`; Result `executed_by == "an@x.com"`, `case_version == 1`.
   - `test_manual_fail_requires_reason_and_failed_step` (422 mỗi trường, không có Run).
   - `test_manual_result_step_mismatch_is_422_without_run` (thiếu / thừa / trùng `step_no`).
@@ -137,11 +149,11 @@ Thứ tự kiểm tra trong endpoint (mỗi lỗi trả về trước khi ghi b�
   - `test_case_detail_has_last_result_for_manual_only`.
   - `test_media_sign_accepts_evidence_purpose` (`tests/test_media_api.py`).
   - `tests/test_issue_sync.py`: `test_switching_to_automation_drops_mode_label`; `tests/test_issue_format.py`: `test_manual_issue_has_mode_label_and_no_agent_block`.
-- [ ] **Step 2: Chạy** `uv run pytest tests/test_manual_results_api.py tests/test_issue_sync.py tests/test_issue_format.py tests/test_media_api.py -q` — Expected: FAIL (404/405 vì chưa có route).
-- [ ] **Step 3: Tách** `notify_results_recorded` và `sync_issues_for_results` từ `agent.py` sang `app/api/result_recording.py`; chạy `uv run pytest tests/test_agent_results_api.py -q` — Expected: PASS (hành vi agent không đổi).
-- [ ] **Step 4: Code** endpoint, media purpose, issue sync/format, `last_result`, dòng `**Người chạy:** <tên> (test tay)` (qua `_safe_text`) khi `runner_name` có.
-- [ ] **Step 5: Chạy lại** các test ở Step 2 — Expected: PASS; rồi bộ kiểm tra backend đầy đủ — Expected: PASS, mypy/ruff sạch.
-- [ ] **Step 6: Commit** (có thể 2 commit) `refactor(backend): tách phần ghi kết quả dùng chung với agent` và `feat(backend): API gửi kết quả test tay và issue cho case Manual`.
+- [x] **Step 2: Chạy** `uv run pytest tests/test_manual_results_api.py tests/test_issue_sync.py tests/test_issue_format.py tests/test_media_api.py -q` — Expected: FAIL (404/405 vì chưa có route).
+- [x] **Step 3: Tách** `notify_results_recorded` và `sync_issues_for_results` từ `agent.py` sang `app/api/result_recording.py`; chạy `uv run pytest tests/test_agent_results_api.py -q` — Expected: PASS (hành vi agent không đổi).
+- [x] **Step 4: Code** endpoint, media purpose, issue sync/format, `last_result`, dòng `**Người chạy:** <tên> (test tay)` (qua `_safe_text`) khi `runner_name` có.
+- [x] **Step 5: Chạy lại** các test ở Step 2 — Expected: PASS; rồi bộ kiểm tra backend đầy đủ — Expected: PASS, mypy/ruff sạch.
+- [x] **Step 6: Commit** (có thể 2 commit) `refactor(backend): tách phần ghi kết quả dùng chung với agent` và `feat(backend): API gửi kết quả test tay và issue cho case Manual`.
 
 ### Task 4: Agent và regression bỏ qua case Manual + tài liệu Codex
 
@@ -154,11 +166,11 @@ Thứ tự kiểm tra trong endpoint (mỗi lỗi trả về trước khi ghi b�
 **Interfaces:**
 - Consumes: `ExecutionMode` (Task 1).
 
-- [ ] **Step 1: Viết test đỏ:** `test_agent_ignores_manual_case` (case Manual → `ignored == [{"test_case_id": ..., "reason": "Case test tay"}]`, `written == 0`, case không đổi trạng thái); `test_regression_run_skips_manual_cases` (dữ liệu Sheet có một case `regression=True`, `APPROVED`, `MANUAL` ghi thẳng vào `gateway.data` cùng một case Automation → `scope.case_ids` chỉ có case Automation).
-- [ ] **Step 2: Chạy** hai file test — Expected: FAIL.
-- [ ] **Step 3: Code:** agent kiểm tra case Manual **trước** kiểm tra "chưa duyệt" (đọc mọi case, không chỉ `APPROVED`); regression lọc thêm `execution_mode == AUTOMATION`. Sửa `docs/codex-agent.md`.
-- [ ] **Step 4: Chạy** bộ kiểm tra backend đầy đủ — Expected: PASS.
-- [ ] **Step 5: Commit** `feat(backend): agent và regression bỏ qua case test tay`. Ghi tiến độ đợt 1 vào plan + `HANDOFF.md` (commit `docs: tiến độ test tay đợt 1`), dừng cho `/compact`.
+- [x] **Step 1: Viết test đỏ:** `test_agent_ignores_manual_case` (case Manual → `ignored == [{"test_case_id": ..., "reason": "Case test tay"}]`, `written == 0`, case không đổi trạng thái); `test_regression_run_skips_manual_cases` (dữ liệu Sheet có một case `regression=True`, `APPROVED`, `MANUAL` ghi thẳng vào `gateway.data` cùng một case Automation → `scope.case_ids` chỉ có case Automation).
+- [x] **Step 2: Chạy** hai file test — Expected: FAIL.
+- [x] **Step 3: Code:** agent kiểm tra case Manual **trước** kiểm tra "chưa duyệt" (đọc mọi case, không chỉ `APPROVED`); regression lọc thêm `execution_mode == AUTOMATION`. Sửa `docs/codex-agent.md`.
+- [x] **Step 4: Chạy** bộ kiểm tra backend đầy đủ — Expected: PASS.
+- [x] **Step 5: Commit** `feat(backend): agent và regression bỏ qua case test tay`. Ghi tiến độ đợt 1 vào plan + `HANDOFF.md` (commit `docs: tiến độ test tay đợt 1`), dừng cho `/compact`.
 
 ---
 

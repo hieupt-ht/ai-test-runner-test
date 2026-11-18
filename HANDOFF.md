@@ -34,6 +34,13 @@ Thiết kế `docs/superpowers/specs/2026-11-18-project-trash-design.md`, kế h
 - **Đợt thùng rác xong** (Task 1–3): `DELETE /api/projects/{id}` (chỉ Admin, dự án phải đã lưu trữ, body `{name}` gõ đúng tên; 409 chưa lưu trữ, 422 sai tên; xoá thành viên rồi dòng dự án, ghi AuditLog; không đụng Sheet riêng/GitHub/ảnh). Trang Admin → Dự án có 2 tab Đang dùng/Thùng rác, nút Chuyển vào thùng rác, Khôi phục, Xoá vĩnh viễn (gõ tên). Backend **683 test**, frontend **212 test** qua, mypy/ruff/typecheck/lint sạch. Chưa thử trình duyệt thật.
 - **Còn lại:** review cả nhánh; sau đó viết plan test tay từ spec `2026-11-18-manual-test-run-design.md`.
 
+## Đang làm (2026-11-18): test tay (Manual)
+
+Thiết kế `docs/superpowers/specs/2026-11-18-manual-test-run-design.md`, kế hoạch `docs/superpowers/plans/2026-11-18-manual-test-run.md` (7 task / 2 đợt, Native, từng đợt).
+
+- **Đợt 1 backend xong** (Task 1–4): trường `execution_mode` (mặc định MANUAL; ô trống ở Sheet cũ = AUTOMATION); case Manual không gửi duyệt, `mark_tested` đưa DRAFT→TESTED, sửa/đổi cách chạy thì về Nháp; `POST /api/projects/{pid}/test-cases/{cid}/manual-results` tạo Run + Result, báo người liên quan, tạo/cập nhật issue (nhãn `mode: manual`, ghi tên người chạy); tester được ký/tải ảnh vào thư mục `evidence`; `last_result` ở chi tiết case; agent và regression bỏ qua case Manual. Backend **727 test**, mypy/ruff sạch.
+- **Còn lại:** Đợt 2 frontend (Task 5–7: form chọn cách chạy, khung "Chạy test tay", nhãn Pass/Fail), rồi review cả nhánh. Chưa thử trình duyệt thật.
+
 ## Đang làm (2026-11-18): ảnh/video cho màn hình + trang chi tiết màn hình
 
 Thiết kế `docs/superpowers/specs/2026-11-18-screen-media-and-detail-design.md`, kế hoạch `docs/superpowers/plans/2026-11-18-screen-media-and-detail.md` (5 task / 2 đợt, làm kiểu Native trong một phiên). Giữ nguyên luật: chỉ Admin/QA Lead tạo-sửa-xoá màn hình; tester chỉ viết case trên màn hình được giao nhưng xem được mọi màn hình.
