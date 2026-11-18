@@ -92,6 +92,8 @@ Chuỗi `evidence` kiểu cũ (một link `https://`) vẫn được nhận; đ�
 
 Chỉ cần thay `<owner/repo>`. Mã dự án và endpoint đã có trong mục **Báo cáo cho AI Test Runner** của từng issue.
 
+> **Bỏ qua issue test tay.** Issue có nhãn `mode: manual` là case do tester tự chạy bằng tay; **luôn bỏ qua**, không chạy và không gửi kết quả (API cũng từ chối với lý do "Case test tay"). Thêm điều kiện này vào mọi prompt bên dưới: *"Bỏ qua mọi issue có nhãn `mode: manual`."*
+
 ### Máy Windows (web và Android)
 
 > Trong repo `<owner/repo>`, dùng GitHub MCP liệt kê issue **đang mở** có label `test-case`, `status:APPROVED` và **một trong hai** label `platform: web` hoặc `platform: android`. **Bỏ qua mọi issue `platform: ios`.** Với mỗi issue: đọc README/source của app, đọc "Điểm bắt đầu", "Mã app Android" và các ảnh hướng dẫn. Web thì viết kịch bản Playwright; Android thì chạy bằng Maestro trên điện thoại thật (`adb devices` phải thấy máy). Lấy PASS/FAIL từ **kết quả lệnh chạy và mã thoát**, không đoán. Không chạy được thì dùng `BLOCKED` hoặc `INCONCLUSIVE` kèm lý do.

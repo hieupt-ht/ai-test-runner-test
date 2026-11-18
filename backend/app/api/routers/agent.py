@@ -29,7 +29,7 @@ from app.core.models.run import (
     RunStatus,
     StepResult,
 )
-from app.core.models.test_case import TestCaseStatus
+from app.core.models.test_case import ExecutionMode, TestCaseStatus
 from app.core.repositories.runs import InvalidRunStateError, RunInProgressError
 from app.core.services.evidence_retention import prune_evidence
 from app.core.time import utc_now
@@ -168,10 +168,12 @@ def write_agent_results(
         raise HTTPException(status.HTTP_409_CONFLICT, "Dự án đã lưu trữ")
 
     scope = scope_for(services, project)
+    all_cases = {case.id: case for case in scope.test_cases.list_all()}
     approved = {
-        case.id: case
-        for case in scope.test_cases.list_all()
+        case_id: case
+        for case_id, case in all_cases.items()
         if case.status == TestCaseStatus.APPROVED
+        and case.execution_mode == ExecutionMode.AUTOMATION
     }
     # Có run_id: kết quả thuộc một lần chạy regression đang mở, không tạo run mới
     regression_run: Run | None = None
@@ -186,7 +188,11 @@ def write_agent_results(
     accepted: list[AgentResult] = []
     ignored: list[IgnoredResult] = []
     for item in body.results:
-        if item.test_case_id not in approved:
+        known = all_cases.get(item.test_case_id)
+        if known is not None and known.execution_mode == ExecutionMode.MANUAL:
+            # Case test tay do tester chạy; agent không được ghi kết quả
+            ignored.append(IgnoredResult(test_case_id=item.test_case_id, reason="Case test tay"))
+        elif item.test_case_id not in approved:
             ignored.append(
                 IgnoredResult(
                     test_case_id=item.test_case_id, reason="Case không tồn tại hoặc chưa duyệt"

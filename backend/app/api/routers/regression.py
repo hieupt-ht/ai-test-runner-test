@@ -17,7 +17,7 @@ from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
 from app.core.models.run import Run, RunStatus
-from app.core.models.test_case import TestCaseStatus
+from app.core.models.test_case import ExecutionMode, TestCaseStatus
 from app.core.permissions import Action
 from app.core.repositories.runs import InvalidRunStateError, RunNotFoundError
 from app.core.services.issue_sync import BackgroundIssueSync
@@ -84,7 +84,9 @@ def create_regression_run(
     case_ids = [
         case.id
         for case in scope.test_cases.list_all()
-        if case.regression and case.status == TestCaseStatus.APPROVED
+        if case.regression
+        and case.status == TestCaseStatus.APPROVED
+        and case.execution_mode == ExecutionMode.AUTOMATION  # case test tay do tester tự chạy
     ]
     if not case_ids:
         raise HTTPException(

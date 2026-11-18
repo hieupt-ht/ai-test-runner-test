@@ -3,9 +3,12 @@
 from typing import Any
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.api.project_scope import scope_for
 from app.core.models.project import Project
+from app.core.models.test_case import TestCaseStatus
 from tests import test_agent_results_api as base
 from tests.fakes import FakeGitHub
 from tests.test_test_cases_api import create
@@ -231,3 +234,21 @@ def test_list_open_regression_runs_for_the_finish_button(
 
     lead.post(regression_url(project, f"/{run_id}/finish"))
     assert lead.get(regression_url(project)).json() == []
+
+
+def test_regression_run_skips_manual_cases(
+    app: FastAPI, an: TestClient, lead: TestClient, project: Project
+) -> None:
+    auto = approved_case(an, lead, project, regression=True)
+    manual = create(an, project, regression=True, execution_mode="MANUAL").json()["id"]
+    scope = scope_for(app.state.services, project)
+    scope.test_cases.save(
+        scope.test_cases.get(manual).model_copy(update={"status": TestCaseStatus.APPROVED}),  # type: ignore[union-attr]
+        expected_version=1,
+        actor="lead@x.com",
+    )
+
+    response = lead.post(regression_url(project), json={"build_version": "1.0"})
+
+    assert response.status_code == 201
+    assert response.json()["scope"]["case_ids"] == [auto]

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.api.project_scope import scope_for
 from app.core.github.client import GitHubError
 from app.core.models.project import Project
+from app.core.models.test_case import TestCaseStatus
 from app.core.models.user import Role
 from app.core.notifications import NotificationStore
 from app.core.repositories.members import ProjectMemberRepository
@@ -582,3 +583,33 @@ def test_fail_assigns_issue_to_screen_dev_and_survives_assign_error(
     assert "⚠️ Không gán được issue cho @nguyenvana" in (
         github.issue_comments[project.repo_full_name][1][0].body
     )
+
+
+def test_agent_ignores_manual_case(
+    app: FastAPI,
+    client: TestClient,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    case = create(an, project, execution_mode="MANUAL").json()
+    scope = scope_for(app.state.services, project)
+    # Dù case Manual có ở trạng thái đã duyệt, agent vẫn không được ghi kết quả cho nó
+    scope.test_cases.save(
+        scope.test_cases.get(case["id"]).model_copy(update={"status": TestCaseStatus.APPROVED}),  # type: ignore[union-attr]
+        expected_version=1,
+        actor="lead@x.com",
+    )
+
+    response = client.post(
+        path(project),
+        json={"results": [{**RESULT, "test_case_id": case["id"]}]},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["written"] == 0
+    assert body["ignored"] == [{"test_case_id": case["id"], "reason": "Case test tay"}]
+    assert scope.test_cases.get(case["id"]).status == TestCaseStatus.APPROVED  # type: ignore[union-attr]
