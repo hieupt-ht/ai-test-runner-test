@@ -241,3 +241,82 @@ def test_old_screen_row_without_media_reads_empty(
     listed = client_as_qa_lead.get(screens_url(project)).json()
     assert listed[0]["id"] == "SC-0001"
     assert listed[0]["media"] == []
+
+
+def _fake_janitor(app) -> list[str]:
+    """Gắn janitor giả vào app; trả về danh sách public_id đã bị yêu cầu xoá."""
+    app.state.services.cloud_name = "mine"
+    deleted: list[str] = []
+
+    class Janitor:
+        def delete(self, items: list[object]) -> None:
+            deleted.extend(item.public_id for item in items)  # type: ignore[attr-defined]
+
+    app.state.services.media_janitor = Janitor()
+    return deleted
+
+
+def _media(public_id: str) -> dict[str, str]:
+    return {**media_json("mine"), "public_id": public_id}
+
+
+def test_removing_screen_media_deletes_file(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    deleted = _fake_janitor(app)
+    created = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(media=[_media("a"), _media("b")])
+    )
+    response = client_as_qa_lead.patch(
+        f"{screens_url(project)}/{created.json()['id']}", json={"media": [_media("b")]}
+    )
+    assert response.status_code == 200
+    assert deleted == ["a"]
+
+
+def test_patch_without_media_keeps_files(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    deleted = _fake_janitor(app)
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen(media=[_media("a")]))
+    response = client_as_qa_lead.patch(
+        f"{screens_url(project)}/{created.json()['id']}", json={"name": "Mới"}
+    )
+    assert deleted == []
+    assert response.json()["media"][0]["public_id"] == "a"
+
+
+def test_deleting_screen_deletes_its_media(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    deleted = _fake_janitor(app)
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen(media=[_media("a")]))
+    response = client_as_qa_lead.delete(f"{screens_url(project)}/{created.json()['id']}")
+    assert response.status_code == 204
+    assert deleted == ["a"]
+
+
+def test_screen_blocked_from_delete_keeps_media(
+    app,
+    client_as_qa_lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    deleted = _fake_janitor(app)
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen(media=[_media("a")]))
+    screen_id = created.json()["id"]
+    TestCaseRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1).create(
+        screen_id=screen_id,
+        content=TestCaseContent(
+            title="Đăng nhập đúng",
+            steps=[TestStep(action="Bấm Đăng nhập", expected="")],
+            expected_result="Vào được trang chủ",
+            severity=Severity.LOW,
+            priority=Priority.P1,
+        ),
+        actor="tester@x.com",
+    )
+    response = client_as_qa_lead.delete(f"{screens_url(project)}/{screen_id}")
+    assert response.status_code == 409
+    assert deleted == []

@@ -103,6 +103,7 @@ class ScreenService:
         if not diff:
             return current
         self._screens.update(updated)
+        self._clean_removed_media(current, updated)
         self._record(actor, "UPDATE", screen_id, diff)
         return updated
 
@@ -116,7 +117,11 @@ class ScreenService:
                 raise ScreenInUseError(screen_id)
             if any(case.screen_id == screen_id for case in self._test_cases.list_all()):
                 raise ScreenHasTestCasesError(screen_id)
+            screen = self._screens.get(screen_id)
             self._screens.delete(screen_id)
+        # Xoá hẳn màn hình thì ảnh/video của nó cũng không còn chỗ dùng
+        if screen is not None and self._janitor is not None:
+            self._janitor.delete(screen.media)
         self._record(actor, "DELETE", screen_id, {})
 
     def _require_own_media(self, media: list[Media]) -> None:
@@ -125,6 +130,15 @@ class ScreenService:
             ensure_own_media(media, self._cloud_name, self._drive_enabled)
         except ForeignMediaError as error:
             raise InvalidScreenError(str(error)) from None
+
+    def _clean_removed_media(self, old: Screen, new: Screen) -> None:
+        """Xoá file của ảnh bản cũ có mà bản mới không còn (so theo public_id)."""
+        if self._janitor is None:
+            return
+        kept = {item.public_id for item in new.media}
+        removed = [item for item in old.media if item.public_id not in kept]
+        if removed:
+            self._janitor.delete(removed)
 
     def _record(self, actor: User, action: str, screen_id: str, diff: dict[str, Any]) -> None:
         self._audit_log.record(
