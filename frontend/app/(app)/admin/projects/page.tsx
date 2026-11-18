@@ -17,7 +17,37 @@ import {
 } from "@/components/ui/table"
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog"
 import { useMe } from "@/lib/use-me"
-import { useProjects } from "@/lib/use-projects"
+import { toast } from "sonner"
+
+import { useProjects, useUpdateProject } from "@/lib/use-projects"
+import type { Project } from "@/lib/api/types"
+
+/** Ô chọn nơi lưu ảnh/video của một dự án. Giá trị lấy từ danh sách nên lỗi thì tự quay về giá trị cũ. */
+function StorageSelect({ project }: { project: Project }) {
+  const t = useTranslations("projects")
+  const update = useUpdateProject(project.id)
+
+  async function change(storage: Project["storage"]) {
+    try {
+      await update.mutateAsync({ storage })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("storageFailed"))
+    }
+  }
+
+  return (
+    <select
+      aria-label={t("storageLabel", { name: project.name })}
+      value={project.storage}
+      disabled={update.isPending}
+      onChange={(event) => void change(event.target.value as Project["storage"])}
+      className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+    >
+      <option value="cloudinary">{t("storageCloudinary")}</option>
+      <option value="drive">{t("storageDrive")}</option>
+    </select>
+  )
+}
 
 export default function AdminProjectsPage() {
   const t = useTranslations("projects")
@@ -55,12 +85,13 @@ export default function AdminProjectsPage() {
                 <TableHead>{t("colRepo")}</TableHead>
                 <TableHead>{t("colBranch")}</TableHead>
                 <TableHead>{t("colStatus")}</TableHead>
+                <TableHead>{t("colStorage")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {projects.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
                     {t("empty")}
                   </TableCell>
                 </TableRow>
@@ -79,6 +110,9 @@ export default function AdminProjectsPage() {
                     <Badge variant={project.archived ? "secondary" : "outline"}>
                       {project.archived ? t("archived") : t("active")}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <StorageSelect project={project} />
                   </TableCell>
                 </TableRow>
               ))}
