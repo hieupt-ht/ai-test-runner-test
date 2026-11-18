@@ -180,3 +180,57 @@ describe("uploadMedia", () => {
     ).rejects.toMatchObject({ key: "uploadFailed" })
   })
 })
+
+describe("uploadMedia với kho Google Drive", () => {
+  const DRIVE_MEDIA = {
+    kind: "image",
+    url: "https://drive.google.com/file/d/F1/view",
+    public_id: "F1",
+    note: "",
+  }
+
+  beforeEach(() => {
+    post.mockReset()
+    vi.stubGlobal("XMLHttpRequest", FakeXhr)
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  function driveXhr(status: number, body: unknown = DRIVE_MEDIA) {
+    return class extends FakeXhr {
+      status = status
+      responseText = JSON.stringify(body)
+    }
+  }
+
+  it("gửi file thẳng tới backend (không xin chữ ký) và trả Media từ phản hồi", async () => {
+    vi.stubGlobal("XMLHttpRequest", driveXhr(200))
+    const progress: number[] = []
+    const media = await uploadMedia(fileOf("a.png", "image/png"), {
+      projectId: "PRJ-0001",
+      storage: "drive",
+      onProgress: (percent) => progress.push(percent),
+    })
+
+    expect(post).not.toHaveBeenCalled()
+    expect(FakeXhr.instance.open).toHaveBeenCalledWith(
+      "POST",
+      "/api/projects/PRJ-0001/media/upload",
+    )
+    const form = FakeXhr.instance.sent as FormData
+    expect(form.get("purpose")).toBe("guide")
+    expect(form.get("file")).toBeInstanceOf(File)
+    expect(progress).toContain(50)
+    expect(media).toEqual(DRIVE_MEDIA)
+  })
+
+  it.each([
+    [413, "tooLarge"],
+    [415, "badType"],
+    [502, "uploadFailed"],
+  ])("backend trả %i thì báo %s", async (status, key) => {
+    vi.stubGlobal("XMLHttpRequest", driveXhr(status, { detail: "x" }))
+    await expect(
+      uploadMedia(fileOf("a.png", "image/png"), { projectId: "PRJ-0001", storage: "drive" }),
+    ).rejects.toMatchObject({ key })
+  })
+})

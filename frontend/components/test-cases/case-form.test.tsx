@@ -14,9 +14,19 @@ vi.mock("@/lib/use-test-cases", () => ({
   useRefreshCases: () => vi.fn(),
 }))
 // Ô chọn ảnh thật cần mạng; ở đây chỉ cần giả lập "đang tải lên".
+// Dự án này lưu ảnh/video ở Drive: form phải chuyển thông tin đó xuống ô chọn ảnh.
+vi.mock("@/lib/use-projects", () => ({
+  useProject: () => ({ data: { storage: "drive" } }),
+}))
 vi.mock("@/components/media/media-picker", () => ({
-  MediaPicker: ({ onBusyChange }: { onBusyChange?: (busy: boolean) => void }) => (
-    <button type="button" onClick={() => onBusyChange?.(true)}>
+  MediaPicker: ({
+    onBusyChange,
+    storage,
+  }: {
+    onBusyChange?: (busy: boolean) => void
+    storage?: string
+  }) => (
+    <button type="button" data-storage={storage} onClick={() => onBusyChange?.(true)}>
       giả-lập-tải-lên
     </button>
   ),
@@ -38,6 +48,13 @@ function renderForm() {
 
 describe("CaseForm", () => {
   afterEach(cleanup)
+
+  it("truyền nơi lưu của dự án cho ô chọn ảnh/video", () => {
+    renderForm()
+    const pickers = screen.getAllByRole("button", { name: "giả-lập-tải-lên" })
+    expect(pickers.length).toBeGreaterThan(0)
+    for (const picker of pickers) expect(picker).toHaveAttribute("data-storage", "drive")
+  })
 
   it("có ô Nền tảng, Loại, Regression và Bắt đầu tại", () => {
     renderForm()

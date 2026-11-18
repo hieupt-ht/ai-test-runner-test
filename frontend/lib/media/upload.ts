@@ -58,21 +58,75 @@ export function videoDuration(file: File): Promise<number> {
   })
 }
 
+export type Storage = "cloudinary" | "drive"
+
 type Options = {
   projectId: string
+  /** Nơi lưu của dự án; mặc định Cloudinary. */
+  storage?: Storage
   onProgress?: (percent: number) => void
   signal?: AbortSignal
 }
 
 type CloudinaryReply = { secure_url: string; public_id: string }
 
-/** Xin backend chữ ký rồi đẩy file thẳng lên Cloudinary (XHR để có tiến độ). */
+/** Gửi một FormData bằng XHR (để có tiến độ) và trả nội dung JSON. `failure` đổi mã HTTP lỗi thành khoá lỗi. */
+function sendForm<T>(
+  url: string,
+  form: FormData,
+  options: Options,
+  failure: (status: number) => UploadErrorKey = () => "uploadFailed",
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", url)
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) options.onProgress?.(Math.round((event.loaded / event.total) * 100))
+    }
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) return reject(new UploadError(failure(xhr.status)))
+      try {
+        resolve(JSON.parse(xhr.responseText) as T)
+      } catch {
+        reject(new UploadError("uploadFailed"))
+      }
+    }
+    xhr.onerror = () => reject(new UploadError("uploadFailed"))
+    xhr.onabort = () => reject(new UploadError("aborted"))
+    options.signal?.addEventListener("abort", () => xhr.abort())
+    xhr.send(form)
+  })
+}
+
+function driveFailure(status: number): UploadErrorKey {
+  if (status === 413) return "tooLarge"
+  if (status === 415) return "badType"
+  return "uploadFailed"
+}
+
+/**
+ * Tải file lên nơi lưu của dự án.
+ * - Cloudinary: xin backend chữ ký rồi đẩy thẳng lên Cloudinary.
+ * - Drive: gửi file tới backend, backend đẩy lên Drive rồi trả lại link.
+ */
 export async function uploadMedia(file: File, options: Options): Promise<Media> {
   const kind = kindOf(file)
   if (kind === null) throw new UploadError("badType")
   const problem = checkFile(file, kind)
   if (problem) throw new UploadError(problem as UploadErrorKey)
   if (kind === "video") await videoDuration(file)
+
+  if (options.storage === "drive") {
+    const form = new FormData()
+    form.set("file", file)
+    form.set("purpose", "guide")
+    return sendForm<Media>(
+      `/api/projects/${encodeURIComponent(options.projectId)}/media/upload`,
+      form,
+      options,
+      driveFailure,
+    )
+  }
 
   const signed = unwrap(
     await api.POST("/api/projects/{project_id}/media/sign", {
@@ -90,25 +144,6 @@ export async function uploadMedia(file: File, options: Options): Promise<Media> 
   form.set("public_id", signed.public_id)
   form.set("allowed_formats", signed.allowed_formats)
 
-  const reply = await new Promise<CloudinaryReply>((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open("POST", signed.upload_url)
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) options.onProgress?.(Math.round((event.loaded / event.total) * 100))
-    }
-    xhr.onload = () => {
-      if (xhr.status < 200 || xhr.status >= 300) return reject(new UploadError("uploadFailed"))
-      try {
-        resolve(JSON.parse(xhr.responseText) as CloudinaryReply)
-      } catch {
-        reject(new UploadError("uploadFailed"))
-      }
-    }
-    xhr.onerror = () => reject(new UploadError("uploadFailed"))
-    xhr.onabort = () => reject(new UploadError("aborted"))
-    options.signal?.addEventListener("abort", () => xhr.abort())
-    xhr.send(form)
-  })
-
+  const reply = await sendForm<CloudinaryReply>(signed.upload_url, form, options)
   return { kind, url: reply.secure_url, public_id: reply.public_id, note: "" }
 }

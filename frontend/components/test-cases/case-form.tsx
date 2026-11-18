@@ -32,6 +32,7 @@ import type {
   TestCaseContent,
   TestType,
 } from "@/lib/api/types"
+import { useProject } from "@/lib/use-projects"
 import { conflictFrom } from "@/lib/test-cases/conflict"
 import { testCaseFormSchema } from "@/lib/test-cases/form-schema"
 import {
@@ -109,6 +110,8 @@ export function CaseForm({
   const tm = useTranslations("media")
   const router = useRouter()
   const queryClient = useQueryClient()
+  // Nơi lưu ảnh/video do Admin chọn cho dự án
+  const storage = useProject(projectId).data?.storage ?? "cloudinary"
   const isEdit = Boolean(testCase)
 
   const form = useForm<TestCaseContent>({
@@ -327,6 +330,7 @@ export function CaseForm({
                   value={field.value ?? []}
                   onChange={field.onChange}
                   projectId={projectId}
+                  storage={storage}
                   onBusyChange={(busy) => reportUploading("case", busy)}
                 />
               )}
@@ -384,6 +388,7 @@ export function CaseForm({
                 onChange={field.onChange}
                 errors={stepErrors}
                 projectId={projectId}
+                storage={storage}
                 onBusyChange={reportUploading}
               />
             )}

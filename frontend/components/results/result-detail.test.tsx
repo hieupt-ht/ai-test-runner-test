@@ -46,6 +46,23 @@ describe("ResultDetail", () => {
     expect(player).toHaveAttribute("controls")
   })
 
+  it("video lưu ở Drive phát bằng iframe, ảnh Drive dùng thumbnail", () => {
+    const video: Media = { kind: "video", url: "https://drive.google.com/file/d/V1/view", public_id: "V1", note: "" }
+    const image: Media = { kind: "image", url: "https://drive.google.com/file/d/I1/view", public_id: "I1", note: "" }
+    const { baseElement } = renderDetail(
+      makeResult({ evidence: { pruned: false, video, screenshots: [image] } }),
+    )
+    expect(baseElement.querySelector("iframe")).toHaveAttribute(
+      "src",
+      "https://drive.google.com/file/d/V1/preview",
+    )
+    expect(baseElement.querySelector("video")).toBeNull()
+    expect(baseElement.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://drive.google.com/thumbnail?id=I1&sz=w1600",
+    )
+  })
+
   it("bảng bước: ảnh mở lightbox và bước không chạy hiện 'Không chạy'", () => {
     renderDetail(
       makeResult({

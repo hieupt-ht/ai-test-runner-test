@@ -20,6 +20,8 @@ type Props = {
   disabled?: boolean
   /** Cần để xin chữ ký tải ảnh/video lên */
   projectId: string
+  /** Nơi lưu ảnh/video của dự án */
+  storage?: "cloudinary" | "drive"
   /** Báo form biết bước nào đang tải ảnh/video (khoá nút Lưu/Gửi) */
   onBusyChange?: (key: string, busy: boolean) => void
 }
@@ -31,6 +33,7 @@ export function StepsEditor({
   errors = [],
   disabled,
   projectId,
+  storage,
   onBusyChange,
 }: Props) {
   const t = useTranslations("testCases")
@@ -141,6 +144,7 @@ export function StepsEditor({
                 value={step.guide_media ?? []}
                 onChange={(guide_media) => update(index, { guide_media })}
                 projectId={projectId}
+                storage={storage}
                 disabled={disabled}
                 onBusyChange={(busy) => onBusyChange?.(`step-${index}`, busy)}
               />

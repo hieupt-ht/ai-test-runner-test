@@ -6,16 +6,20 @@ import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { MediaLightbox } from "@/components/media/media-lightbox"
+import { MediaVideo } from "@/components/media/media-video"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Media } from "@/lib/api/types"
-import { UploadError, uploadMedia } from "@/lib/media/upload"
+import { displayUrl } from "@/lib/media/display"
+import { type Storage, UploadError, uploadMedia } from "@/lib/media/upload"
 
 type Props = {
   value: Media[]
   onChange: (next: Media[]) => void
   max?: number
   projectId: string
+  /** Nơi lưu của dự án (mặc định Cloudinary). */
+  storage?: Storage
   disabled?: boolean
   /** Báo cho form biết đang tải lên (để khoá nút Lưu/Gửi). */
   onBusyChange?: (busy: boolean) => void
@@ -23,12 +27,13 @@ type Props = {
 
 type Pending = { id: number; name: string; percent: number }
 
-/** Ô chọn ảnh/video: tải lên Cloudinary, xem trước, ghi chú ngắn, xoá. */
+/** Ô chọn ảnh/video: tải lên Cloudinary hoặc Drive, xem trước, ghi chú ngắn, xoá. */
 export function MediaPicker({
   value,
   onChange,
   max = 5,
   projectId,
+  storage = "cloudinary",
   disabled,
   onBusyChange,
 }: Props) {
@@ -56,6 +61,7 @@ export function MediaPicker({
     try {
       const uploaded = await uploadMedia(file, {
         projectId,
+        storage,
         onProgress: (percent) =>
           setPending((list) => list.map((item) => (item.id === id ? { ...item, percent } : item))),
       })
@@ -86,15 +92,15 @@ export function MediaPicker({
               className="shrink-0"
               onClick={() => setZoomed(item)}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ Cloudinary */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài (Cloudinary/Drive) */}
               <img
-                src={item.url}
+                src={displayUrl(item)}
                 alt={item.note || t("imageAlt")}
                 className="size-16 rounded object-cover"
               />
             </button>
           ) : (
-            <video src={item.url} controls preload="metadata" className="h-16 w-28 rounded" />
+            <MediaVideo media={item} className="h-16 w-28 rounded" />
           )}
           <Input
             value={item.note}

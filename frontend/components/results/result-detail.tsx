@@ -4,12 +4,14 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 
 import { MediaLightbox } from "@/components/media/media-lightbox"
+import { MediaVideo } from "@/components/media/media-video"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { displayUrl } from "@/lib/media/display"
 import { safeEvidenceUrl } from "@/lib/safe-url"
 import type { Media, ResultItem } from "@/lib/api/types"
 
@@ -93,7 +95,7 @@ function Body({ result, onZoom }: { result: ResultItem; onZoom: (media: Media) =
         </a>
       )}
       {evidence.video && (
-        <video controls src={evidence.video.url} className="max-h-72 w-full rounded-lg bg-black" />
+        <MediaVideo media={evidence.video} className="max-h-72 w-full rounded-lg bg-black" />
       )}
 
       {result.step_results.length > 0 && (
@@ -123,7 +125,7 @@ function Body({ result, onZoom }: { result: ResultItem; onZoom: (media: Media) =
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ Cloudinary */}
                       <img
-                        src={step.screenshot.url}
+                        src={displayUrl(step.screenshot)}
                         alt=""
                         className="h-12 w-20 rounded border object-cover"
                       />
@@ -146,7 +148,7 @@ function Body({ result, onZoom }: { result: ResultItem; onZoom: (media: Media) =
               onClick={() => onZoom(shot)}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ Cloudinary */}
-              <img src={shot.url} alt="" className="h-16 w-24 rounded border object-cover" />
+              <img src={displayUrl(shot)} alt="" className="h-16 w-24 rounded border object-cover" />
             </button>
           ))}
         </div>
