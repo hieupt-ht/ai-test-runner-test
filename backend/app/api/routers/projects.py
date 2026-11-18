@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, HttpUrl
 
 from app.api.deps import CurrentUser, ServicesDep, require
@@ -14,8 +14,12 @@ from app.core.models.media import NOT_CONFIGURED_DRIVE
 from app.core.models.project import Project, Storage
 from app.core.models.user import User
 from app.core.permissions import Action
-from app.core.repositories.projects import SpreadsheetInUseError
-from app.core.services.projects import InvalidProjectInputError, ProjectService
+from app.core.repositories.projects import ProjectNotFoundError, SpreadsheetInUseError
+from app.core.services.projects import (
+    InvalidProjectInputError,
+    ProjectNotArchivedError,
+    ProjectService,
+)
 
 router = APIRouter(prefix="/api", tags=["projects"])
 
@@ -53,6 +57,10 @@ class UpdateProjectRequest(BaseModel):
     ios_bundle_id: AppId | None = None
     require_review: bool | None = None
     storage: Storage | None = None  # chỉ Admin đổi (không nằm trong _SETTINGS_FIELDS)
+
+
+class DeleteProjectRequest(BaseModel):
+    name: str  # gõ lại đúng tên dự án để xác nhận
 
 
 # Các trường mà QA Lead (thành viên dự án) cũng được đổi; trường còn lại chỉ Admin.
@@ -154,6 +162,26 @@ def update_project(
         raise HTTPException(
             status.HTTP_409_CONFLICT, "Hệ thống đang bận, vui lòng thử lại"
         ) from None
+
+
+@router.delete("/projects/{project_id}", status_code=204)
+def delete_project(
+    project_id: str, body: DeleteProjectRequest, user: CurrentUser, services: ServicesDep
+) -> Response:
+    project = load_project(services, user, project_id, Action.MANAGE_PROJECTS, allow_archived=True)
+    try:
+        _service(services).delete_project(user, project, confirm_name=body.name)
+    except ProjectNotArchivedError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from None
+    except InvalidProjectInputError as error:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
+    except ProjectNotFoundError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy dự án") from None
+    except LockTimeout:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Hệ thống đang bận, vui lòng thử lại"
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _approve_pending(services: Services, user: User, project: Project) -> None:

@@ -23,6 +23,10 @@ class InvalidProjectInputError(Exception):
     """Dữ liệu nhập sai (trả 422). `str(error)` là câu báo lỗi tiếng Việt."""
 
 
+class ProjectNotArchivedError(Exception):
+    """Chỉ xoá được dự án đã vào thùng rác (trả 409)."""
+
+
 class ProjectService:
     def __init__(
         self,
@@ -126,6 +130,26 @@ class ProjectService:
         self._projects.update(updated)
         self._record(actor, "UPDATE", project.id, diff)
         return updated
+
+    def delete_project(self, actor: User, project: Project, *, confirm_name: str) -> None:
+        """Xoá vĩnh viễn dự án đã lưu trữ khỏi app (Sheet riêng, GitHub, ảnh/video giữ nguyên)."""
+        if not project.archived:
+            raise ProjectNotArchivedError("Hãy chuyển dự án vào thùng rác trước")
+        if confirm_name.strip() != project.name:
+            raise InvalidProjectInputError("Tên xác nhận không khớp")
+        # Xoá thành viên trước: nếu lỗi giữa chừng, dự án vẫn còn trong thùng rác để xoá lại.
+        self._members.remove_all_for_project(project.id)
+        self._projects.delete(project.id)
+        self._record(
+            actor,
+            "DELETE",
+            project.id,
+            {
+                "name": project.name,
+                "repo_full_name": project.repo_full_name,
+                "spreadsheet_id": project.spreadsheet_id,
+            },
+        )
 
     # ----- Các bước kiểm tra khi tạo dự án -----
 
