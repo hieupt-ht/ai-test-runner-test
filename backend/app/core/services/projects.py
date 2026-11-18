@@ -107,6 +107,10 @@ class ProjectService:
             "require_review": require_review,
             "storage": storage,
         }
+        # Dự án lưu trữ bị bỏ qua lúc nâng cấp Sheet, nên bỏ lưu trữ thì nâng cấp ngay.
+        if project.archived and archived is False:
+            self._prepare_project_sheet(project.spreadsheet_id)
+
         updated = project.model_copy(
             update={field: value for field, value in changes.items() if value is not None}
         )

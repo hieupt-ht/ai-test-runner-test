@@ -63,6 +63,21 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
       : t("screens.devOwnerInvalid")
   const hasErrors = Boolean(nameError) || Boolean(ownerError) || pathErrors.some(Boolean)
 
+  // Mỗi lần mở lại thì nạp lại từ dữ liệu đã lưu, để ảnh/chữ bỏ dở lần trước không bị lưu nhầm
+  function handleOpenChange(next: boolean) {
+    if (next && screen) {
+      setName(screen.name)
+      setDescription(screen.description)
+      setRoute(screen.route)
+      setDevOwner(screen.dev_owner)
+      setCodePaths(screen.code_paths)
+      setMedia(screen.media ?? [])
+      setUploading(false)
+      setSubmitted(false)
+    }
+    setOpen(next)
+  }
+
   function updatePath(index: number, value: string) {
     setCodePaths((paths) => paths.map((path, i) => (i === index ? value : path)))
   }
@@ -102,7 +117,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={trigger}>{triggerLabel}</DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>

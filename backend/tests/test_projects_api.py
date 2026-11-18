@@ -287,3 +287,22 @@ def test_qa_lead_cannot_change_storage(
     response = lead.patch(f"/api/projects/{project.id}", json={"storage": "drive"})
 
     assert response.status_code == 403
+
+
+def test_unarchive_upgrades_old_sheet_columns(
+    client_as_admin: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    """Bỏ lưu trữ thì phải thêm cột còn thiếu (vd media_json) vào Sheet cũ."""
+    project = make_project(projects, members, gateway, archived=True)
+    header = gateway.data[project.spreadsheet_id]["Screens"][0]
+    assert "media_json" in header
+    header.remove("media_json")
+
+    response = client_as_admin.patch(f"/api/projects/{project.id}", json={"archived": False})
+
+    assert response.status_code == 200
+    assert "media_json" in gateway.data[project.spreadsheet_id]["Screens"][0]
+    assert client_as_admin.get(f"/api/projects/{project.id}/screens").status_code == 200

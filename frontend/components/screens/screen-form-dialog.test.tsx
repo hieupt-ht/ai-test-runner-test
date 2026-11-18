@@ -138,3 +138,21 @@ describe("ScreenFormDialog – ảnh/video", () => {
     expect(screen.getByRole("button", { name: "Lưu" })).toBeDisabled()
   })
 })
+
+describe("ScreenFormDialog – mở lại sau khi huỷ", () => {
+  afterEach(() => {
+    cleanup()
+    mutateAsync.mockReset()
+  })
+
+  it("thêm ảnh rồi Huỷ thì lần mở sau không còn ảnh đó, Lưu không gửi ảnh thừa", async () => {
+    mutateAsync.mockResolvedValue(existing)
+    openDialog(existing)
+    fireEvent.click(screen.getByText("Thêm ảnh giả"))
+    fireEvent.click(screen.getByRole("button", { name: "Huỷ" }))
+    fireEvent.click(screen.getByText("Mở"))
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled())
+    expect(mutateAsync.mock.calls[0][0]).toMatchObject({ media: [existingMedia] })
+  })
+})
