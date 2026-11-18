@@ -14,6 +14,7 @@ from app.api.sessions import SessionStore
 from app.core.github.client import GitHubAppClient, GitHubClient
 from app.core.login_throttle import LoginThrottle
 from app.core.media.cloudinary import CloudinaryClient, CloudinarySigner, MediaJanitor
+from app.core.media.drive import DriveClient
 from app.core.notifications import NotificationStore
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
@@ -41,7 +42,7 @@ class Services:
     issue_sync: IssueSink | None = None
     cloudinary_signer: CloudinarySigner | None = None  # None khi chưa cấu hình Cloudinary
     media_janitor: MediaJanitor | None = None
-    drive: Any | None = None  # None khi chưa cấu hình Google Drive (Task 3 đổi sang DriveClient)
+    drive: DriveClient | None = None  # None khi chưa cấu hình Google Drive
     cloud_name: str = ""
     app_base_url: str = "http://localhost:3000"
     lock_wait_seconds: float = 5.0
