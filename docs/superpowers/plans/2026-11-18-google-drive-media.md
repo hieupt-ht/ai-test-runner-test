@@ -152,7 +152,7 @@
 **Interfaces:**
 - Produces: `isDrive(media: Media): boolean`; `displayUrl(media: Media): string` (ảnh Drive → `https://drive.google.com/thumbnail?id=<ID>&sz=w1600`, còn lại → `media.url`); `embedUrl(media: Media): string | null` (video Drive → `https://drive.google.com/file/d/<ID>/preview`, còn lại `null`). Phải khớp với `display_url` ở backend (Task 2).
 
-- [ ] **Step 1: Test đỏ** cho ba hàm (ảnh Drive, video Drive, ảnh/video Cloudinary). **Step 2:** cài đặt, `npm run gen:api`. **Step 3:** `npm test` PASS. **Step 4: Commit** `feat(frontend): hàm tạo link hiển thị ảnh/video theo nơi lưu`.
+- [x] **Step 1: Test đỏ** cho ba hàm (ảnh Drive, video Drive, ảnh/video Cloudinary). **Step 2:** cài đặt, `npm run gen:api`. **Step 3:** `npm test` PASS. **Step 4: Commit** `feat(frontend): hàm tạo link hiển thị ảnh/video theo nơi lưu`.
 
 ### Task 8: Upload theo nơi lưu và hiển thị
 
@@ -160,8 +160,8 @@
 - Modify: `frontend/lib/media/upload.ts` (`Options` thêm `storage: "cloudinary" | "drive"`; nhánh `drive`: `XMLHttpRequest` POST `FormData{file, purpose:"guide"}` tới `/api/projects/{id}/media/upload`, cookie `same-origin` như `api`, giữ `onProgress`/`signal`, kiểm tra tại chỗ như cũ, mã lỗi 413/415/5xx → `UploadError("tooLarge"|"badType"|"uploadFailed")`), `frontend/components/media/media-picker.tsx`, `frontend/components/media/media-lightbox.tsx`, `frontend/components/results/result-detail.tsx` (dùng `displayUrl`; video Drive dùng `<iframe src={embedUrl(media)}>`), nơi gọi `MediaPicker` (truyền `storage` từ `useProject`)
 - Test: `frontend/lib/media/upload.test.ts`, `frontend/components/media/media-picker.test.tsx`, `frontend/components/results/result-detail.test.tsx`
 
-- [ ] **Step 1: Test đỏ:** `upload` với `storage:"drive"` gọi `/media/upload` (không gọi `/sign`) và trả `Media` từ phản hồi; mã 413 → `tooLarge`; picker hiện ảnh Drive bằng thumbnail và video Drive bằng iframe; ảnh/video Cloudinary hiển thị như cũ (test cũ không đổi).
-- [ ] **Step 2:** Cài đặt. `media-picker.tsx(+.test)` đang có thay đổi chưa commit của chủ dự án: đọc `git diff` trước, sửa chồng lên. **Step 3:** `npm test && npm run typecheck && npm run lint` PASS. **Step 4: Commit** `feat(frontend): tải và xem ảnh/video theo nơi lưu của dự án`.
+- [x] **Step 1: Test đỏ:** `upload` với `storage:"drive"` gọi `/media/upload` (không gọi `/sign`) và trả `Media` từ phản hồi; mã 413 → `tooLarge`; picker hiện ảnh Drive bằng thumbnail và video Drive bằng iframe; ảnh/video Cloudinary hiển thị như cũ (test cũ không đổi).
+- [x] **Step 2:** Cài đặt. `media-picker.tsx(+.test)` đang có thay đổi chưa commit của chủ dự án: đọc `git diff` trước, sửa chồng lên. **Step 3:** `npm test && npm run typecheck && npm run lint` PASS. **Step 4: Commit** `feat(frontend): tải và xem ảnh/video theo nơi lưu của dự án`.
 
 ### Task 9: Admin chọn nơi lưu cho project
 
@@ -169,7 +169,7 @@
 - Modify: `frontend/app/(app)/admin/projects/page.tsx` (thêm cột/ô chọn "Nơi lưu ảnh/video": Cloudinary | Google Drive, gọi `useUpdateProject`; 422 hiện thông báo của backend), `frontend/messages/vi.json`
 - Test: `frontend/app/(app)/admin/projects/page.test.tsx` (tạo nếu chưa có)
 
-- [ ] **Step 1: Test đỏ:** đổi sang Google Drive gửi `PATCH {storage:"drive"}`; nhận 422 "Chưa cấu hình Google Drive" thì hiện lỗi và ô chọn quay về giá trị cũ. **Step 2:** cài đặt (file này đang có thay đổi chưa commit của chủ dự án). **Step 3:** PASS. **Step 4: Commit** `feat(frontend): Admin chọn nơi lưu ảnh/video cho từng dự án`.
+- [x] **Step 1: Test đỏ:** đổi sang Google Drive gửi `PATCH {storage:"drive"}`; nhận 422 "Chưa cấu hình Google Drive" thì hiện lỗi và ô chọn quay về giá trị cũ. **Step 2:** cài đặt (file này đang có thay đổi chưa commit của chủ dự án). **Step 3:** PASS. **Step 4: Commit** `feat(frontend): Admin chọn nơi lưu ảnh/video cho từng dự án`.
 
 > **Cuối Đợt 2:** chạy đủ `npm test`, typecheck, lint; tick, ghi HANDOFF, dừng chờ `/compact`.
 
