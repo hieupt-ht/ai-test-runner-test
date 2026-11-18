@@ -114,3 +114,46 @@ def test_janitor_without_client_does_nothing() -> None:
     janitor = MediaJanitor(None)
     janitor.delete([media("a")])
     janitor.close()
+
+
+def drive_media(public_id: str) -> Media:
+    return Media(
+        kind=MediaKind.IMAGE,
+        url=f"https://drive.google.com/file/d/{public_id}/view",
+        public_id=public_id,
+    )
+
+
+def test_janitor_routes_each_file_to_its_own_provider() -> None:
+    cloudinary, drive = RecordingClient(), RecordingClient()
+    janitor = MediaJanitor(cloudinary, drive=drive)
+
+    janitor.delete([media("c1"), drive_media("d1"), media("c2")])
+    janitor.close()
+
+    assert cloudinary.deleted == ["c1", "c2"]
+    assert drive.deleted == ["d1"]
+
+
+def test_janitor_skips_drive_file_when_drive_is_not_configured(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    cloudinary = RecordingClient()
+    janitor = MediaJanitor(cloudinary)  # chưa cấu hình Drive
+
+    with caplog.at_level(logging.WARNING):
+        janitor.delete([drive_media("d1"), media("c1")])
+        janitor.close()
+
+    assert cloudinary.deleted == ["c1"]
+    assert "Google Drive" in caplog.text
+
+
+def test_janitor_with_only_drive_still_deletes_drive_files() -> None:
+    drive = RecordingClient()
+    janitor = MediaJanitor(None, drive=drive)
+
+    janitor.delete([drive_media("d1")])
+    janitor.close()
+
+    assert drive.deleted == ["d1"]

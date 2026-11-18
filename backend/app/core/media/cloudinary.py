@@ -14,7 +14,7 @@ from typing import Literal, Protocol
 import httpx
 from pydantic import BaseModel
 
-from app.core.models.media import Media, MediaKind
+from app.core.models.media import Media, MediaKind, provider_of
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ MAX_BYTES = {
 }
 
 Purpose = Literal["guide", "evidence"]
+_NAMES = {"cloudinary": "Cloudinary", "drive": "Google Drive"}
 
 
 class SignedUpload(BaseModel):
@@ -134,24 +135,32 @@ class CloudinaryClient:
 
 
 class MediaJanitor:
-    """Xoá file Cloudinary ở luồng nền; lỗi chỉ ghi log, không làm hỏng việc đang làm."""
+    """Xoá file (Cloudinary/Drive) ở luồng nền; lỗi chỉ ghi log, không làm hỏng việc đang làm."""
 
-    def __init__(self, client: MediaDestroyer | None) -> None:
-        self._client = client
+    def __init__(
+        self, client: MediaDestroyer | None, *, drive: MediaDestroyer | None = None
+    ) -> None:
+        self._clients: dict[str, MediaDestroyer | None] = {"cloudinary": client, "drive": drive}
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="media-janitor")
 
     def delete(self, items: list[Media]) -> None:
-        if self._client is None or not items:
+        if not items or all(client is None for client in self._clients.values()):
             return
-        self._executor.submit(self._delete_all, self._client, list(items))
+        self._executor.submit(self._delete_all, list(items))
 
-    @staticmethod
-    def _delete_all(client: MediaDestroyer, items: list[Media]) -> None:
+    def _delete_all(self, items: list[Media]) -> None:
         for item in items:
+            provider = provider_of(item)
+            client = self._clients[provider]
+            if client is None:
+                logger.warning("Chưa cấu hình %s, bỏ qua file %s", _NAMES[provider], item.public_id)
+                continue
             try:
                 client.destroy(item.public_id, item.kind)
             except Exception:
-                logger.warning("Không xoá được file Cloudinary %s", item.public_id, exc_info=True)
+                logger.warning(
+                    "Không xoá được file %s %s", _NAMES[provider], item.public_id, exc_info=True
+                )
 
     def close(self) -> None:
         """Chờ các việc đang chạy xong (dùng khi tắt app và trong test)."""
