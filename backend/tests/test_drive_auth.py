@@ -65,3 +65,27 @@ def test_main_requires_client_id_and_secret(
 
     assert main(env_file=None) == 2
     assert "GOOGLE_OAUTH_CLIENT_ID" in capsys.readouterr().err
+
+
+def test_default_env_file_also_looks_in_parent_folder(
+    tmp_path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Chạy từ backend/ mà .env nằm ở thư mục gốc dự án thì vẫn đọc được."""
+    (tmp_path / ".env").write_text(
+        "GOOGLE_OAUTH_CLIENT_ID=id\nGOOGLE_OAUTH_CLIENT_SECRET=sec\n", encoding="utf-8"
+    )
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    monkeypatch.chdir(backend)
+    for name in ("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"):
+        monkeypatch.delenv(name, raising=False)
+
+    def stop(*_args: object, **_kwargs: object) -> None:
+        raise SystemExit(99)  # đã qua bước kiểm tra biến, dừng trước khi mở trình duyệt
+
+    monkeypatch.setattr("app.tools.drive_auth.webbrowser.open", stop)
+    monkeypatch.setattr("app.tools.drive_auth.HTTPServer", stop)
+    with pytest.raises(SystemExit) as stopped:
+        main()
+    assert stopped.value.code == 99
+    assert "Thiếu" not in capsys.readouterr().err

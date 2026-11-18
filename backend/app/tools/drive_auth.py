@@ -92,7 +92,7 @@ def _wait_for_code() -> str:
     return found["code"]
 
 
-def main(*, env_file: str | None = ".env") -> int:
+def main(*, env_file: str | tuple[str, ...] | None = ("../.env", ".env")) -> int:
     settings = Settings(_env_file=env_file)
     client_id, client_secret = settings.google_oauth_client_id, settings.google_oauth_client_secret
     if not client_id or not client_secret:
