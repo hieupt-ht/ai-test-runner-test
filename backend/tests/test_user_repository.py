@@ -131,3 +131,53 @@ def test_writes_take_one_lock_for_the_whole_users_tab(
     with redis_lock(redis, "lock:system:users"):
         with pytest.raises(LockTimeout):
             users.update(make_user("an@x.com", name="An mới"))
+
+
+def test_create_stores_hash_in_sheet_not_in_user(users: UserRepository) -> None:
+    created = users.create(make_user("an@x.com"), password_hash="H1")
+
+    assert users.get_password_hash("  AN@x.com ") == "H1"
+    assert "password_hash" not in created.model_dump()
+    found = users.get("an@x.com")
+    assert found is not None
+    assert "password_hash" not in found.model_dump()
+
+
+def test_update_keeps_existing_hash(users: UserRepository) -> None:
+    users.create(make_user("an@x.com", name="An"), password_hash="H1")
+
+    users.update(make_user("an@x.com", name="An Mới"))
+
+    assert users.get_password_hash("an@x.com") == "H1"
+
+
+def test_set_password_hash_changes_only_hash(users: UserRepository) -> None:
+    users.create(make_user("an@x.com", name="An", role=Role.QA_LEAD), password_hash="H1")
+
+    users.set_password_hash("AN@x.com", "H2")
+
+    assert users.get_password_hash("an@x.com") == "H2"
+    found = users.get("an@x.com")
+    assert found is not None
+    assert (found.name, found.role) == ("An", Role.QA_LEAD)
+
+
+def test_set_password_hash_unknown_user_raises(users: UserRepository) -> None:
+    with pytest.raises(UserNotFoundError):
+        users.set_password_hash("la@x.com", "H")
+
+
+def test_get_password_hash_missing_returns_empty(users: UserRepository) -> None:
+    users.create(make_user("an@x.com"))
+
+    assert users.get_password_hash("an@x.com") == ""
+    assert users.get_password_hash("khong-co@x.com") == ""
+
+
+def test_hash_not_in_redis_cache(users: UserRepository, redis: fakeredis.FakeRedis) -> None:
+    users.create(make_user("an@x.com"), password_hash="H1-SECRET")
+    users.list_all()
+
+    cached = redis.get("cache:users")
+    assert cached is not None
+    assert b"H1-SECRET" not in cached

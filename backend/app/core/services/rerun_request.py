@@ -17,16 +17,20 @@ RERUN_MARKER = "<!-- ai-test-runner-rerun -->"
 RERUN_LABEL_COLOR = "e6a817"
 
 
-def format_rerun_comment(user_name: str, requested_at: datetime) -> str:
+def format_rerun_comment(
+    user_name: str, requested_at: datetime, *, run_id: str | None = None
+) -> str:
     # Ghi giờ Việt Nam cho người dùng dễ đọc
     local_time = requested_at.astimezone(VIETNAM)
-    return "\n".join(
-        [
-            RERUN_MARKER,
-            f"🔄 **Yêu cầu chạy lại** — {user_name} · {local_time:%Y-%m-%d %H:%M}",
-            "Mở Codex và chạy lại case này.",
-        ]
-    )
+    lines = [
+        RERUN_MARKER,
+        f"🔄 **Yêu cầu chạy lại** — {user_name} · {local_time:%Y-%m-%d %H:%M}",
+        "Mở Codex và chạy lại case này.",
+    ]
+    if run_id:
+        # Chạy bộ regression: Codex phải gửi kèm mã này để kết quả vào đúng lần chạy
+        lines.append(f'Mã lần chạy: {run_id} — gửi kèm "run_id" khi báo kết quả.')
+    return "\n".join(lines)
 
 
 def request_rerun_on_issue(
@@ -36,6 +40,7 @@ def request_rerun_on_issue(
     case_id: str,
     user_name: str,
     requested_at: datetime,
+    run_id: str | None = None,
 ) -> None:
     """Comment + mở lại issue + gắn nhãn needs-rerun. Mỗi việc lỗi riêng chỉ ghi log."""
     try:
@@ -48,7 +53,7 @@ def request_rerun_on_issue(
         return
 
     try:
-        body = format_rerun_comment(user_name, requested_at)
+        body = format_rerun_comment(user_name, requested_at, run_id=run_id)
         github.create_issue_comment(repo, issue.number, body)
     except Exception as error:  # noqa: BLE001
         logger.warning("Không comment được yêu cầu chạy lại cho %s: %s", case_id, error)

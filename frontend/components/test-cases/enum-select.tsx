@@ -20,7 +20,7 @@ export function EnumSelect({
   options,
 }: {
   control: Control<TestCaseContent>
-  name: "severity" | "priority"
+  name: "severity" | "priority" | "platform" | "test_type"
   label: string
   options: { value: string; label: string }[]
 }) {

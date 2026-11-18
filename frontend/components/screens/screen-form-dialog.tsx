@@ -18,9 +18,19 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { MediaPicker } from "@/components/media/media-picker"
 import { MAX_CODE_PATHS, codePathError } from "@/components/screens/code-path"
-import type { Screen } from "@/lib/api/types"
+import type { Media, Screen } from "@/lib/api/types"
 import { useSaveScreen } from "@/lib/use-project-data"
+import { useProject } from "@/lib/use-projects"
+
+// Tên GitHub: chữ/số, gạch ngang ở giữa, tối đa 39 ký tự (khớp luật của backend)
+const GITHUB_NAME = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/
+
+/** Bỏ khoảng trắng và dấu @ ở đầu, giống backend. */
+function cleanDevOwner(value: string): string {
+  return value.trim().replace(/^@/, "")
+}
 
 type Props = {
   projectId: string
@@ -36,13 +46,37 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
   const [name, setName] = useState(screen?.name ?? "")
   const [description, setDescription] = useState(screen?.description ?? "")
   const [route, setRoute] = useState(screen?.route ?? "")
+  const [devOwner, setDevOwner] = useState(screen?.dev_owner ?? "")
   const [codePaths, setCodePaths] = useState<string[]>(screen?.code_paths ?? [])
+  const [media, setMedia] = useState<Media[]>(screen?.media ?? [])
+  const [uploading, setUploading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const storage = useProject(projectId).data?.storage ?? "cloudinary"
   const saveScreen = useSaveScreen(projectId)
 
   const pathErrors = codePaths.map((path) => codePathError(path))
   const nameError = name.trim() ? null : t("screens.nameRequired")
-  const hasErrors = Boolean(nameError) || pathErrors.some(Boolean)
+  const cleanedOwner = cleanDevOwner(devOwner)
+  const ownerError =
+    cleanedOwner === "" || (cleanedOwner.length <= 39 && GITHUB_NAME.test(cleanedOwner))
+      ? null
+      : t("screens.devOwnerInvalid")
+  const hasErrors = Boolean(nameError) || Boolean(ownerError) || pathErrors.some(Boolean)
+
+  // Mỗi lần mở lại thì nạp lại từ dữ liệu đã lưu, để ảnh/chữ bỏ dở lần trước không bị lưu nhầm
+  function handleOpenChange(next: boolean) {
+    if (next && screen) {
+      setName(screen.name)
+      setDescription(screen.description)
+      setRoute(screen.route)
+      setDevOwner(screen.dev_owner)
+      setCodePaths(screen.code_paths)
+      setMedia(screen.media ?? [])
+      setUploading(false)
+      setSubmitted(false)
+    }
+    setOpen(next)
+  }
 
   function updatePath(index: number, value: string) {
     setCodePaths((paths) => paths.map((path, i) => (i === index ? value : path)))
@@ -63,6 +97,8 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
         description: description.trim(),
         route: route.trim(),
         code_paths: codePaths.map((path) => path.trim()),
+        dev_owner: cleanedOwner,
+        media,
       })
       toast.success(t("common.saved"))
       setOpen(false)
@@ -70,7 +106,9 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
         setName("")
         setDescription("")
         setRoute("")
+        setDevOwner("")
         setCodePaths([])
+        setMedia([])
         setSubmitted(false)
       }
     } catch (error) {
@@ -79,16 +117,16 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={trigger}>{triggerLabel}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {screen ? t("screens.formEdit", { id: screen.id }) : t("screens.formAdd")}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+        <form onSubmit={submit} className="flex max-h-[80dvh] flex-col gap-4 overflow-y-auto" noValidate>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="screen-name">{t("screens.fieldName")}</Label>
             <Input id="screen-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -106,6 +144,19 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
           </div>
 
           <div className="flex flex-col gap-1.5">
+            <Label htmlFor="screen-dev-owner">{t("screens.fieldDevOwner")}</Label>
+            <Input
+              id="screen-dev-owner"
+              placeholder="nguyenvana"
+              value={devOwner}
+              aria-invalid={submitted && Boolean(ownerError)}
+              onChange={(e) => setDevOwner(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">{t("screens.devOwnerHint")}</p>
+            {submitted && ownerError && <p className="text-xs text-destructive">{ownerError}</p>}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="screen-description">{t("screens.fieldDescription")}</Label>
             <textarea
               id="screen-description"
@@ -114,6 +165,18 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
               onChange={(e) => setDescription(e.target.value)}
               className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>{t("screens.fieldMedia")}</Label>
+            <MediaPicker
+              value={media}
+              onChange={setMedia}
+              projectId={projectId}
+              storage={storage}
+              onBusyChange={setUploading}
+            />
+            <p className="text-xs text-muted-foreground">{t("screens.mediaHint")}</p>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -163,7 +226,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
             <DialogClose render={<Button variant="outline" type="button" />}>
               {t("common.cancel")}
             </DialogClose>
-            <Button type="submit" disabled={saveScreen.isPending}>
+            <Button type="submit" disabled={saveScreen.isPending || uploading}>
               {t("common.save")}
             </Button>
           </DialogFooter>

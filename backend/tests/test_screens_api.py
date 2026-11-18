@@ -15,9 +15,7 @@ from tests.fakes import FakeSheetsGateway
 def project(
     projects: ProjectRepository, members: ProjectMemberRepository, gateway: FakeSheetsGateway
 ) -> Project:
-    return make_project(
-        projects, members, gateway, member_emails=("lead@x.com", "tester@x.com")
-    )
+    return make_project(projects, members, gateway, member_emails=("lead@x.com", "tester@x.com"))
 
 
 def screens_url(project: Project) -> str:
@@ -35,9 +33,7 @@ def login_screen(**overrides: object) -> dict[str, object]:
     return body
 
 
-def test_create_list_update_delete_screen(
-    client_as_qa_lead: TestClient, project: Project
-) -> None:
+def test_create_list_update_delete_screen(client_as_qa_lead: TestClient, project: Project) -> None:
     first = client_as_qa_lead.post(screens_url(project), json=login_screen())
     second = client_as_qa_lead.post(screens_url(project), json=login_screen(name="Giỏ hàng"))
 
@@ -136,3 +132,191 @@ def test_delete_screen_with_test_case_is_409(
     assert response.status_code == 409
     assert response.json() == {"detail": "Màn hình đang có test case, không xoá được"}
     assert len(client_as_qa_lead.get(screens_url(project)).json()) == 1
+
+
+def test_screen_dev_owner_defaults_empty_and_round_trips(
+    project: Project, gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis
+) -> None:
+    from app.core.repositories.screens import ScreenRepository
+
+    repo = ScreenRepository(gateway, SHEET_A, redis, project.id)
+    screen = repo.create(name="Đăng nhập", description="", route="/login", code_paths=[])
+    assert screen.dev_owner == ""
+
+    repo.update(screen.model_copy(update={"dev_owner": "nguyenvana"}))
+
+    saved = repo.get(screen.id)
+    assert saved is not None and saved.dev_owner == "nguyenvana"
+    # Dòng cũ không có ô dev_owner vẫn đọc ra ""
+    gateway.data[SHEET_A]["Screens"][1] = gateway.data[SHEET_A]["Screens"][1][:6]
+    repo._cache.invalidate()
+    old = repo.get(screen.id)
+    assert old is not None and old.dev_owner == ""
+
+
+def test_dev_owner_is_saved_without_leading_at(
+    client_as_qa_lead: TestClient, project: Project
+) -> None:
+    created = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(dev_owner="@nguyenvana")
+    )
+    assert created.status_code == 201
+    assert created.json()["dev_owner"] == "nguyenvana"
+
+    updated = client_as_qa_lead.patch(
+        f"{screens_url(project)}/{created.json()['id']}", json={"dev_owner": "@tran-b"}
+    )
+    assert updated.json()["dev_owner"] == "tran-b"
+
+
+def test_dev_owner_can_be_cleared(client_as_qa_lead: TestClient, project: Project) -> None:
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen(dev_owner="abc"))
+    cleared = client_as_qa_lead.patch(
+        f"{screens_url(project)}/{created.json()['id']}", json={"dev_owner": ""}
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["dev_owner"] == ""
+
+
+@pytest.mark.parametrize("bad", ["a b", "-abc", "abc-", "a--b", "x" * 40, "a/b"])
+def test_bad_dev_owner_is_422(client_as_qa_lead: TestClient, project: Project, bad: str) -> None:
+    response = client_as_qa_lead.post(screens_url(project), json=login_screen(dev_owner=bad))
+    assert response.status_code == 422
+
+
+def test_tester_cannot_set_dev_owner(client_as_tester: TestClient, project: Project) -> None:
+    response = client_as_tester.post(screens_url(project), json=login_screen(dev_owner="abc"))
+    assert response.status_code == 403
+
+
+def media_json(cloud: str) -> dict[str, str]:
+    return {
+        "kind": "image",
+        "url": f"https://res.cloudinary.com/{cloud}/image/upload/a.png",
+        "public_id": "a",
+    }
+
+
+def test_screen_media_saved_and_returned(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    app.state.services.cloud_name = "mine"
+    created = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(media=[media_json("mine")])
+    )
+    assert created.status_code == 201
+    assert created.json()["media"][0]["public_id"] == "a"
+    listed = client_as_qa_lead.get(screens_url(project)).json()
+    assert listed[0]["media"][0]["public_id"] == "a"
+
+
+def test_screen_media_from_foreign_cloud_is_422(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    app.state.services.cloud_name = "mine"
+    response = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(media=[media_json("other")])
+    )
+    assert response.status_code == 422
+    assert "không thuộc kho lưu trữ" in response.json()["detail"]
+
+
+def test_screen_more_than_five_media_is_422(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    app.state.services.cloud_name = "mine"
+    response = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(media=[media_json("mine")] * 6)
+    )
+    assert response.status_code == 422
+
+
+def test_old_screen_row_without_media_reads_empty(
+    client_as_qa_lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    # Giả lập dòng của Sheet cũ: chỉ có 7 cột đầu, không có ô media_json
+    gateway.data[project.spreadsheet_id]["Screens"].append(
+        ["SC-0001", "Cũ", "", "/old", "[]", "2026-11-01T00:00:00+00:00", ""]
+    )
+    listed = client_as_qa_lead.get(screens_url(project)).json()
+    assert listed[0]["id"] == "SC-0001"
+    assert listed[0]["media"] == []
+
+
+def _fake_janitor(app) -> list[str]:
+    """Gắn janitor giả vào app; trả về danh sách public_id đã bị yêu cầu xoá."""
+    app.state.services.cloud_name = "mine"
+    deleted: list[str] = []
+
+    class Janitor:
+        def delete(self, items: list[object]) -> None:
+            deleted.extend(item.public_id for item in items)  # type: ignore[attr-defined]
+
+    app.state.services.media_janitor = Janitor()
+    return deleted
+
+
+def _media(public_id: str) -> dict[str, str]:
+    return {**media_json("mine"), "public_id": public_id}
+
+
+def test_removing_screen_media_deletes_file(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    deleted = _fake_janitor(app)
+    created = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(media=[_media("a"), _media("b")])
+    )
+    response = client_as_qa_lead.patch(
+        f"{screens_url(project)}/{created.json()['id']}", json={"media": [_media("b")]}
+    )
+    assert response.status_code == 200
+    assert deleted == ["a"]
+
+
+def test_patch_without_media_keeps_files(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    deleted = _fake_janitor(app)
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen(media=[_media("a")]))
+    response = client_as_qa_lead.patch(
+        f"{screens_url(project)}/{created.json()['id']}", json={"name": "Mới"}
+    )
+    assert deleted == []
+    assert response.json()["media"][0]["public_id"] == "a"
+
+
+def test_deleting_screen_deletes_its_media(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    deleted = _fake_janitor(app)
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen(media=[_media("a")]))
+    response = client_as_qa_lead.delete(f"{screens_url(project)}/{created.json()['id']}")
+    assert response.status_code == 204
+    assert deleted == ["a"]
+
+
+def test_screen_blocked_from_delete_keeps_media(
+    app,
+    client_as_qa_lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    deleted = _fake_janitor(app)
+    created = client_as_qa_lead.post(screens_url(project), json=login_screen(media=[_media("a")]))
+    screen_id = created.json()["id"]
+    TestCaseRepository(gateway, SHEET_A, redis, project.id, lock_wait_seconds=0.1).create(
+        screen_id=screen_id,
+        content=TestCaseContent(
+            title="Đăng nhập đúng",
+            steps=[TestStep(action="Bấm Đăng nhập", expected="")],
+            expected_result="Vào được trang chủ",
+            severity=Severity.LOW,
+            priority=Priority.P1,
+        ),
+        actor="tester@x.com",
+    )
+    response = client_as_qa_lead.delete(f"{screens_url(project)}/{screen_id}")
+    assert response.status_code == 409
+    assert deleted == []

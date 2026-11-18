@@ -7,7 +7,7 @@ from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.sheets.schema import PROJECT_TABS
 from tests.conftest import SHEET_A, SHEET_B, SYSTEM_SHEET_ID, client_for, make_project
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 
 LINK_A = f"  https://docs.google.com/spreadsheets/d/{SHEET_A}/edit#gid=0 "
 
@@ -137,7 +137,6 @@ def test_detail_includes_permissions(
 
 def test_archived_project_hidden_for_non_admin(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     projects: ProjectRepository,
     members: ProjectMemberRepository,
@@ -146,8 +145,8 @@ def test_archived_project_hidden_for_non_admin(
     project = make_project(
         projects, members, gateway, member_emails=("lead@x.com",), archived=True
     )
-    lead = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
-    admin = client_for(app, oauth, users, "admin@x.com", Role.ADMIN)
+    lead = client_for(app, users, "lead@x.com", Role.QA_LEAD)
+    admin = client_for(app, users, "admin@x.com", Role.ADMIN)
 
     assert lead.get("/api/projects").json() == []
     assert lead.get(f"/api/projects/{project.id}").status_code == 404
@@ -227,14 +226,83 @@ def test_admin_can_clear_staging_url(
     assert response.json()["staging_url"] == ""
 
 
-def test_create_with_existing_tab_missing_columns_is_422(
+def test_create_with_existing_tab_missing_columns_appends_them(
     client_as_admin: TestClient, gateway: FakeSheetsGateway
 ) -> None:
-    # Sheet đã có sẵn tab Screens nhưng cột không đúng (ví dụ file cũ của nhóm khác)
+    # Sheet đã có sẵn tab Screens nhưng thiếu cột: app thêm cột còn thiếu vào cuối, giữ cột lạ
     gateway.data[SHEET_A] = {"Screens": [["Tên màn hình", "Ghi chú"]]}
 
     response = client_as_admin.post("/api/projects", json=create_body())
 
+    assert response.status_code == 201
+    header = gateway.data[SHEET_A]["Screens"][0]
+    assert header[:2] == ["Tên màn hình", "Ghi chú"]
+    assert "id" in header
+
+
+# ----- Nơi lưu ảnh/video của dự án -----
+
+
+def test_admin_sets_storage_to_drive_when_drive_is_configured(
+    app: FastAPI,
+    client_as_admin: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.drive = object()  # giả là đã cấu hình Drive
+    project = make_project(projects, members, gateway)
+
+    response = client_as_admin.patch(f"/api/projects/{project.id}", json={"storage": "drive"})
+
+    assert response.status_code == 200
+    assert response.json()["storage"] == "drive"
+
+
+def test_cannot_choose_drive_when_drive_is_not_configured(
+    client_as_admin: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    project = make_project(projects, members, gateway)
+
+    response = client_as_admin.patch(f"/api/projects/{project.id}", json={"storage": "drive"})
+
     assert response.status_code == 422
-    assert response.json()["detail"].startswith("Sheet này đã có tab nhưng sai cột: ")
-    assert "Tab 'Screens' thiếu cột: id" in response.json()["detail"]
+    assert response.json() == {"detail": "Chưa cấu hình Google Drive"}
+
+
+def test_qa_lead_cannot_change_storage(
+    app: FastAPI,
+    users: UserRepository,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.drive = object()
+    project = make_project(projects, members, gateway, member_emails=("lead@x.com",))
+    lead = client_for(app, users, "lead@x.com", Role.QA_LEAD)
+
+    response = lead.patch(f"/api/projects/{project.id}", json={"storage": "drive"})
+
+    assert response.status_code == 403
+
+
+def test_unarchive_upgrades_old_sheet_columns(
+    client_as_admin: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    """Bỏ lưu trữ thì phải thêm cột còn thiếu (vd media_json) vào Sheet cũ."""
+    project = make_project(projects, members, gateway, archived=True)
+    header = gateway.data[project.spreadsheet_id]["Screens"][0]
+    assert "media_json" in header
+    header.remove("media_json")
+
+    response = client_as_admin.patch(f"/api/projects/{project.id}", json={"archived": False})
+
+    assert response.status_code == 200
+    assert "media_json" in gateway.data[project.spreadsheet_id]["Screens"][0]
+    assert client_as_admin.get(f"/api/projects/{project.id}/screens").status_code == 200

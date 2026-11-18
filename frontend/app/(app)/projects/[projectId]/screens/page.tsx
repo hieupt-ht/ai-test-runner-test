@@ -72,6 +72,7 @@ export default function ScreensPage() {
               <TableHead className="w-24">{t("screens.colId")}</TableHead>
               <TableHead>{t("screens.colName")}</TableHead>
               <TableHead>{t("screens.colRoute")}</TableHead>
+              <TableHead>{t("screens.colDevOwner")}</TableHead>
               <TableHead>{t("screens.colCodePaths")}</TableHead>
               <TableHead>{t("screens.colCases")}</TableHead>
               {canManage && <TableHead className="w-24" />}
@@ -80,7 +81,7 @@ export default function ScreensPage() {
           <TableBody>
             {screens.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                   {t("screens.empty")}
                 </TableCell>
               </TableRow>
@@ -89,7 +90,12 @@ export default function ScreensPage() {
               <TableRow key={screen.id}>
                 <TableCell className="font-mono text-xs text-muted-foreground">{screen.id}</TableCell>
                 <TableCell>
-                  <div className="font-medium">{screen.name}</div>
+                  <Link
+                    href={`/projects/${projectId}/screens/${screen.id}`}
+                    className="font-medium underline-offset-2 hover:underline"
+                  >
+                    {screen.name}
+                  </Link>
                   {screen.description && (
                     <div className="line-clamp-1 text-xs text-muted-foreground">
                       {screen.description}
@@ -97,6 +103,13 @@ export default function ScreensPage() {
                   )}
                 </TableCell>
                 <TableCell className="font-mono text-xs">{screen.route}</TableCell>
+                <TableCell className="text-xs">
+                  {screen.dev_owner ? (
+                    `@${screen.dev_owner}`
+                  ) : (
+                    <span className="text-muted-foreground">{t("screens.noDevOwner")}</span>
+                  )}
+                </TableCell>
                 <TableCell
                   className="text-xs text-muted-foreground"
                   title={screen.code_paths.join("\n")}

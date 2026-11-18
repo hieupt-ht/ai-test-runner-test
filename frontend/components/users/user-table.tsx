@@ -1,9 +1,12 @@
 "use client"
 
+import { KeyRound } from "lucide-react"
 import { useFormatter, useTranslations } from "next-intl"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import {
   Table,
@@ -13,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ResetPasswordDialog } from "@/components/users/reset-password-dialog"
 import { RoleSelect } from "@/components/users/role-select"
 import { useUpdateUser } from "@/components/users/use-users"
 import type { Role, User } from "@/lib/api/types"
@@ -23,6 +27,7 @@ export function UserTable({ users, currentUserEmail }: Props) {
   const t = useTranslations("users")
   const format = useFormatter()
   const updateUser = useUpdateUser()
+  const [resetEmail, setResetEmail] = useState<string | null>(null)
 
   async function saveChange(user: User, changes: { active?: boolean; role?: Role }) {
     try {
@@ -43,12 +48,15 @@ export function UserTable({ users, currentUserEmail }: Props) {
             <TableHead>{t("colRole")}</TableHead>
             <TableHead>{t("colActive")}</TableHead>
             <TableHead className="text-right">{t("colCreatedAt")}</TableHead>
+            <TableHead className="w-12">
+              <span className="sr-only">{t("colActions")}</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                 {t("empty")}
               </TableCell>
             </TableRow>
@@ -86,11 +94,29 @@ export function UserTable({ users, currentUserEmail }: Props) {
                 <TableCell className="text-right text-muted-foreground">
                   {format.dateTime(new Date(user.created_at), { dateStyle: "medium" })}
                 </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("resetFor", { email: user.email })}
+                    title={t("resetTitle")}
+                    onClick={() => setResetEmail(user.email)}
+                  >
+                    <KeyRound />
+                  </Button>
+                </TableCell>
               </TableRow>
             )
           })}
         </TableBody>
       </Table>
+      {resetEmail && (
+        <ResetPasswordDialog
+          email={resetEmail}
+          open
+          onOpenChange={(open) => !open && setResetEmail(null)}
+        />
+      )}
     </div>
   )
 }

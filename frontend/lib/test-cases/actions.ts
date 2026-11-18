@@ -1,4 +1,4 @@
-import type { TestCaseStatus } from "@/lib/api/types"
+import type { ExecutionMode, TestCaseStatus } from "@/lib/api/types"
 
 export type CaseAction = "submit" | "approve" | "return" | "deprecate" | "restore"
 
@@ -6,14 +6,16 @@ export type CaseAction = "submit" | "approve" | "return" | "deprecate" | "restor
  * Các thao tác chuyển trạng thái được phép — cùng quy tắc với backend:
  * submit DRAFT→IN_REVIEW, approve IN_REVIEW→APPROVED, return IN_REVIEW→DRAFT,
  * deprecate (mọi trạng thái trừ DEPRECATED), restore DEPRECATED→DRAFT.
+ * Case test tay (MANUAL) không qua bước gửi duyệt nên không có "submit".
  */
 export function availableActions(
   status: TestCaseStatus,
   canEdit: boolean,
   canReview: boolean,
+  executionMode: ExecutionMode,
 ): CaseAction[] {
   const actions: CaseAction[] = []
-  if (status === "DRAFT" && canEdit) actions.push("submit")
+  if (status === "DRAFT" && canEdit && executionMode === "AUTOMATION") actions.push("submit")
   if (status === "IN_REVIEW" && canReview) actions.push("approve", "return")
   if (status !== "DEPRECATED" && canEdit) actions.push("deprecate")
   if (status === "DEPRECATED" && canReview) actions.push("restore")

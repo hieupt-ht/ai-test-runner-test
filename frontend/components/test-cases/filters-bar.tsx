@@ -10,12 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { Priority, Screen, Severity, TestCaseStatus } from "@/lib/api/types"
+import type { ExecutionMode, Priority, Screen, Severity, TestCaseStatus } from "@/lib/api/types"
 import type { CaseFilters } from "@/lib/test-cases/filter"
 
 const STATUSES: TestCaseStatus[] = ["DRAFT", "IN_REVIEW", "APPROVED", "TESTED", "ARCHIVED", "DEPRECATED"]
 const SEVERITIES: Severity[] = ["LOW", "MEDIUM", "HIGH"]
 const PRIORITIES: Priority[] = ["P1", "P2", "P3"]
+const EXECUTION_MODES: ExecutionMode[] = ["MANUAL", "AUTOMATION"]
 const ALL = "__all__"
 
 type Option = { value: string; label: string }
@@ -100,6 +101,12 @@ export function FiltersBar({
         value={filters.priority}
         options={PRIORITIES.map((p) => ({ value: p, label: p }))}
         onChange={(priority) => set({ priority: priority as Priority | undefined })}
+      />
+      <FilterSelect
+        label={t("filterExecutionMode")}
+        value={filters.executionMode}
+        options={EXECUTION_MODES.map((m) => ({ value: m, label: t(`executionMode.${m}`) }))}
+        onChange={(executionMode) => set({ executionMode: executionMode as ExecutionMode | undefined })}
       />
       <FilterSelect
         label={t("filterCreator")}

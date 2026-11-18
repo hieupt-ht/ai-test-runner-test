@@ -6,6 +6,7 @@ Việc tính lại lấy khoá `assignments`, nên luôn chạy SAU KHI đã nh�
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -14,8 +15,19 @@ from pydantic import BaseModel, Field
 
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
+from app.core.media.cloudinary import MediaJanitor
+from app.core.models.media import ForeignMediaError, ensure_own_media
 from app.core.models.project import Project
-from app.core.models.test_case import TestCase, TestCaseContent, TestCaseStatus
+from app.core.models.screen import Screen
+from app.core.models.test_case import (
+    CHANGED_FIELD_LABELS,
+    RERUN_FIELDS,
+    ExecutionMode,
+    TestCase,
+    TestCaseContent,
+    TestCaseStatus,
+    media_of,
+)
 from app.core.models.user import Role, User, normalize_email
 from app.core.permissions import Action, can
 from app.core.repositories.assignments import AssignmentRepository
@@ -38,6 +50,8 @@ logger = logging.getLogger(__name__)
 AUDIT_ENTITY = "test_case"
 MAX_COMMENT_LENGTH = 1000
 MAX_SYNC_BATCH_SIZE = 200
+REVIEW_OFF = "Dự án đang tắt bước duyệt"
+MANUAL_NO_REVIEW = "Case test tay không cần gửi duyệt"
 
 
 class CaseAction(StrEnum):
@@ -114,6 +128,17 @@ class SyncIssuesResult(BaseModel):
     failed: list[SkippedCase] = Field(default_factory=list)
 
 
+def _strip_media(value: Any) -> Any:
+    """Lịch sử chỉ giữ chữ: mỗi ảnh/video chỉ còn loại và ghi chú, không giữ link."""
+    if isinstance(value, dict):
+        if "public_id" in value and "url" in value:
+            return {"kind": value.get("kind"), "note": value.get("note", "")}
+        return {key: _strip_media(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_strip_media(item) for item in value]
+    return value
+
+
 class TestCaseService:
     __test__ = False  # pytest đừng tưởng đây là lớp test
 
@@ -132,6 +157,10 @@ class TestCaseService:
         issue_syncer: IssueSyncer | None = None,
         notifier: Notifier | None = None,
         users: UserRepository | None = None,
+        has_results: Callable[[str], bool] | None = None,
+        cloud_name: str = "",
+        drive_enabled: bool = False,
+        janitor: MediaJanitor | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -145,7 +174,16 @@ class TestCaseService:
         self._issue_syncer = issue_syncer
         self._notifier = notifier
         self._users = users
-        self._screen_names: dict[str, str] | None = None
+        self._has_results = has_results
+        self._cloud_name = cloud_name
+        self._drive_enabled = drive_enabled
+        self._janitor = janitor
+        self._screens_by_id: dict[str, Screen] | None = None
+
+    @property
+    def review_enabled(self) -> bool:
+        """Dự án có bắt buộc QA duyệt không. Không biết dự án thì giữ hành vi cũ (có duyệt)."""
+        return self._project is None or self._project.require_review
 
     # --- Đọc ---
 
@@ -206,6 +244,8 @@ class TestCaseService:
         if not allowed:
             raise TestCasePermissionError("Bạn không có quyền tạo test case cho màn hình này")
 
+        self._require_own_media(content)
+
         # Kiểm tra màn hình rồi tạo case trong CÙNG một khoá: màn hình không bị xoá chen vào giữa.
         with self._test_cases.lock():
             if self._screens.get(screen_id) is None:
@@ -225,6 +265,7 @@ class TestCaseService:
         case = self.get_case(case_id)
         self._require_edit(user, case)
         self._require_version(case, version)
+        self._require_own_media(content)
         if case.status in (TestCaseStatus.DEPRECATED, TestCaseStatus.ARCHIVED):
             raise InvalidTransitionError(
                 "Case đã lưu trữ hoặc ngừng dùng, hãy khôi phục trước khi sửa"
@@ -242,17 +283,54 @@ class TestCaseService:
         }
         # lấy từng trường (không dùng model_dump) để `steps` vẫn là TestStep chứ không thành dict
         changes: dict[str, Any] = {field: getattr(content, field) for field in _CONTENT_FIELDS}
-        if case.status in (TestCaseStatus.IN_REVIEW, TestCaseStatus.APPROVED):
-            # Nội dung đã đổi thì phải duyệt lại từ đầu.
+        # Chỉ case Automation mới được giữ trạng thái "đã duyệt" khi dự án tắt bước duyệt
+        keep_status = (
+            not self.review_enabled
+            and case.status == TestCaseStatus.APPROVED
+            and case.execution_mode == ExecutionMode.AUTOMATION
+            and content.execution_mode == ExecutionMode.AUTOMATION
+        )
+        mode_changed = content.execution_mode != case.execution_mode
+        manual_tested = (
+            case.execution_mode == ExecutionMode.MANUAL and case.status == TestCaseStatus.TESTED
+        )
+        review_states = (TestCaseStatus.IN_REVIEW, TestCaseStatus.APPROVED)
+        needs_draft = case.status in review_states or manual_tested
+        if mode_changed and case.status == TestCaseStatus.TESTED:
+            needs_draft = True  # đổi cách chạy thì kết quả cũ không còn đúng
+        if needs_draft and not keep_status:
+            # Nội dung đã đổi thì phải duyệt/chạy lại từ đầu.
             diff["status"] = [case.status.value, TestCaseStatus.DRAFT.value]
             changes["status"] = TestCaseStatus.DRAFT
-        return self._save(user, case, changes, version, "UPDATE", diff)
+        saved = self._save(user, case, changes, version, "UPDATE", diff)
+        self._clean_removed_media(case, content)
+        if keep_status:
+            self._note_edited(saved, [field for field in _CONTENT_FIELDS if field in diff])
+        return saved
 
     def transition(
         self, user: User, case_id: str, action: CaseAction, *, version: int, comment: str = ""
     ) -> TestCase:
         case = self.get_case(case_id)
         return self._transition_case(user, case, action, version, comment, refresh=True)
+
+    def mark_tested(self, user: User, case_id: str, *, version: int) -> TestCase:
+        """Case test tay đã có kết quả: DRAFT -> TESTED (đang TESTED thì giữ nguyên, không ghi)."""
+        case = self.get_case(case_id)
+        self._require_edit(user, case)
+        if case.execution_mode != ExecutionMode.MANUAL:
+            raise InvalidTransitionError("Chỉ case test tay mới ghi nhận kết quả như vậy")
+        if case.status == TestCaseStatus.TESTED:
+            return case
+        if case.status != TestCaseStatus.DRAFT:
+            raise InvalidTransitionError(
+                f"Không thể ghi kết quả khi case đang ở trạng thái {case.status.value}"
+            )
+        self._require_version(case, version)
+        diff = {"status": [case.status.value, TestCaseStatus.TESTED.value]}
+        return self._save(
+            user, case, {"status": TestCaseStatus.TESTED}, version, "MANUAL_TEST", diff
+        )
 
     def approve_many(self, user: User, items: list[tuple[str, int]]) -> BatchApproveResult:
         """Duyệt nhiều case một lượt; `items` là danh sách (case_id, version người duyệt đang xem).
@@ -263,6 +341,8 @@ class TestCaseService:
         """
         if not self.can_review(user):
             raise TestCasePermissionError("Bạn không có quyền duyệt test case")
+        if not self.review_enabled:
+            raise InvalidTransitionError(REVIEW_OFF)
 
         result = BatchApproveResult()
         with self._test_cases.lock():
@@ -286,6 +366,24 @@ class TestCaseService:
             self._refresh_status(screen_id)
         return result
 
+    def approve_all_in_review(self, user: User) -> list[TestCase]:
+        """Dự án vừa tắt bước duyệt: duyệt luôn mọi case đang chờ, một lượt ghi Sheet.
+
+        Mỗi case ghi một dòng AuditLog `AUTO_APPROVE` rồi đẩy đồng bộ issue (nền, một luồng).
+        """
+        approved = self._test_cases.approve_all_in_review(normalize_email(user.email))
+        for case in approved:
+            self._audit(
+                user,
+                "AUTO_APPROVE",
+                case.id,
+                {"status": [TestCaseStatus.IN_REVIEW.value, TestCaseStatus.APPROVED.value]},
+            )
+            self._sync_issue(case)
+        for screen_id in dict.fromkeys(case.screen_id for case in approved):
+            self._refresh_status(screen_id)
+        return approved
+
     def sync_issues(self, user: User) -> SyncIssuesResult:
         if not self.can_review(user):
             raise TestCasePermissionError("Bạn không có quyền đồng bộ issue")
@@ -293,11 +391,15 @@ class TestCaseService:
             raise RuntimeError("GitHub chưa được cấu hình")
 
         result = SyncIssuesResult()
-        screen_names = {screen.id: screen.name for screen in self._screens.list_all()}
+        screens = {screen.id: screen for screen in self._screens.list_all()}
         for case in self._test_cases.list_all()[:MAX_SYNC_BATCH_SIZE]:
             try:
+                screen = screens.get(case.screen_id)
                 outcome = self._issue_syncer.sync_case(
-                    self._project, case, screen_name=screen_names.get(case.screen_id, "")
+                    self._project,
+                    case,
+                    screen_name=screen.name if screen else "",
+                    screen=screen,
                 )
                 setattr(result, outcome, getattr(result, outcome) + 1)
             except Exception as error:
@@ -324,11 +426,20 @@ class TestCaseService:
         elif action in _REVIEW_ACTIONS:
             if not self.can_review(user):
                 raise TestCasePermissionError("Bạn không có quyền duyệt test case")
+            if action in {CaseAction.APPROVE, CaseAction.RETURN} and not self.review_enabled:
+                raise InvalidTransitionError(REVIEW_OFF)
         else:
             self._require_edit(user, case)
         self._require_version(case, version)
 
         allowed_from, target = _TRANSITIONS[action]
+        manual = case.execution_mode == ExecutionMode.MANUAL
+        if action == CaseAction.SUBMIT and manual:
+            raise InvalidTransitionError(MANUAL_NO_REVIEW)
+        if action == CaseAction.DEPRECATE and manual:
+            allowed_from = {*allowed_from, TestCaseStatus.TESTED}
+        if action == CaseAction.SUBMIT and not self.review_enabled:
+            target = TestCaseStatus.APPROVED  # tắt bước duyệt: gửi là duyệt luôn
         if case.status not in allowed_from:
             raise InvalidTransitionError(
                 f"Không thể thực hiện thao tác này khi case đang ở trạng thái {case.status.value}"
@@ -343,7 +454,7 @@ class TestCaseService:
         saved = self._save(
             user, case, {"status": target}, version, action.value, diff, refresh=refresh
         )
-        if action == CaseAction.SUBMIT:
+        if action == CaseAction.SUBMIT and target == TestCaseStatus.IN_REVIEW:
             self._notify_submitted(user, saved)
         if self._notifier is not None and case.created_by != normalize_email(user.email):
             if action == CaseAction.RETURN:
@@ -421,14 +532,52 @@ class TestCaseService:
             self._refresh_status(saved.screen_id)
         return saved
 
+    def _require_own_media(self, content: TestCaseContent) -> None:
+        """Mọi ảnh/video phải nằm trong kho của app (Cloudinary/Drive), không thì không ghi gì."""
+        try:
+            ensure_own_media(media_of(content), self._cloud_name, self._drive_enabled)
+        except ForeignMediaError as error:
+            raise InvalidTestCaseError(str(error)) from None
+
+    def _clean_removed_media(self, old: TestCaseContent, new: TestCaseContent) -> None:
+        """Xoá khỏi Cloudinary các file bản cũ có mà bản mới không còn (so theo public_id)."""
+        if self._janitor is None:
+            return
+        kept = {item.public_id for item in media_of(new)}
+        removed = [item for item in media_of(old) if item.public_id not in kept]
+        if removed:
+            self._janitor.delete(removed)
+
+    def _note_edited(self, case: TestCase, changed_fields: list[str]) -> None:
+        """Báo lên issue là case đã sửa tại chỗ; cần chạy lại nếu đổi phần ảnh hưởng kết quả cũ."""
+        if self._issue_sync is None or self._project is None:
+            return
+        try:
+            affects_results = any(name in RERUN_FIELDS for name in changed_fields)
+            needs_rerun = (
+                affects_results and self._has_results is not None and self._has_results(case.id)
+            )
+            self._issue_sync.note_case_edited(
+                self._project,
+                case,
+                changed=[CHANGED_FIELD_LABELS[name] for name in changed_fields],
+                needs_rerun=needs_rerun,
+            )
+        except Exception:
+            logger.warning("Không báo được case %s đã sửa lên issue", case.id, exc_info=True)
+
     def _sync_issue(self, case: TestCase) -> None:
         if self._issue_sync is None or self._project is None:
             return
         try:
-            if self._screen_names is None:
-                self._screen_names = {screen.id: screen.name for screen in self._screens.list_all()}
+            if self._screens_by_id is None:
+                self._screens_by_id = {screen.id: screen for screen in self._screens.list_all()}
+            screen = self._screens_by_id.get(case.screen_id)
             self._issue_sync.sync_case(
-                self._project, case, screen_name=self._screen_names.get(case.screen_id, "")
+                self._project,
+                case,
+                screen_name=screen.name if screen else "",
+                screen=screen,
             )
         except Exception:
             # Case đã được ghi vào Sheet; lỗi GitHub không được khiến người dùng tạo lại.
@@ -447,5 +596,9 @@ class TestCaseService:
 
     def _audit(self, user: User, action: str, case_id: str, diff: dict[str, Any]) -> None:
         self._audit_log.record(
-            actor=user.email, action=action, entity=AUDIT_ENTITY, entity_id=case_id, diff=diff
+            actor=user.email,
+            action=action,
+            entity=AUDIT_ENTITY,
+            entity_id=case_id,
+            diff=_strip_media(diff),
         )

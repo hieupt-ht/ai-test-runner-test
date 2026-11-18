@@ -9,8 +9,10 @@ import pytest
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import redis_lock
 from app.core.models.assignment import AssignmentStatus
+from app.core.models.media import Media, MediaKind
 from app.core.models.project import Project
 from app.core.models.test_case import (
+    ExecutionMode,
     Priority,
     Severity,
     TestCase,
@@ -49,6 +51,8 @@ def content(title: str = "Đăng nhập đúng") -> TestCaseContent:
         expected_result="Vào được trang chính",
         severity=Severity.HIGH,
         priority=Priority.P1,
+        # Các test cũ viết cho case do agent chạy (có bước duyệt)
+        execution_mode=ExecutionMode.AUTOMATION,
     )
 
 
@@ -400,3 +404,225 @@ def test_approve_many_refreshes_each_screen_once(env: Env, monkeypatch: pytest.M
     env.service.approve_many(LEAD, [(first.id, first.version), (second.id, second.version)])
 
     assert refreshed == ["SC-0001"]
+
+
+# ----- Sửa case đã gửi tại chỗ (Task 8) -----
+
+
+class EditSink:
+    """Ghi lại các lần service báo "case đã sửa" (không gọi GitHub)."""
+
+    def __init__(self) -> None:
+        self.edits: list[tuple[str, list[str], bool]] = []
+
+    def sync_case(
+        self,
+        project: Project,
+        case: TestCase,
+        *,
+        screen_name: str = "",
+        screen: object = None,
+    ) -> None:
+        pass
+
+    def note_case_edited(
+        self, project: Project, case: TestCase, *, changed: list[str], needs_rerun: bool
+    ) -> None:
+        self.edits.append((case.id, changed, needs_rerun))
+
+
+def service_with(
+    env: Env, *, review: bool, sink: EditSink, has_results: bool = False
+) -> TestCaseService:
+    return TestCaseService(
+        project_id=env.project.id,
+        test_cases=env.test_cases,
+        screens=env.screens,
+        assignments=env.assignments,
+        members=env.service._members,
+        status_updater=AssignmentStatusUpdater(env.assignments, env.test_cases),
+        audit_log=AuditLogRepository(env.gateway, env.project.spreadsheet_id),
+        issue_sync=sink,
+        project=env.project.model_copy(update={"require_review": review}),
+        has_results=lambda case_id: has_results,
+    )
+
+
+def approved_case(env: Env, service: TestCaseService) -> TestCase:
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content())
+    return service.transition(TESTER_A, case.id, CaseAction.SUBMIT, version=1)
+
+
+def test_edit_approved_keeps_status_when_review_off(env: Env) -> None:
+    sink = EditSink()
+    service = service_with(env, review=False, sink=sink)
+    case = approved_case(env, service)
+    assert case.status == TestCaseStatus.APPROVED
+
+    saved = service.update_content(
+        TESTER_A, case.id, version=case.version, content=content("Tiêu đề khác")
+    )
+
+    assert saved.status == TestCaseStatus.APPROVED
+    assert saved.version == case.version + 1
+    assert sink.edits == [(case.id, ["Tiêu đề"], False)]
+
+
+def test_edit_steps_with_results_requests_rerun(env: Env) -> None:
+    sink = EditSink()
+    service = service_with(env, review=False, sink=sink, has_results=True)
+    case = approved_case(env, service)
+    changed = content().model_copy(update={"steps": [TestStep(action="Bước mới", expected="")]})
+
+    service.update_content(TESTER_A, case.id, version=case.version, content=changed)
+
+    assert sink.edits[-1] == (case.id, ["Các bước"], True)
+
+
+def test_edit_steps_without_results_no_rerun(env: Env) -> None:
+    sink = EditSink()
+    service = service_with(env, review=False, sink=sink, has_results=False)
+    case = approved_case(env, service)
+    changed = content().model_copy(update={"steps": [TestStep(action="Bước mới", expected="")]})
+
+    service.update_content(TESTER_A, case.id, version=case.version, content=changed)
+
+    assert sink.edits[-1][2] is False
+
+
+def test_edit_with_review_on_resets_to_draft_and_sends_no_note(env: Env) -> None:
+    sink = EditSink()
+    service = service_with(env, review=True, sink=sink)
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content())
+    service.transition(TESTER_A, case.id, CaseAction.SUBMIT, version=1)
+    service.transition(LEAD, case.id, CaseAction.APPROVE, version=2)
+
+    saved = service.update_content(
+        TESTER_A, case.id, version=3, content=content("Tiêu đề khác")
+    )
+
+    assert saved.status == TestCaseStatus.DRAFT
+    assert sink.edits == []
+
+
+# --- Ảnh/video hướng dẫn: kiểm tra cloud và dọn file ---
+
+
+class FakeJanitor:
+    def __init__(self) -> None:
+        self.deleted: list[str] = []
+
+    def delete(self, items: list[Media]) -> None:
+        self.deleted.extend(item.public_id for item in items)
+
+
+def image(public_id: str, cloud: str = "mine") -> Media:
+    return Media(
+        kind=MediaKind.IMAGE,
+        url=f"https://res.cloudinary.com/{cloud}/image/upload/{public_id}.png",
+        public_id=public_id,
+        note="chụp màn hình",
+    )
+
+
+def with_media(env: Env, janitor: FakeJanitor, cloud_name: str = "mine") -> TestCaseService:
+    return TestCaseService(
+        project_id=env.project.id,
+        test_cases=env.test_cases,
+        screens=env.screens,
+        assignments=env.assignments,
+        members=env.service._members,
+        status_updater=AssignmentStatusUpdater(env.assignments, env.test_cases),
+        audit_log=AuditLogRepository(env.gateway, env.project.spreadsheet_id),
+        cloud_name=cloud_name,
+        janitor=janitor,  # type: ignore[arg-type]
+    )
+
+
+def content_with(case_media: list[Media], step_media: list[Media]) -> TestCaseContent:
+    base = content()
+    return base.model_copy(
+        update={
+            "guide_media": case_media,
+            "steps": [TestStep(action="Nhập email", expected="", guide_media=step_media)],
+        }
+    )
+
+
+def test_media_removed_from_case_is_sent_to_janitor(env: Env) -> None:
+    janitor = FakeJanitor()
+    service = with_media(env, janitor)
+    case = service.create(
+        TESTER_A, screen_id="SC-0001", content=content_with([image("a"), image("b")], [])
+    )
+
+    service.update_content(
+        TESTER_A, case.id, version=1, content=content_with([image("b")], [])
+    )
+
+    assert janitor.deleted == ["a"]
+
+
+def test_media_removed_from_a_step_is_also_cleaned(env: Env) -> None:
+    janitor = FakeJanitor()
+    service = with_media(env, janitor)
+    case = service.create(
+        TESTER_A, screen_id="SC-0001", content=content_with([], [image("s1")])
+    )
+
+    service.update_content(TESTER_A, case.id, version=1, content=content_with([], []))
+
+    assert janitor.deleted == ["s1"]
+
+
+def test_unchanged_media_is_not_deleted(env: Env) -> None:
+    janitor = FakeJanitor()
+    service = with_media(env, janitor)
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content_with([image("a")], []))
+
+    renamed = content_with([image("a")], []).model_copy(update={"title": "Tên mới"})
+    service.update_content(TESTER_A, case.id, version=1, content=renamed)
+
+    assert janitor.deleted == []
+
+
+def test_foreign_cloud_media_is_invalid_and_sheet_unchanged(env: Env) -> None:
+    janitor = FakeJanitor()
+    service = with_media(env, janitor)
+    rows_before = len(env.gateway.data[env.project.spreadsheet_id]["TestCases"])
+
+    with pytest.raises(InvalidTestCaseError, match="không thuộc kho lưu trữ"):
+        service.create(
+            TESTER_A,
+            screen_id="SC-0001",
+            content=content_with([image("x", cloud="other")], []),
+        )
+
+    assert len(env.gateway.data[env.project.spreadsheet_id]["TestCases"]) == rows_before
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content())
+    with pytest.raises(InvalidTestCaseError):
+        service.update_content(
+            TESTER_A, case.id, version=1, content=content_with([], [image("y", cloud="other")])
+        )
+    assert env.test_cases.get(case.id).version == 1  # type: ignore[union-attr]
+    assert janitor.deleted == []
+
+
+def test_media_without_cloudinary_config_is_invalid(env: Env) -> None:
+    service = with_media(env, FakeJanitor(), cloud_name="")
+    with pytest.raises(InvalidTestCaseError, match="Chưa cấu hình Cloudinary"):
+        service.create(TESTER_A, screen_id="SC-0001", content=content_with([image("a")], []))
+
+
+def test_audit_diff_keeps_only_kind_and_note_of_media(env: Env) -> None:
+    service = with_media(env, FakeJanitor())
+    case = service.create(
+        TESTER_A, screen_id="SC-0001", content=content_with([image("a")], [image("s1")])
+    )
+    service.update_content(
+        TESTER_A, case.id, version=1, content=content_with([image("b")], [])
+    )
+
+    rows = env.gateway.data[env.project.spreadsheet_id]["AuditLog"]
+    assert "res.cloudinary.com" not in str(rows)
+    assert "chụp màn hình" in str(rows)  # ghi chú vẫn còn trong lịch sử

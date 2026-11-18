@@ -15,11 +15,10 @@ flowchart TD
 
     subgraph Storage["Lưu trữ"]
         Sheet["Google Sheets\n── Users\n── Projects\n── Members\n── TestCases\n── Runs / Results\n── AuditLog"]
-        Redis["Redis\nthông báo mỗi user\n(tối đa 100, TTL 30 ngày)"]
+        Redis["Redis\nphiên đăng nhập\nthông báo mỗi user\n(tối đa 100, TTL 30 ngày)"]
     end
 
     subgraph External["Ngoài ứng dụng"]
-        GoogleOAuth["Google OAuth\nxác thực danh tính"]
         GHApp["GitHub App\ntạo / đồng bộ Issue"]
         Codex["Codex (AI Agent)\nchạy Playwright"]
         GHRepo["GitHub Repo\nIssues của dự án"]
@@ -33,9 +32,9 @@ flowchart TD
     API -->|"tạo / cập nhật Issue\nkhi case APPROVED"| GHApp
     GHApp -->|"GitHub API"| GHRepo
 
-    FE -->|"redirect đăng nhập"| GoogleOAuth
-    GoogleOAuth -->|"trả email + tên"| API
-    API -->|"kiểm tra email\ncó trong tab Users?"| Sheet
+    FE -->|"đăng nhập: email + mật khẩu"| API
+    API -->|"kiểm tra email + password_hash\ntrong tab Users"| Sheet
+    API -->|"phiên đăng nhập\n+ đếm sai mật khẩu"| Redis
 
     Codex -->|"đọc Issue + label"| GHMCP
     GHMCP -->|"GitHub API"| GHRepo
@@ -48,34 +47,30 @@ flowchart TD
 
 ---
 
-## 2. Luồng đăng nhập (Google OAuth)
+## 2. Luồng đăng nhập (email + mật khẩu)
 
 ```mermaid
 sequenceDiagram
     actor User as Người dùng
     participant FE as Next.js
     participant BE as FastAPI
-    participant Google as Google OAuth
+    participant Redis as Redis
     participant Sheet as Google Sheets
 
-    User->>FE: Bấm "Đăng nhập"
-    FE->>BE: GET /auth/login
-    BE->>Google: redirect (authorization_url)
-    Google->>User: Trang đăng nhập Google
-    User->>Google: Chọn tài khoản
-    Google->>BE: callback + code
-    BE->>Google: đổi code lấy token → lấy email
-    BE->>Sheet: get(email) từ tab Users
-    alt Email có trong Users và active = true
-        Sheet-->>BE: trả User
-        BE->>BE: tạo session cookie
-        BE-->>FE: redirect về app (đăng nhập thành công)
-    else Không có hoặc active = false
-        BE-->>FE: 401 — không được vào
+    User->>FE: Nhập email + mật khẩu
+    FE->>BE: POST /api/auth/login
+    BE->>Redis: đã sai quá 5 lần chưa?
+    BE->>Sheet: get(email) + password_hash từ tab Users
+    alt Email đúng, active = true, mật khẩu khớp hash (argon2)
+        BE->>BE: tạo session cookie (lưu trong Redis)
+        BE-->>FE: 200 + cookie
+    else Sai email, sai mật khẩu hoặc active = false
+        BE->>Redis: tăng đếm sai
+        BE-->>FE: 401 (hoặc 429 nếu bị khoá 15 phút)
     end
 ```
 
-> **Hai lớp kiểm soát:** Google xác nhận danh tính; app kiểm tra email có trong tab Users không. Nếu app đang ở chế độ "Testing" trên Google Cloud, Gmail còn phải được thêm vào danh sách Test users ở Google Cloud Console.
+> **Mật khẩu không lưu thẳng.** Tab Users chỉ giữ `password_hash` (argon2), cột này không bao giờ trả ra API. Admin tạo thành viên và đặt lại mật khẩu; người dùng tự đổi được. Mọi lần đổi hoặc đặt lại đều đăng xuất các phiên cũ.
 
 ---
 

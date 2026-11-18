@@ -10,11 +10,8 @@ from collections.abc import Callable
 from typing import Literal
 
 import httplib2
-from fastapi import Request
-from fastapi.responses import RedirectResponse, Response
 from googleapiclient.errors import HttpError
 
-from app.api.oauth import GoogleIdentity
 from app.core.github.client import GitHubError, IssueComment, IssueInfo, RepoInfo
 from app.core.sheets.gateway import SheetAccessDeniedError
 
@@ -57,6 +54,8 @@ class FakeSheetsGateway:
         # Móc chạy MỘT LẦN, ngay sau khi đọc xong đúng range này (trước khi trả kết quả).
         # Dùng để giả lập "request khác chen vào giữa lúc mình vừa đọc xong và sắp ghi".
         self.after_next_read: dict[str, Callable[[], None]] = {}
+        # Số lần gọi ghi nhiều dòng một lượt (values.batchUpdate)
+        self.batch_update_calls = 0
 
     def _tab(self, spreadsheet_id: str, tab: str) -> list[list[str]]:
         if spreadsheet_id in self.denied:
@@ -94,6 +93,13 @@ class FakeSheetsGateway:
             rows.append([])
         rows[row_number - 1] = list(values)
 
+    def update_rows(self, spreadsheet_id: str, tab: str, rows: dict[int, list[str]]) -> None:
+        self.calls.append(f"update_rows:{tab}")
+        self.batch_update_calls += 1
+        for row_number, values in rows.items():
+            self.update_row(spreadsheet_id, tab, row_number, values)
+            self.calls.pop()  # chỉ tính là một lời gọi
+
     def list_tabs(self, spreadsheet_id: str) -> list[str]:
         if spreadsheet_id in self.denied:
             raise SheetAccessDeniedError(spreadsheet_id)
@@ -110,22 +116,6 @@ class FakeSheetsGateway:
         self.data.setdefault(spreadsheet_id, {})[tab] = [list(header)]
 
 
-class FakeOAuth:
-    """Google giả: không gọi mạng, trả về danh tính đặt sẵn trong `identity`."""
-
-    def __init__(self) -> None:
-        self.identity = GoogleIdentity(email="an@x.com", name="An")
-        self.fail_with: Exception | None = None
-
-    async def authorize_redirect(self, request: Request, redirect_uri: str) -> Response:
-        return RedirectResponse(f"https://accounts.google.com/fake?redirect_uri={redirect_uri}")
-
-    async def fetch_identity(self, request: Request) -> GoogleIdentity:
-        if self.fail_with is not None:
-            raise self.fail_with
-        return self.identity
-
-
 class FakeGitHub:
     """GitHub giả: `repos` là {"org/repo": ["main", "develop"]}."""
 
@@ -136,6 +126,9 @@ class FakeGitHub:
         self.fail_with: Exception | None = None
         self.issue_comments: dict[str, dict[int, list[IssueComment]]] = {}
         self.labels: dict[str, dict[str, str]] = {}
+        # Người được giao theo số issue (test chỉ dùng một repo)
+        self.assignees: dict[int, list[str]] = {}
+        self.fail_assign_with: Exception | None = None
 
     def _check(self) -> None:
         if self.fail_with is not None:
@@ -224,6 +217,16 @@ class FakeGitHub:
                     return
         raise GitHubError("Không tìm thấy comment")
 
+    def add_assignees(
+        self, repo_full_name: str, issue_number: int, assignees: list[str]
+    ) -> None:
+        self._check()
+        self.calls.append("assign")
+        if self.fail_assign_with is not None:
+            raise self.fail_assign_with
+        current = self.assignees.setdefault(issue_number, [])
+        current.extend(name for name in assignees if name not in current)
+
     def update_issue_state_and_labels(
         self,
         repo_full_name: str,
@@ -240,3 +243,34 @@ class FakeGitHub:
                 items[index] = (old.model_copy(update={"state": state, "labels": labels}), body)
                 return
         raise GitHubError("Không tìm thấy issue")
+
+
+class FakeDrive:
+    """Bản giả của DriveClient: ghi lại lần gọi, không gọi Google thật."""
+
+    def __init__(self) -> None:
+        self.uploads: list[dict[str, object]] = []
+        self.error: Exception | None = None
+
+    def upload(
+        self,
+        project_id: str,
+        purpose: str,
+        kind: object,
+        filename: str,
+        content_type: str,
+        data: object,
+        size: int,
+    ) -> object:
+        from app.core.models.media import Media
+
+        if self.error is not None:
+            raise self.error
+        content = data.read()  # type: ignore[attr-defined]
+        self.uploads.append(
+            {"project_id": project_id, "purpose": purpose, "kind": kind, "bytes": content}
+        )
+        return Media(kind=kind, url="https://drive.google.com/file/d/F1/view", public_id="F1")  # type: ignore[arg-type]
+
+    def destroy(self, public_id: str, kind: object) -> None:
+        pass

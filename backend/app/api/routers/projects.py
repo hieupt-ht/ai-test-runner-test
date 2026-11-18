@@ -1,22 +1,30 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, HttpUrl
 
 from app.api.deps import CurrentUser, ServicesDep, require
 from app.api.errors import github_http_error
 from app.api.project_access import load_project, project_permissions
+from app.api.routers.test_cases import service_for
 from app.api.services import Services
 from app.core.github.client import GitHubError, GitHubNotConfiguredError
 from app.core.locks.redis_lock import LockTimeout
-from app.core.models.project import Project
+from app.core.models.media import NOT_CONFIGURED_DRIVE
+from app.core.models.project import Project, Storage
+from app.core.models.user import User
 from app.core.permissions import Action
-from app.core.repositories.projects import SpreadsheetInUseError
-from app.core.services.projects import InvalidProjectInputError, ProjectService
+from app.core.repositories.projects import ProjectNotFoundError, SpreadsheetInUseError
+from app.core.services.projects import (
+    InvalidProjectInputError,
+    ProjectNotArchivedError,
+    ProjectService,
+)
 
 router = APIRouter(prefix="/api", tags=["projects"])
 
 Name = Annotated[str, Field(min_length=1, max_length=100)]
+AppId = Annotated[str, Field(max_length=200, pattern=r"^[A-Za-z0-9._-]*$")]
 
 
 def _blank_to_none(value: object) -> object:
@@ -44,6 +52,19 @@ class UpdateProjectRequest(BaseModel):
     branch: str | None = None
     staging_url: OptionalUrl = None
     archived: bool | None = None
+    # Mã app mobile: chỉ chữ, số, dấu chấm, gạch dưới, gạch ngang (không có khoảng trắng)
+    android_app_id: AppId | None = None
+    ios_bundle_id: AppId | None = None
+    require_review: bool | None = None
+    storage: Storage | None = None  # chỉ Admin đổi (không nằm trong _SETTINGS_FIELDS)
+
+
+class DeleteProjectRequest(BaseModel):
+    name: str  # gõ lại đúng tên dự án để xác nhận
+
+
+# Các trường mà QA Lead (thành viên dự án) cũng được đổi; trường còn lại chỉ Admin.
+_SETTINGS_FIELDS = {"android_app_id", "ios_bundle_id", "require_review"}
 
 
 class ProjectDetail(Project):
@@ -111,9 +132,11 @@ def get_project(project_id: str, user: CurrentUser, services: ServicesDep) -> Pr
 def update_project(
     project_id: str, body: UpdateProjectRequest, user: CurrentUser, services: ServicesDep
 ) -> Project:
-    project = load_project(
-        services, user, project_id, Action.MANAGE_PROJECTS, allow_archived=True
-    )
+    only_settings = body.model_fields_set <= _SETTINGS_FIELDS
+    action = Action.MANAGE_PROJECT_SETTINGS if only_settings else Action.MANAGE_PROJECTS
+    project = load_project(services, user, project_id, action, allow_archived=True)
+    if body.storage == "drive" and services.drive is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, NOT_CONFIGURED_DRIVE)
     try:
         return _service(services).update_project(
             user,
@@ -125,11 +148,45 @@ def update_project(
                 _url_text(body.staging_url) if "staging_url" in body.model_fields_set else None
             ),
             archived=body.archived,
+            android_app_id=body.android_app_id,
+            ios_bundle_id=body.ios_bundle_id,
+            require_review=body.require_review,
+            storage=body.storage,
+            approve_pending=lambda: _approve_pending(services, user, project),
         )
     except InvalidProjectInputError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
     except (GitHubNotConfiguredError, GitHubError) as error:
         raise github_http_error(error) from None
+    except LockTimeout:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Hệ thống đang bận, vui lòng thử lại"
+        ) from None
+
+
+@router.delete("/projects/{project_id}", status_code=204)
+def delete_project(
+    project_id: str, body: DeleteProjectRequest, user: CurrentUser, services: ServicesDep
+) -> Response:
+    project = load_project(services, user, project_id, Action.MANAGE_PROJECTS, allow_archived=True)
+    try:
+        _service(services).delete_project(user, project, confirm_name=body.name)
+    except ProjectNotArchivedError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from None
+    except InvalidProjectInputError as error:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
+    except ProjectNotFoundError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy dự án") from None
+    except LockTimeout:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Hệ thống đang bận, vui lòng thử lại"
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _approve_pending(services: Services, user: User, project: Project) -> None:
+    """Tắt bước duyệt: duyệt luôn các case đang chờ."""
+    service_for(services, project).approve_all_in_review(user)
 
 
 @router.get("/settings/service-account")

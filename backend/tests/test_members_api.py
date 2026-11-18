@@ -13,7 +13,7 @@ from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import today_in_vietnam
 from tests.conftest import SYSTEM_SHEET_ID, client_for, make_project, make_user
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeSheetsGateway
 
 
 @pytest.fixture
@@ -29,8 +29,8 @@ def project(
 
 
 @pytest.fixture
-def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project) -> TestClient:
-    return client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+def lead(app: FastAPI, users: UserRepository, project: Project) -> TestClient:
+    return client_for(app, users, "lead@x.com", Role.QA_LEAD)
 
 
 def members_url(project: Project) -> str:
@@ -121,13 +121,12 @@ def test_remove_unknown_member_is_404(lead: TestClient, project: Project) -> Non
 
 def test_tester_cannot_manage_members(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     members: ProjectMemberRepository,
     project: Project,
 ) -> None:
     members.add(project.id, "binh@x.com")
-    tester = client_for(app, oauth, users, "binh@x.com", Role.TESTER)
+    tester = client_for(app, users, "binh@x.com", Role.TESTER)
 
     assert tester.get(members_url(project)).status_code == 200
     assert tester.post(members_url(project), json={"email": "lead@x.com"}).status_code == 403

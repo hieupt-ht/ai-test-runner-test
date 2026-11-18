@@ -5,11 +5,13 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import { EnumSelect } from "@/components/test-cases/enum-select"
 import { ConflictDialog } from "@/components/test-cases/conflict-dialog"
+import { MediaPicker } from "@/components/media/media-picker"
+import { ScreenMediaStrip } from "@/components/screens/screen-media-strip"
 import { StepsEditor } from "@/components/test-cases/steps-editor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +24,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import type { Priority, Screen, Severity, TestCase, TestCaseContent } from "@/lib/api/types"
+import type {
+  Platform,
+  Priority,
+  Screen,
+  Severity,
+  TestCase,
+  TestCaseContent,
+  TestType,
+} from "@/lib/api/types"
+import { useProject } from "@/lib/use-projects"
 import { conflictFrom } from "@/lib/test-cases/conflict"
 import { testCaseFormSchema } from "@/lib/test-cases/form-schema"
 import {
@@ -34,20 +45,46 @@ import {
 
 const SEVERITIES: Severity[] = ["LOW", "MEDIUM", "HIGH"]
 const PRIORITIES: Priority[] = ["P1", "P2", "P3"]
+const PLATFORMS: Platform[] = ["WEB", "ANDROID", "IOS"]
+const TEST_TYPES: TestType[] = ["FUNCTIONAL", "UI"]
 
 const EMPTY: TestCaseContent = {
   title: "",
   precondition: "",
   test_data: "",
-  steps: [{ action: "", expected: "" }],
+  steps: [{ action: "", expected: "", guide_media: [] }],
   expected_result: "",
   severity: "MEDIUM",
   priority: "P2",
+  platform: "WEB",
+  test_type: "FUNCTIONAL",
+  regression: false,
+  start_point: "",
+  guide_media: [],
+  postcondition: "",
+  requirement_ref: "",
+  execution_mode: "MANUAL", // case mới mặc định là test tay
 }
 
 function contentOf(testCase: TestCase): TestCaseContent {
-  const { title, precondition, test_data, steps, expected_result, severity, priority } = testCase
-  return { title, precondition, test_data, steps, expected_result, severity, priority }
+  return {
+    title: testCase.title,
+    precondition: testCase.precondition,
+    test_data: testCase.test_data,
+    // Bước cũ có thể chưa có guide_media: bù mảng rỗng để form luôn đủ trường
+    steps: testCase.steps.map((step) => ({ ...step, guide_media: step.guide_media ?? [] })),
+    expected_result: testCase.expected_result,
+    severity: testCase.severity,
+    priority: testCase.priority,
+    platform: testCase.platform ?? "WEB",
+    test_type: testCase.test_type ?? "FUNCTIONAL",
+    regression: testCase.regression ?? false,
+    start_point: testCase.start_point ?? "",
+    guide_media: testCase.guide_media ?? [],
+    postcondition: testCase.postcondition ?? "",
+    requirement_ref: testCase.requirement_ref ?? "",
+    execution_mode: testCase.execution_mode ?? "MANUAL",
+  }
 }
 
 type Props = {
@@ -59,13 +96,25 @@ type Props = {
   defaultScreenId?: string
   /** Báo cho trang cha biết form có thay đổi chưa lưu */
   onDirtyChange?: (dirty: boolean) => void
+  /** Dự án có bước QA duyệt không (mặc định có). Tắt thì "Gửi" là duyệt luôn. */
+  reviewEnabled?: boolean
 }
 
-export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, onDirtyChange }: Props) {
+export function CaseForm({
+  projectId,
+  testCase,
+  screens = [],
+  defaultScreenId,
+  onDirtyChange,
+  reviewEnabled = true,
+}: Props) {
   const t = useTranslations("testCases")
   const tc = useTranslations("common")
+  const tm = useTranslations("media")
   const router = useRouter()
   const queryClient = useQueryClient()
+  // Nơi lưu ảnh/video do Admin chọn cho dự án
+  const storage = useProject(projectId).data?.storage ?? "cloudinary"
   const isEdit = Boolean(testCase)
 
   const form = useForm<TestCaseContent>({
@@ -73,6 +122,7 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, o
     defaultValues: testCase ? contentOf(testCase) : EMPTY,
   })
   const { register, control, handleSubmit, reset, formState } = form
+  const executionMode = useWatch({ control, name: "execution_mode" })
   const { errors } = formState
 
   const [screenId, setScreenId] = useState(defaultScreenId ?? "")
@@ -92,7 +142,13 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, o
     onDirtyChange?.(isDirty)
     return () => onDirtyChange?.(false)
   }, [isDirty, onDirtyChange])
-  const busy = create.isPending || update.isPending || transition.isPending
+  // Ô chọn ảnh/video nào đang tải lên thì khoá nút Lưu/Gửi, kẻo lưu thiếu file.
+  const [uploading, setUploading] = useState<Record<string, boolean>>({})
+  function reportUploading(key: string, busy: boolean) {
+    setUploading((prev) => (Boolean(prev[key]) === busy ? prev : { ...prev, [key]: busy }))
+  }
+  const isUploading = Object.values(uploading).some(Boolean)
+  const busy = create.isPending || update.isPending || transition.isPending || isUploading
 
   function fail(error: unknown) {
     const found = conflictFrom(error)
@@ -160,107 +216,21 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, o
     : []
   const fieldError = (message?: string) =>
     message ? <p className="text-xs text-destructive">{t(`form.errors.${message}`)}</p> : null
-  const showSubmitButton = !isEdit || testCase?.status === "DRAFT"
+  // Case test tay không qua bước gửi duyệt: chạy xong là "Đã kiểm thử"
+  const showSubmitButton =
+    executionMode === "AUTOMATION" && (!isEdit || testCase?.status === "DRAFT")
 
   return (
     <form
       onSubmit={handleSubmit((values) => save(values, false))}
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-3"
       noValidate
     >
-      {!isEdit && (
-        <div className="flex flex-col gap-1.5">
-          <Label>{t("form.screen")}</Label>
-          <Select
-            items={screens.map((s) => ({ value: s.id, label: `${s.id} · ${s.name}` }))}
-            value={screenId || null}
-            onValueChange={(next) => {
-              setScreenId(next ?? "")
-              setScreenMissing(false)
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-96" aria-label={t("form.screen")}>
-              <SelectValue placeholder={t("form.screenPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {screens.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.id} · {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {screens.length === 0 && (
-            <p className="text-sm text-muted-foreground">{t("form.noScreens")}</p>
-          )}
-          {screenMissing && fieldError("screenRequired")}
-        </div>
-      )}
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="case-title">{t("form.title")}</Label>
-        <Input id="case-title" aria-invalid={Boolean(errors.title)} {...register("title")} />
-        {fieldError(errors.title?.message)}
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="case-precondition">{t("form.precondition")}</Label>
-          <Textarea id="case-precondition" rows={3} {...register("precondition")} />
-          {fieldError(errors.precondition?.message)}
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="case-test-data">{t("form.testData")}</Label>
-          <Textarea id="case-test-data" rows={3} {...register("test_data")} />
-          {fieldError(errors.test_data?.message)}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label>{t("form.steps")}</Label>
-        <Controller
-          control={control}
-          name="steps"
-          render={({ field }) => (
-            <StepsEditor steps={field.value} onChange={field.onChange} errors={stepErrors} />
-          )}
-        />
-        {!Array.isArray(errors.steps) && fieldError(errors.steps?.message)}
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="case-expected">{t("form.expectedResult")}</Label>
-        <Textarea
-          id="case-expected"
-          rows={3}
-          aria-invalid={Boolean(errors.expected_result)}
-          {...register("expected_result")}
-        />
-        {fieldError(errors.expected_result?.message)}
-      </div>
-
-      <div className="flex flex-wrap gap-4">
-        <EnumSelect
-          control={control}
-          name="severity"
-          label={t("form.severity")}
-          options={SEVERITIES.map((value) => ({ value, label: t(`severity.${value}`) }))}
-        />
-        <EnumSelect
-          control={control}
-          name="priority"
-          label={t("form.priority")}
-          options={PRIORITIES.map((value) => ({ value, label: value }))}
-        />
-      </div>
-
-      {isEdit && testCase?.status !== "DRAFT" && (
-        <p className="text-sm text-amber-700 dark:text-amber-300">{t("form.resetWarning")}</p>
-      )}
-
-      <div className="flex flex-wrap gap-2">
+      {/* Thanh nút dính ở trên: cuộn đến đâu vẫn bấm Lưu được */}
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b bg-background py-2">
         <Button type="submit" variant="outline" disabled={busy}>
-          {t("form.saveDraft")}
+          {/* Test tay không có bước duyệt nên không gọi là "nháp" */}
+          {executionMode === "MANUAL" ? t("form.saveManual") : t("form.saveDraft")}
         </Button>
         {showSubmitButton && (
           <Button
@@ -268,9 +238,201 @@ export function CaseForm({ projectId, testCase, screens = [], defaultScreenId, o
             disabled={busy}
             onClick={handleSubmit((values) => save(values, true))}
           >
-            {t("form.saveAndSubmit")}
+            {reviewEnabled ? t("form.saveAndSubmit") : t("form.saveAndSend")}
           </Button>
         )}
+        {isEdit && testCase?.status !== "DRAFT" && (reviewEnabled || executionMode === "MANUAL") && (
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            {executionMode === "MANUAL" ? t("form.resetWarningManual") : t("form.resetWarning")}
+          </p>
+        )}
+      </div>
+
+      {/* Hai cột trên màn hình rộng; chỉ phần bên trong cột cuộn, cả trang không cuộn */}
+      <div className="grid gap-5 lg:h-[calc(100dvh-15rem)] lg:min-h-96 lg:grid-cols-2">
+        <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-2">
+          <div className="flex flex-col gap-1.5">
+            <Label>{t("form.executionMode")}</Label>
+            <Controller
+              control={control}
+              name="execution_mode"
+              render={({ field }) => (
+                <div className="flex gap-2">
+                  {(["MANUAL", "AUTOMATION"] as const).map((mode) => (
+                    <Button
+                      key={mode}
+                      type="button"
+                      size="sm"
+                      variant={field.value === mode ? "default" : "outline"}
+                      aria-pressed={field.value === mode}
+                      onClick={() => field.onChange(mode)}
+                    >
+                      {t(`executionMode.${mode}`)}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            />
+            {executionMode === "AUTOMATION" && (
+              <p className="text-xs text-muted-foreground">{t("form.automationNote")}</p>
+            )}
+          </div>
+
+          {!isEdit && (
+            <div className="flex flex-col gap-1.5">
+              <Label>{t("form.screen")}</Label>
+              <Select
+                items={screens.map((s) => ({ value: s.id, label: `${s.id} · ${s.name}` }))}
+                value={screenId || null}
+                onValueChange={(next) => {
+                  setScreenId(next ?? "")
+                  setScreenMissing(false)
+                }}
+              >
+                <SelectTrigger className="w-full" aria-label={t("form.screen")}>
+                  <SelectValue placeholder={t("form.screenPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {screens.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.id} · {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {screens.length === 0 && (
+                <p className="text-sm text-muted-foreground">{t("form.noScreens")}</p>
+              )}
+              {/* Ảnh/video của màn hình đã chọn, để tester hình dung khi viết case */}
+              <ScreenMediaStrip media={screens.find((s) => s.id === screenId)?.media ?? []} />
+              {screenMissing && fieldError("screenRequired")}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="case-title">{t("form.title")}</Label>
+            <Input id="case-title" aria-invalid={Boolean(errors.title)} {...register("title")} />
+            {fieldError(errors.title?.message)}
+          </div>
+
+          <div className="flex flex-wrap items-end gap-4">
+            <EnumSelect
+              control={control}
+              name="platform"
+              label={t("form.platform")}
+              options={PLATFORMS.map((value) => ({ value, label: t(`platform.${value}`) }))}
+            />
+            <EnumSelect
+              control={control}
+              name="test_type"
+              label={t("form.testType")}
+              options={TEST_TYPES.map((value) => ({ value, label: t(`testType.${value}`) }))}
+            />
+            <EnumSelect
+              control={control}
+              name="severity"
+              label={t("form.severity")}
+              options={SEVERITIES.map((value) => ({ value, label: t(`severity.${value}`) }))}
+            />
+            <EnumSelect
+              control={control}
+              name="priority"
+              label={t("form.priority")}
+              options={PRIORITIES.map((value) => ({ value, label: value }))}
+            />
+            <div className="flex h-8 items-center gap-2">
+              <input
+                id="case-regression"
+                type="checkbox"
+                className="size-4"
+                {...register("regression")}
+              />
+              <Label htmlFor="case-regression">{t("form.regression")}</Label>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="case-start-point">{t("form.startPoint")}</Label>
+            <Input id="case-start-point" {...register("start_point")} />
+            <p className="text-xs text-muted-foreground">{t("form.startPointHint")}</p>
+            {fieldError(errors.start_point?.message)}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>{t("form.guideMedia")}</Label>
+            <Controller
+              control={control}
+              name="guide_media"
+              render={({ field }) => (
+                <MediaPicker
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                  projectId={projectId}
+                  storage={storage}
+                  onBusyChange={(busy) => reportUploading("case", busy)}
+                />
+              )}
+            />
+            <p className="text-xs text-muted-foreground">{tm("safetyNote")}</p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="case-expected">{t("form.expectedResult")}</Label>
+            <Textarea
+              id="case-expected"
+              rows={3}
+              aria-invalid={Boolean(errors.expected_result)}
+              {...register("expected_result")}
+            />
+            {fieldError(errors.expected_result?.message)}
+          </div>
+
+          <details className="rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-medium">{t("form.more")}</summary>
+            <div className="mt-3 flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="case-precondition">{t("form.precondition")}</Label>
+                <Textarea id="case-precondition" rows={3} {...register("precondition")} />
+                {fieldError(errors.precondition?.message)}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="case-test-data">{t("form.testData")}</Label>
+                <Textarea id="case-test-data" rows={3} {...register("test_data")} />
+                {fieldError(errors.test_data?.message)}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="case-postcondition">{t("form.postcondition")}</Label>
+                <Textarea id="case-postcondition" rows={3} {...register("postcondition")} />
+                {fieldError(errors.postcondition?.message)}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="case-requirement-ref">{t("form.requirementRef")}</Label>
+                <Input id="case-requirement-ref" {...register("requirement_ref")} />
+                {fieldError(errors.requirement_ref?.message)}
+              </div>
+            </div>
+          </details>
+        </div>
+
+        {/* Cột phải: các bước, cuộn riêng */}
+        <div className="flex min-h-0 flex-col gap-1.5 lg:overflow-y-auto lg:pr-2">
+          <Label>{t("form.steps")}</Label>
+          <Controller
+            control={control}
+            name="steps"
+            render={({ field }) => (
+              <StepsEditor
+                steps={field.value}
+                onChange={field.onChange}
+                errors={stepErrors}
+                projectId={projectId}
+                storage={storage}
+                onBusyChange={reportUploading}
+              />
+            )}
+          />
+          {!Array.isArray(errors.steps) && fieldError(errors.steps?.message)}
+        </div>
       </div>
 
       <ConflictDialog

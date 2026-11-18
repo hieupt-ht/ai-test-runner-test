@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
-import { unwrap } from "@/lib/api/request"
+import { ensureOk, unwrap } from "@/lib/api/request"
 import type { Project, ProjectDetail, RepoInfo } from "@/lib/api/types"
 
 export const PROJECTS_KEY = ["projects"] as const
@@ -88,6 +88,10 @@ export type UpdateProjectInput = {
   branch?: string
   staging_url?: string
   archived?: boolean
+  android_app_id?: string
+  ios_bundle_id?: string
+  require_review?: boolean
+  storage?: "cloudinary" | "drive"
 }
 
 export function useUpdateProject(projectId: string) {
@@ -101,6 +105,22 @@ export function useUpdateProject(projectId: string) {
         }),
       ),
     // Làm mới cả danh sách lẫn chi tiết dự án
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PROJECTS_KEY }),
+  })
+}
+
+/** Xoá vĩnh viễn một dự án đã vào thùng rác; phải gửi đúng tên dự án để xác nhận. */
+export function useDeleteProject(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string): Promise<void> => {
+      ensureOk(
+        await api.DELETE("/api/projects/{project_id}", {
+          params: { path: { project_id: projectId } },
+          body: { name },
+        }),
+      )
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PROJECTS_KEY }),
   })
 }

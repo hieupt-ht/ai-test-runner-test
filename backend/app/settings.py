@@ -15,10 +15,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
 
     # Đăng nhập Google
-    google_client_id: str = ""
-    google_client_secret: str = ""
     session_secret: str = ""
     bootstrap_admin_email: str = ""
+    bootstrap_admin_password: str = ""
 
     # Google Sheets
     google_service_account_json: str = ""
@@ -30,6 +29,18 @@ class Settings(BaseSettings):
 
     # Agent bên ngoài chỉ được phép ghi kết quả; để trống thì tắt API.
     agent_api_token: str = ""
+
+    # Cloudinary: nơi lưu ảnh/video. Secret chỉ ở backend, không bao giờ trả ra ngoài.
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
+
+    # Google Drive: nơi lưu ảnh/video (đăng nhập OAuth bằng Gmail của chủ dự án).
+    # Lấy refresh token bằng `python -m app.tools.drive_auth`. Thiếu một biến là tắt Drive.
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    google_oauth_refresh_token: str = ""
+    google_drive_root_folder_id: str = ""  # trống thì app tự tạo thư mục "ai-test-runner"
 
     # AI (từ M4)
     anthropic_api_key: str = ""
@@ -43,6 +54,8 @@ class Settings(BaseSettings):
 
     # Thời gian sống
     session_ttl_seconds: int = 7 * 24 * 60 * 60  # 7 ngày
+    # Sai mật khẩu bao nhiêu lần thì khoá 15 phút. Đặt 0 để tắt khoá (chỉ khi đang test).
+    login_max_failures: int = 5
     user_cache_ttl_seconds: int = 5 * 60  # 5 phút
     # Cache danh sách case/việc/màn hình của dự án. Ngắn, vì ghi xong là xoá cache ngay.
     # Chỉ bị "cũ" khi có người sửa thẳng trên Google Sheet (không qua app).

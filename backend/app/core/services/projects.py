@@ -1,10 +1,11 @@
 """Nghiệp vụ dự án: tạo (kiểm tra GitHub và Google Sheet), sửa, lưu trữ."""
 
+from collections.abc import Callable
 from typing import Any
 
 from app.core.bootstrap import bootstrap_project_spreadsheet
 from app.core.github.client import GitHubClient, GitHubNotConfiguredError
-from app.core.models.project import Project
+from app.core.models.project import Project, Storage
 from app.core.models.user import Role, User
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
@@ -20,6 +21,10 @@ from app.core.sheets.table import MissingColumnsError
 
 class InvalidProjectInputError(Exception):
     """Dữ liệu nhập sai (trả 422). `str(error)` là câu báo lỗi tiếng Việt."""
+
+
+class ProjectNotArchivedError(Exception):
+    """Chỉ xoá được dự án đã vào thùng rác (trả 409)."""
 
 
 class ProjectService:
@@ -86,11 +91,30 @@ class ProjectService:
         branch: str | None = None,
         staging_url: str | None = None,
         archived: bool | None = None,
+        android_app_id: str | None = None,
+        ios_bundle_id: str | None = None,
+        require_review: bool | None = None,
+        storage: Storage | None = None,
+        approve_pending: Callable[[], None] | None = None,
     ) -> Project:
+        """`approve_pending` chạy khi công tắc "cần duyệt" đổi từ bật sang tắt."""
         if branch is not None and branch != project.branch:
             self._ensure_repo_and_branch(project.repo_full_name, branch)
 
-        changes = {"name": name, "branch": branch, "staging_url": staging_url, "archived": archived}
+        changes = {
+            "name": name,
+            "branch": branch,
+            "staging_url": staging_url,
+            "archived": archived,
+            "android_app_id": android_app_id,
+            "ios_bundle_id": ios_bundle_id,
+            "require_review": require_review,
+            "storage": storage,
+        }
+        # Dự án lưu trữ bị bỏ qua lúc nâng cấp Sheet, nên bỏ lưu trữ thì nâng cấp ngay.
+        if project.archived and archived is False:
+            self._prepare_project_sheet(project.spreadsheet_id)
+
         updated = project.model_copy(
             update={field: value for field, value in changes.items() if value is not None}
         )
@@ -99,9 +123,33 @@ class ProjectService:
         if not diff:
             return project
 
+        # Duyệt trước rồi mới lưu công tắc: nếu duyệt lỗi thì công tắc vẫn bật, bấm lại được.
+        turning_review_off = project.require_review and not updated.require_review
+        if turning_review_off and approve_pending is not None:
+            approve_pending()
         self._projects.update(updated)
         self._record(actor, "UPDATE", project.id, diff)
         return updated
+
+    def delete_project(self, actor: User, project: Project, *, confirm_name: str) -> None:
+        """Xoá vĩnh viễn dự án đã lưu trữ khỏi app (Sheet riêng, GitHub, ảnh/video giữ nguyên)."""
+        if not project.archived:
+            raise ProjectNotArchivedError("Hãy chuyển dự án vào thùng rác trước")
+        if confirm_name.strip() != project.name:
+            raise InvalidProjectInputError("Tên xác nhận không khớp")
+        # Xoá thành viên trước: nếu lỗi giữa chừng, dự án vẫn còn trong thùng rác để xoá lại.
+        self._members.remove_all_for_project(project.id)
+        self._projects.delete(project.id)
+        self._record(
+            actor,
+            "DELETE",
+            project.id,
+            {
+                "name": project.name,
+                "repo_full_name": project.repo_full_name,
+                "spreadsheet_id": project.spreadsheet_id,
+            },
+        )
 
     # ----- Các bước kiểm tra khi tạo dự án -----
 

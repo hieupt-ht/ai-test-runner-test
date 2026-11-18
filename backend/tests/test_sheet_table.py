@@ -160,3 +160,40 @@ def test_update_found_writes_without_rereading_header_or_row() -> None:
     assert gateway.data["sys"]["Users"][1] == [
         "TESTER", "a@x.com", "giữ nguyên", "An Nguyễn", "TRUE", CREATED
     ]
+
+
+def test_ensure_columns_appends_missing_at_end_and_keeps_unknown() -> None:
+    gateway = FakeSheetsGateway({"S": {"T": [["id", "la", "name"]]}})
+    table = SheetTable(gateway, "S", "T", ["id", "name", "platform", "regression"])
+
+    assert table.ensure_columns() == ["platform", "regression"]
+    assert gateway.data["S"]["T"][0] == ["id", "la", "name", "platform", "regression"]
+    # Chạy lần hai không đổi gì và không ghi thêm
+    gateway.calls.clear()
+    assert table.ensure_columns() == []
+    assert not [call for call in gateway.calls if call.startswith("update:")]
+
+
+def test_update_many_reads_once_writes_once_and_keeps_unknown_columns() -> None:
+    table, gateway = make_table([
+        ["role", "email", "extra", "name", "active", "created_at"],
+        ["TESTER", "a@x.com", "giữ", "An", "TRUE", CREATED],
+        ["TESTER", "b@x.com", "giữ2", "Bình", "TRUE", CREATED],
+    ])
+    gateway.calls.clear()
+
+    table.update_many([(2, {"name": "An mới"}), (3, {"name": "Bình mới"})])
+
+    assert gateway.calls == ["Users", "update_rows:Users"]
+    assert gateway.batch_update_calls == 1
+    assert gateway.data["sys"]["Users"][1][2:4] == ["giữ", "An mới"]
+    assert gateway.data["sys"]["Users"][2][2:4] == ["giữ2", "Bình mới"]
+
+
+def test_update_many_with_nothing_does_not_call_google() -> None:
+    table, gateway = make_table([COLUMNS])
+    gateway.calls.clear()
+
+    table.update_many([])
+
+    assert gateway.calls == []

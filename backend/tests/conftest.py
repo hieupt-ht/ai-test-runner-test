@@ -7,13 +7,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.oauth import GoogleIdentity
 from app.api.services import Services
 from app.api.sessions import SessionStore
 from app.core.bootstrap import bootstrap_project_spreadsheet
+from app.core.login_throttle import LoginThrottle
 from app.core.models.project import Project
 from app.core.models.user import Role, User
 from app.core.notifications import NotificationStore
+from app.core.passwords import hash_password
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
@@ -21,7 +22,7 @@ from app.core.repositories.users import UserRepository
 from app.core.sheets.schema import SYSTEM_TABS
 from app.main import create_app
 from app.settings import Settings
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 
 SYSTEM_SHEET_ID = "1SystemSheetId000000000000000000"
 SHEET_A = "1ProjectSheetA00000000000000000"
@@ -37,6 +38,16 @@ def make_user(
         role=role,
         active=active,
         created_at=datetime(2026, 11, 12, tzinfo=UTC),
+    )
+
+
+@pytest.fixture(autouse=True)
+def fast_password_hasher(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hạ chi phí argon2 trong test cho chạy nhanh (bản thật vẫn dùng mặc định)."""
+    from argon2 import PasswordHasher
+
+    monkeypatch.setattr(
+        "app.core.passwords._hasher", PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
     )
 
 
@@ -65,11 +76,6 @@ def audit_log(gateway: FakeSheetsGateway) -> AuditLogRepository:
 
 
 @pytest.fixture
-def oauth() -> FakeOAuth:
-    return FakeOAuth()
-
-
-@pytest.fixture
 def github() -> FakeGitHub:
     return FakeGitHub({"org/web": ["develop", "main"], "org/api": ["main"]})
 
@@ -79,7 +85,6 @@ def app(
     users: UserRepository,
     audit_log: AuditLogRepository,
     redis: fakeredis.FakeRedis,
-    oauth: FakeOAuth,
     gateway: FakeSheetsGateway,
     projects: ProjectRepository,
     members: ProjectMemberRepository,
@@ -92,7 +97,7 @@ def app(
         users=users,
         audit_log=audit_log,
         sessions=SessionStore(redis, ttl_seconds=3600),
-        oauth=oauth,
+        login_throttle=LoginThrottle(redis),
         gateway=gateway,
         system_spreadsheet_id=SYSTEM_SHEET_ID,
         service_account_email=gateway.service_account_email,
@@ -116,12 +121,10 @@ def client(app: FastAPI) -> TestClient:
     return TestClient(app, follow_redirects=False)
 
 
-def client_for(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, email: str, role: Role
-) -> TestClient:
+def client_for(app: FastAPI, users: UserRepository, email: str, role: Role) -> TestClient:
     """Một trình duyệt riêng (cookie riêng) đã đăng nhập bằng `email`."""
     browser = TestClient(app, follow_redirects=False)
-    log_in_as(browser, oauth, users, email, role)
+    log_in_as(browser, users, email, role)
     return browser
 
 
@@ -148,26 +151,34 @@ def make_project(
     return project
 
 
+TEST_PASSWORD = "mat-khau-test"
+
+
 def log_in_as(
-    client: TestClient, oauth: FakeOAuth, users: UserRepository, email: str, role: Role
+    client: TestClient,
+    users: UserRepository,
+    email: str,
+    role: Role,
+    password: str = TEST_PASSWORD,
 ) -> None:
-    """Tạo user (nếu chưa có) rồi đăng nhập qua luồng OAuth giả."""
+    """Tạo user (nếu chưa có) kèm mật khẩu thật, rồi đăng nhập qua API."""
     if users.get(email) is None:
-        users.create(make_user(email, role=role))
-    oauth.identity = GoogleIdentity(email=email, name="Ai đó")
-    response = client.get("/api/auth/callback")
-    assert response.headers["location"] == "/"
+        users.create(make_user(email, role=role), password_hash=hash_password(password))
+    elif not users.get_password_hash(email):
+        users.set_password_hash(email, hash_password(password))  # user tạo sẵn, chưa có mật khẩu
+    response = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert response.status_code == 200, response.text
 
 
 @pytest.fixture
-def client_as_admin(client: TestClient, oauth: FakeOAuth, users: UserRepository) -> TestClient:
-    log_in_as(client, oauth, users, "admin@x.com", Role.ADMIN)
+def client_as_admin(client: TestClient, users: UserRepository) -> TestClient:
+    log_in_as(client, users, "admin@x.com", Role.ADMIN)
     return client
 
 
 @pytest.fixture
-def client_as_qa_lead(client: TestClient, oauth: FakeOAuth, users: UserRepository) -> TestClient:
-    log_in_as(client, oauth, users, "lead@x.com", Role.QA_LEAD)
+def client_as_qa_lead(client: TestClient, users: UserRepository) -> TestClient:
+    log_in_as(client, users, "lead@x.com", Role.QA_LEAD)
     return client
 
 
@@ -186,6 +197,6 @@ def members(gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis) -> ProjectMe
 
 
 @pytest.fixture
-def client_as_tester(client: TestClient, oauth: FakeOAuth, users: UserRepository) -> TestClient:
-    log_in_as(client, oauth, users, "tester@x.com", Role.TESTER)
+def client_as_tester(client: TestClient, users: UserRepository) -> TestClient:
+    log_in_as(client, users, "tester@x.com", Role.TESTER)
     return client

@@ -1,4 +1,4 @@
-"""Gom các đối tượng dùng chung (Redis, repository, OAuth, GitHub) vào một chỗ.
+"""Gom các đối tượng dùng chung (Redis, repository, GitHub) vào một chỗ.
 
 App thật dựng chúng từ cấu hình; test truyền vào bản giả.
 """
@@ -10,9 +10,11 @@ from typing import Any
 
 from redis import Redis
 
-from app.api.oauth import GoogleOAuth, OAuthClient
 from app.api.sessions import SessionStore
 from app.core.github.client import GitHubAppClient, GitHubClient
+from app.core.login_throttle import LoginThrottle
+from app.core.media.cloudinary import CloudinaryClient, CloudinarySigner, MediaJanitor
+from app.core.media.drive import DriveClient
 from app.core.notifications import NotificationStore
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
@@ -30,7 +32,7 @@ class Services:
     users: UserRepository
     audit_log: AuditLogRepository
     sessions: SessionStore
-    oauth: OAuthClient
+    login_throttle: LoginThrottle
     gateway: SheetsGateway
     system_spreadsheet_id: str
     service_account_email: str
@@ -38,6 +40,10 @@ class Services:
     members: ProjectMemberRepository
     github: GitHubClient | None  # None khi chưa cấu hình GitHub App
     issue_sync: IssueSink | None = None
+    cloudinary_signer: CloudinarySigner | None = None  # None khi chưa cấu hình Cloudinary
+    media_janitor: MediaJanitor | None = None
+    drive: DriveClient | None = None  # None khi chưa cấu hình Google Drive
+    cloud_name: str = ""
     app_base_url: str = "http://localhost:3000"
     lock_wait_seconds: float = 5.0
     sheet_cache_ttl_seconds: int = 60
@@ -66,10 +72,34 @@ def build_github(settings: Settings) -> GitHubClient | None:
     return GitHubAppClient(settings.github_app_id, settings.github_app_private_key)
 
 
+def build_drive(settings: Settings) -> DriveClient | None:
+    if not (
+        settings.google_oauth_client_id
+        and settings.google_oauth_client_secret
+        and settings.google_oauth_refresh_token
+    ):
+        return None
+    return DriveClient(
+        settings.google_oauth_client_id,
+        settings.google_oauth_client_secret,
+        settings.google_oauth_refresh_token,
+        settings.google_drive_root_folder_id,
+    )
+
+
+def _cloudinary_configured(settings: Settings) -> bool:
+    return bool(
+        settings.cloudinary_cloud_name
+        and settings.cloudinary_api_key
+        and settings.cloudinary_api_secret
+    )
+
+
 def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services:
     redis = Redis.from_url(settings.redis_url)
     system_sheet = settings.system_spreadsheet_id
     github = build_github(settings)
+    drive = build_drive(settings)
     return Services(
         redis=redis,
         notifications=NotificationStore(redis),
@@ -78,7 +108,7 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         ),
         audit_log=AuditLogRepository(gateway, system_sheet),
         sessions=SessionStore(redis, ttl_seconds=settings.session_ttl_seconds),
-        oauth=GoogleOAuth(settings.google_client_id, settings.google_client_secret),
+        login_throttle=LoginThrottle(redis, max_failures=settings.login_max_failures),
         gateway=gateway,
         system_spreadsheet_id=system_sheet,
         service_account_email=gateway.service_account_email,
@@ -94,6 +124,27 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
             if github
             else None
         ),
+        cloudinary_signer=(
+            CloudinarySigner(
+                settings.cloudinary_cloud_name,
+                settings.cloudinary_api_key,
+                settings.cloudinary_api_secret,
+            )
+            if _cloudinary_configured(settings)
+            else None
+        ),
+        media_janitor=MediaJanitor(
+            CloudinaryClient(
+                settings.cloudinary_cloud_name,
+                settings.cloudinary_api_key,
+                settings.cloudinary_api_secret,
+            )
+            if _cloudinary_configured(settings)
+            else None,
+            drive=drive,
+        ),
+        drive=drive,
+        cloud_name=settings.cloudinary_cloud_name,
         app_base_url=settings.app_base_url,
         sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,
     )

@@ -54,21 +54,13 @@ Google Sheets  ── nơi lưu dữ liệu (chỉ backend được ghi)
 
 Cần: **Docker Desktop**. Nếu muốn chạy từng phần để phát triển thì cần thêm **Python 3.12+**, **[uv](https://docs.astral.sh/uv/)** và **Node 24**.
 
-### 1. Google OAuth (để đăng nhập)
-1. Vào [Google Cloud Console](https://console.cloud.google.com/), tạo (hoặc chọn) một project.
-2. **APIs & Services → OAuth consent screen**: chọn **External**, để ở chế độ **Testing**. Ở mục **Test users**, thêm email của những người sẽ dùng app (tối đa 100).
-3. **APIs & Services → Credentials → Create credentials → OAuth client ID**:
-   - Application type: **Web application**
-   - Authorized redirect URIs: `http://localhost:3000/api/auth/callback`
-4. Chép **Client ID** và **Client secret** vào `.env`.
-
-### 2. Service Account (để backend đọc/ghi Google Sheets)
+### 1. Service Account (để backend đọc/ghi Google Sheets)
 1. **APIs & Services → Library**: bật **Google Sheets API**.
 2. **IAM & Admin → Service Accounts → Create service account**. Không cần gán role.
 3. Vào service account vừa tạo, chọn **Keys → Add key → JSON**, rồi tải file key về. **Không commit file này.**
 4. Ghi lại email của service account (dạng `ten@project.iam.gserviceaccount.com`).
 
-### 3. File Google Sheet hệ thống
+### 2. File Google Sheet hệ thống
 1. Tạo một Google Sheet **trống**.
 2. **Share** file cho email service account với quyền **Editor**. Những người khác chỉ nên được quyền **Viewer**.
 3. Lấy **Spreadsheet ID** từ đường link: `https://docs.google.com/spreadsheets/d/<ID>/edit`.
@@ -109,9 +101,9 @@ cp .env.example .env
 
 | Biến | Điền gì |
 |---|---|
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Ở bước 1 |
 | `SESSION_SECRET` | Một chuỗi ngẫu nhiên dài, ví dụ kết quả của `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
-| `BOOTSTRAP_ADMIN_EMAIL` | Email Google của bạn, sẽ thành Admin đầu tiên |
+| `BOOTSTRAP_ADMIN_EMAIL` | Email công ty của bạn, sẽ thành Admin đầu tiên |
+| `BOOTSTRAP_ADMIN_PASSWORD` | Mật khẩu đăng nhập của Admin đầu tiên (tối thiểu 8 ký tự). Đừng dùng mật khẩu Gmail thật |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Nội dung file key JSON (viết trên một dòng), hoặc đường dẫn tới file key |
 | `SYSTEM_SPREADSHEET_ID` | Ở bước 3 |
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` | Ở bước 4 |
@@ -129,7 +121,7 @@ Sau khi QA Lead duyệt case, xem issue trong repo của dự án. Nếu đồng
 docker compose up --build
 ```
 
-- Mở http://localhost:3000, đăng nhập bằng email `BOOTSTRAP_ADMIN_EMAIL`.
+- Mở http://localhost:3000, đăng nhập bằng `BOOTSTRAP_ADMIN_EMAIL` và `BOOTSTRAP_ADMIN_PASSWORD`. Admin tạo thành viên (kèm mật khẩu) ở trang Người dùng.
 - Kiểm tra API còn sống: http://localhost:3000/api/health trả về `{"status":"ok"}`.
 - Tắt: `docker compose down`. Thêm `-v` nếu muốn xoá luôn dữ liệu Redis (mọi phiên đăng nhập).
 
@@ -174,9 +166,8 @@ Khi sửa API ở backend, chạy `npm run gen:api` trong `frontend/` để sinh
 
 | Hiện tượng | Nguyên nhân và cách sửa |
 |---|---|
-| Google báo `redirect_uri_mismatch` | Redirect URI ở bước 1 phải đúng `http://localhost:3000/api/auth/callback` |
-| Google báo app chưa được xác minh, hoặc chặn đăng nhập | Email chưa có trong **Test users** của OAuth consent screen |
-| Đăng nhập xong bị đưa về `/login?error=not_allowed` | Email chưa có trong tab `Users`, hoặc cột `active` đang là `FALSE` |
+| Đăng nhập báo "Email hoặc mật khẩu không đúng" | Sai email/mật khẩu, email chưa có trong tab `Users`, hoặc cột `active` đang là `FALSE` |
+| Backend báo "Thiếu BOOTSTRAP_ADMIN_PASSWORD" | Điền `BOOTSTRAP_ADMIN_PASSWORD` trong `.env` rồi khởi động lại |
 | API trả 503 "chưa được cấu hình Google Sheets" | Thiếu `GOOGLE_SERVICE_ACCOUNT_JSON` hoặc `SYSTEM_SPREADSHEET_ID` |
 | Backend báo lỗi 403 / `PERMISSION_DENIED` khi khởi động | Chưa share file Sheet cho email service account với quyền Editor |
 | Backend báo `Tab 'Users' thiếu cột: ...` | Ai đó đã sửa hàng tiêu đề trong Sheet; thêm lại đúng tên cột bị thiếu |
