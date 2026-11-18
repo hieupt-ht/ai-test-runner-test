@@ -43,7 +43,13 @@ export type TestCaseContent = Pick<
   | "guide_media"
   | "postcondition"
   | "requirement_ref"
+  | "execution_mode"
 >
+export type ExecutionMode = Schemas["ExecutionMode"]
+export type LastResult = Schemas["LastResult"]
+export type ManualResultRequest = Schemas["ManualResultRequest"]
+export type ManualResultResponse = Schemas["ManualResultResponse"]
+export type StepResult = Schemas["StepResult"]
 export type TestCaseStatus = Schemas["TestCaseStatus"]
 export type Severity = Schemas["Severity"]
 export type Priority = Schemas["Priority"]

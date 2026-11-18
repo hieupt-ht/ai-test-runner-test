@@ -17,6 +17,7 @@ const valid = {
   guide_media: [],
   postcondition: "",
   requirement_ref: "",
+  execution_mode: "MANUAL",
 }
 
 describe("testCaseFormSchema", () => {

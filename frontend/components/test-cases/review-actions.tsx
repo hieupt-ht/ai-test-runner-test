@@ -47,7 +47,12 @@ export function ReviewActions({ projectId, testCase, hideSubmit, formDirty, revi
   const [commentTouched, setCommentTouched] = useState(false)
   const [conflictMessage, setConflictMessage] = useState<string | null>(null)
 
-  const actions = availableActions(testCase.status, testCase.can_edit, testCase.can_review).filter(
+  const actions = availableActions(
+    testCase.status,
+    testCase.can_edit,
+    testCase.can_review,
+    testCase.execution_mode,
+  ).filter(
     (action) => !(hideSubmit && action === "submit"),
   )
   const trimmed = comment.trim()

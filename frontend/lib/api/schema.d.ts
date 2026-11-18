@@ -653,6 +653,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/{case_id}/manual-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Manual Result */
+        post: operations["submit_manual_result_api_projects__project_id__test_cases__case_id__manual_results_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/overview": {
         parameters: {
             query?: never;
@@ -1011,9 +1028,9 @@ export interface components {
             /**
              * Purpose
              * @default guide
-             * @constant
+             * @enum {string}
              */
-            purpose: "guide";
+            purpose: "guide" | "evidence";
         };
         /** ChangeDeadlineRequest */
         ChangeDeadlineRequest: {
@@ -1133,6 +1150,8 @@ export interface components {
              * @default
              */
             requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
             /** Screen Id */
             screen_id: string;
         };
@@ -1170,6 +1189,11 @@ export interface components {
              */
             pruned: boolean;
         };
+        /**
+         * ExecutionMode
+         * @enum {string}
+         */
+        ExecutionMode: "MANUAL" | "AUTOMATION";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1182,12 +1206,69 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /**
+         * LastResult
+         * @description Kết quả chạy gần nhất của một case test tay.
+         */
+        LastResult: {
+            status: components["schemas"]["ResultStatus"];
+            /** Run Id */
+            run_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Email */
             email: string;
             /** Password */
             password: string;
+        };
+        /** ManualResultRequest */
+        ManualResultRequest: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PASS" | "FAIL" | "BLOCKED";
+            /** Step Results */
+            step_results?: components["schemas"]["StepResult"][];
+            /**
+             * Actual Result
+             * @default
+             */
+            actual_result: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Failed Step */
+            failed_step?: number | null;
+            evidence?: components["schemas"]["AgentEvidence"];
+            /** Environment */
+            environment: string;
+            /**
+             * Build Version
+             * @default
+             */
+            build_version: string;
+            /**
+             * Assignee
+             * @default
+             */
+            assignee: string;
+            /** Version */
+            version: number;
+        };
+        /** ManualResultResponse */
+        ManualResultResponse: {
+            /** Run Id */
+            run_id: string;
+            case: components["schemas"]["TestCase"];
         };
         /** Media */
         Media: {
@@ -1560,9 +1641,9 @@ export interface components {
             kind: components["schemas"]["MediaKind"];
             /**
              * Purpose
-             * @constant
+             * @enum {string}
              */
-            purpose: "guide";
+            purpose: "guide" | "evidence";
         };
         /**
          * SignedUpload
@@ -1708,6 +1789,8 @@ export interface components {
              * @default
              */
             requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
             /** Id */
             id: string;
             /** Screen Id */
@@ -1779,6 +1862,8 @@ export interface components {
              * @default
              */
             requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
             /** Id */
             id: string;
             /** Screen Id */
@@ -1806,6 +1891,7 @@ export interface components {
             can_review: boolean;
             /** Can Archive */
             can_archive: boolean;
+            last_result?: components["schemas"]["LastResult"] | null;
         };
         /**
          * TestCaseStatus
@@ -1922,6 +2008,8 @@ export interface components {
              * @default
              */
             requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
             /** Version */
             version: number;
         };
@@ -3466,6 +3554,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditEntry"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_manual_result_api_projects__project_id__test_cases__case_id__manual_results_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualResultRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualResultResponse"];
                 };
             };
             /** @description Validation Error */

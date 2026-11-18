@@ -2199,6 +2199,67 @@
         }
       }
     },
+    "/api/projects/{project_id}/test-cases/{case_id}/manual-results": {
+      "post": {
+        "tags": [
+          "manual-results"
+        ],
+        "summary": "Submit Manual Result",
+        "operationId": "submit_manual_result_api_projects__project_id__test_cases__case_id__manual_results_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualResultRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/overview": {
       "get": {
         "tags": [
@@ -3140,7 +3201,10 @@
           },
           "purpose": {
             "type": "string",
-            "const": "guide",
+            "enum": [
+              "guide",
+              "evidence"
+            ],
             "title": "Purpose",
             "default": "guide"
           }
@@ -3397,6 +3461,10 @@
             "title": "Requirement Ref",
             "default": ""
           },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
+          },
           "screen_id": {
             "type": "string",
             "title": "Screen Id"
@@ -3499,6 +3567,14 @@
         "title": "Evidence",
         "description": "Bằng chứng của một kết quả: video cả lần chạy và ảnh các bước."
       },
+      "ExecutionMode": {
+        "type": "string",
+        "enum": [
+          "MANUAL",
+          "AUTOMATION"
+        ],
+        "title": "ExecutionMode"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3530,6 +3606,30 @@
         ],
         "title": "IgnoredResult"
       },
+      "LastResult": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResultStatus"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "run_id",
+          "created_at"
+        ],
+        "title": "LastResult",
+        "description": "Kết quả chạy gần nhất của một case test tay."
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -3547,6 +3647,102 @@
           "password"
         ],
         "title": "LoginRequest"
+      },
+      "ManualResultRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "BLOCKED"
+            ],
+            "title": "Status"
+          },
+          "step_results": {
+            "items": {
+              "$ref": "#/components/schemas/StepResult"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Step Results"
+          },
+          "actual_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Actual Result",
+            "default": ""
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason",
+            "default": ""
+          },
+          "failed_step": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Step"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/AgentEvidence"
+          },
+          "environment": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Environment"
+          },
+          "build_version": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Build Version",
+            "default": ""
+          },
+          "assignee": {
+            "type": "string",
+            "maxLength": 39,
+            "pattern": "^([A-Za-z0-9]+(-[A-Za-z0-9]+)*)?$",
+            "title": "Assignee",
+            "default": ""
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "environment",
+          "version"
+        ],
+        "title": "ManualResultRequest"
+      },
+      "ManualResultResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "case": {
+            "$ref": "#/components/schemas/TestCase"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "case"
+        ],
+        "title": "ManualResultResponse"
       },
       "Media": {
         "properties": {
@@ -4357,7 +4553,10 @@
           },
           "purpose": {
             "type": "string",
-            "const": "guide",
+            "enum": [
+              "guide",
+              "evidence"
+            ],
             "title": "Purpose"
           }
         },
@@ -4627,6 +4826,10 @@
             "title": "Requirement Ref",
             "default": ""
           },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -4760,6 +4963,10 @@
             "title": "Requirement Ref",
             "default": ""
           },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -4804,6 +5011,16 @@
           "can_archive": {
             "type": "boolean",
             "title": "Can Archive"
+          },
+          "last_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5169,6 +5386,10 @@
             "maxLength": 200,
             "title": "Requirement Ref",
             "default": ""
+          },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
           },
           "version": {
             "type": "integer",

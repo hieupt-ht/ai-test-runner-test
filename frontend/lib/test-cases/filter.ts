@@ -1,4 +1,4 @@
-import type { Priority, Severity, TestCase, TestCaseStatus } from "@/lib/api/types"
+import type { ExecutionMode, Priority, Severity, TestCase, TestCaseStatus } from "@/lib/api/types"
 
 export type CaseFilters = {
   screenId?: string
@@ -6,6 +6,7 @@ export type CaseFilters = {
   severity?: Severity
   priority?: Priority
   createdBy?: string
+  executionMode?: ExecutionMode
   query: string
 }
 
@@ -30,6 +31,7 @@ export function filterTestCases(cases: TestCase[], filters: CaseFilters): TestCa
     if (filters.screenId && testCase.screen_id !== filters.screenId) return false
     if (filters.severity && testCase.severity !== filters.severity) return false
     if (filters.priority && testCase.priority !== filters.priority) return false
+    if (filters.executionMode && testCase.execution_mode !== filters.executionMode) return false
     if (filters.createdBy && testCase.created_by !== filters.createdBy) return false
     if (query) {
       const haystack = normalizeForSearch(`${testCase.id} ${testCase.title}`)

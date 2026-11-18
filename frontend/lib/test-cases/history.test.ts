@@ -14,6 +14,10 @@ describe("history", () => {
     ])
   })
 
+  it("trường execution_mode hiện là Cách chạy", () => {
+    expect(changedLabels({ execution_mode: ["MANUAL", "AUTOMATION"] })).toEqual(["Cách chạy"])
+  })
+
   it("mỗi dòng lịch sử là một phiên bản, đếm từ cũ nhất", () => {
     expect(versionOfEntry(0, 3)).toBe(3) // dòng mới nhất của 3 dòng là v3
     expect(versionOfEntry(2, 3)).toBe(1)

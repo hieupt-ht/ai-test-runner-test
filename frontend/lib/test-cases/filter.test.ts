@@ -27,6 +27,7 @@ function makeCase(overrides: Partial<TestCase>): TestCase {
     guide_media: [],
     postcondition: "",
     requirement_ref: "",
+    execution_mode: "MANUAL",
     ...overrides,
   }
 }
@@ -71,5 +72,20 @@ describe("paginate", () => {
     expect(last.pageCount).toBe(3)
     expect(last.items).toEqual([50])
     expect(paginate([], 1, 25).pageCount).toBe(1)
+  })
+})
+
+describe("lọc theo cách chạy", () => {
+  const cases = [
+    makeCase({ id: "TC-000001", execution_mode: "MANUAL" }),
+    makeCase({ id: "TC-000002", execution_mode: "AUTOMATION" }),
+  ]
+
+  it("chỉ lấy case đúng cách chạy", () => {
+    const ids = (executionMode?: "MANUAL" | "AUTOMATION") =>
+      filterTestCases(cases, { query: "", executionMode }).map((c) => c.id)
+    expect(ids("MANUAL")).toEqual(["TC-000001"])
+    expect(ids("AUTOMATION")).toEqual(["TC-000002"])
+    expect(ids(undefined)).toEqual(["TC-000001", "TC-000002"])
   })
 })

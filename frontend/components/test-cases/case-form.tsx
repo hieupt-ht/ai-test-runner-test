@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import { EnumSelect } from "@/components/test-cases/enum-select"
@@ -63,6 +63,7 @@ const EMPTY: TestCaseContent = {
   guide_media: [],
   postcondition: "",
   requirement_ref: "",
+  execution_mode: "MANUAL", // case mới mặc định là test tay
 }
 
 function contentOf(testCase: TestCase): TestCaseContent {
@@ -82,6 +83,7 @@ function contentOf(testCase: TestCase): TestCaseContent {
     guide_media: testCase.guide_media ?? [],
     postcondition: testCase.postcondition ?? "",
     requirement_ref: testCase.requirement_ref ?? "",
+    execution_mode: testCase.execution_mode ?? "MANUAL",
   }
 }
 
@@ -120,6 +122,7 @@ export function CaseForm({
     defaultValues: testCase ? contentOf(testCase) : EMPTY,
   })
   const { register, control, handleSubmit, reset, formState } = form
+  const executionMode = useWatch({ control, name: "execution_mode" })
   const { errors } = formState
 
   const [screenId, setScreenId] = useState(defaultScreenId ?? "")
@@ -213,7 +216,9 @@ export function CaseForm({
     : []
   const fieldError = (message?: string) =>
     message ? <p className="text-xs text-destructive">{t(`form.errors.${message}`)}</p> : null
-  const showSubmitButton = !isEdit || testCase?.status === "DRAFT"
+  // Case test tay không qua bước gửi duyệt: chạy xong là "Đã kiểm thử"
+  const showSubmitButton =
+    executionMode === "AUTOMATION" && (!isEdit || testCase?.status === "DRAFT")
 
   return (
     <form
@@ -235,14 +240,43 @@ export function CaseForm({
             {reviewEnabled ? t("form.saveAndSubmit") : t("form.saveAndSend")}
           </Button>
         )}
-        {reviewEnabled && isEdit && testCase?.status !== "DRAFT" && (
-          <p className="text-sm text-amber-700 dark:text-amber-300">{t("form.resetWarning")}</p>
+        {isEdit && testCase?.status !== "DRAFT" && (reviewEnabled || executionMode === "MANUAL") && (
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            {executionMode === "MANUAL" ? t("form.resetWarningManual") : t("form.resetWarning")}
+          </p>
         )}
       </div>
 
       {/* Hai cột trên màn hình rộng; chỉ phần bên trong cột cuộn, cả trang không cuộn */}
       <div className="grid gap-5 lg:h-[calc(100dvh-15rem)] lg:min-h-96 lg:grid-cols-2">
         <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-2">
+          <div className="flex flex-col gap-1.5">
+            <Label>{t("form.executionMode")}</Label>
+            <Controller
+              control={control}
+              name="execution_mode"
+              render={({ field }) => (
+                <div className="flex gap-2">
+                  {(["MANUAL", "AUTOMATION"] as const).map((mode) => (
+                    <Button
+                      key={mode}
+                      type="button"
+                      size="sm"
+                      variant={field.value === mode ? "default" : "outline"}
+                      aria-pressed={field.value === mode}
+                      onClick={() => field.onChange(mode)}
+                    >
+                      {t(`executionMode.${mode}`)}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            />
+            {executionMode === "AUTOMATION" && (
+              <p className="text-xs text-muted-foreground">{t("form.automationNote")}</p>
+            )}
+          </div>
+
           {!isEdit && (
             <div className="flex flex-col gap-1.5">
               <Label>{t("form.screen")}</Label>

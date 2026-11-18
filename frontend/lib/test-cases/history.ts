@@ -17,6 +17,7 @@ export const CHANGED_FIELD_LABELS: Record<string, string> = {
   postcondition: "Điều kiện sau",
   requirement_ref: "Mã yêu cầu",
   status: "Trạng thái",
+  execution_mode: "Cách chạy",
 }
 
 /** Tên tiếng Việt của các trường có trong diff (bỏ khoá lạ như `comment`). */

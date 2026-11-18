@@ -39,4 +39,5 @@ export const testCaseFormSchema: z.ZodType<TestCaseContent, TestCaseContent> = z
   guide_media: mediaListSchema,
   postcondition: z.string().max(LIMITS.text, "textTooLong"),
   requirement_ref: z.string().max(200, "textTooLong"),
+  execution_mode: z.enum(["MANUAL", "AUTOMATION"]),
 })

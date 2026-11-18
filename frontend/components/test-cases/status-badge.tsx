@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 
 import { Badge } from "@/components/ui/badge"
-import type { TestCaseStatus } from "@/lib/api/types"
+import type { ResultStatus, TestCaseStatus } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 const COLORS: Record<TestCaseStatus, string> = {
@@ -15,11 +15,20 @@ const COLORS: Record<TestCaseStatus, string> = {
   DEPRECATED: "bg-zinc-100 text-zinc-500 line-through opacity-60 dark:bg-zinc-500/10",
 }
 
-export function CaseStatusBadge({ status }: { status: TestCaseStatus }) {
+export function CaseStatusBadge({
+  status,
+  lastResult,
+}: {
+  status: TestCaseStatus
+  /** Kết quả lần chạy gần nhất; chỉ hiện khi case đang "Đã kiểm thử". */
+  lastResult?: ResultStatus
+}) {
   const t = useTranslations("testCases.status")
+  const tr = useTranslations("testCases.lastResult")
+  const showResult = status === "TESTED" && lastResult !== undefined
   return (
     <Badge variant="outline" className={cn("border-transparent", COLORS[status])}>
-      {t(status)}
+      {showResult ? `${t(status)} · ${tr(lastResult)}` : t(status)}
     </Badge>
   )
 }
