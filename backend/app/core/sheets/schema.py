@@ -76,6 +76,7 @@ TEST_CASE_COLUMNS = [
     "guide_media_json",
     "postcondition",
     "requirement_ref",
+    "execution_mode",
 ]
 RUN_COLUMNS = [
     "id",

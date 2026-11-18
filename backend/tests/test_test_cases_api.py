@@ -740,3 +740,10 @@ def test_edit_approved_case_with_results_requests_rerun_through_api(
     assert response.status_code == 200
     assert response.json()["status"] == "APPROVED"
     assert sink.edits == [(case["id"], ["Các bước"], True)]
+
+
+def test_api_create_defaults_to_manual(an: TestClient, project: Project) -> None:
+    created = create(an, project)
+
+    assert created.status_code == 201
+    assert created.json()["execution_mode"] == "MANUAL"

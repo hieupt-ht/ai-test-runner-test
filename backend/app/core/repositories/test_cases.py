@@ -17,6 +17,7 @@ from app.core.ids import IdGenerator
 from app.core.locks.redis_lock import redis_lock
 from app.core.models.media import Media
 from app.core.models.test_case import (
+    ExecutionMode,
     Platform,
     Priority,
     Severity,
@@ -83,6 +84,7 @@ def _to_record(case: TestCase) -> Record:
         ),
         "postcondition": case.postcondition,
         "requirement_ref": case.requirement_ref,
+        "execution_mode": case.execution_mode.value,
     }
 
 
@@ -111,6 +113,10 @@ def _from_record(record: Record) -> TestCase:
         guide_media=[Media(**item) for item in json.loads(record["guide_media_json"] or "[]")],
         postcondition=record["postcondition"],
         requirement_ref=record["requirement_ref"],
+        # Case cũ (ô trống) được viết cho agent chạy nên đọc thành AUTOMATION
+        execution_mode=ExecutionMode(
+            record["execution_mode"].strip().upper() or ExecutionMode.AUTOMATION
+        ),
     )
 
 

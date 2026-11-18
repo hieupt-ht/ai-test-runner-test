@@ -38,6 +38,11 @@ class TestType(StrEnum):
     UI = "UI"  # kiểm tra giao diện
 
 
+class ExecutionMode(StrEnum):
+    MANUAL = "MANUAL"  # tester tự chạy tay
+    AUTOMATION = "AUTOMATION"  # agent AI chạy
+
+
 class TestStep(BaseModel):
     """Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống)."""
 
@@ -67,6 +72,7 @@ class TestCaseContent(BaseModel):
     guide_media: MediaList = Field(default_factory=list)  # ảnh/video chỉ đường cho cả case
     postcondition: str = Field(default="", max_length=2000)
     requirement_ref: str = Field(default="", max_length=200)
+    execution_mode: ExecutionMode = ExecutionMode.MANUAL  # case mới mặc định là test tay
 
 
 # Tên tiếng Việt của từng trường nội dung, dùng khi báo "đã sửa gì" trên issue và lịch sử
@@ -85,6 +91,7 @@ CHANGED_FIELD_LABELS: dict[str, str] = {
     "guide_media": "Ảnh/video hướng dẫn",
     "postcondition": "Điều kiện sau",
     "requirement_ref": "Mã yêu cầu",
+    "execution_mode": "Cách chạy",
 }
 
 # Đổi các trường này thì kết quả chạy cũ không còn đúng với case: cần chạy lại.
