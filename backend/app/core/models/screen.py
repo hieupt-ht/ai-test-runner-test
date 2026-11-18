@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, StringConstraints
+from pydantic import AfterValidator, BaseModel, Field, StringConstraints
+
+from app.core.models.media import MediaList
 
 MAX_CODE_PATHS = 20
 
@@ -35,3 +37,5 @@ class Screen(BaseModel):
     code_paths: list[str]
     created_at: datetime
     dev_owner: str = ""  # tên GitHub của dev phụ trách, dùng để giao bug
+    # Ảnh/video tham khảo để tester hình dung màn hình (không đưa lên GitHub issue)
+    media: MediaList = Field(default_factory=list)

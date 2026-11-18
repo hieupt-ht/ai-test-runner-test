@@ -41,7 +41,16 @@ RUNS_TAB = "Runs"
 RESULTS_TAB = "Results"
 
 META_COLUMNS = ["key", "value"]
-SCREEN_COLUMNS = ["id", "name", "description", "route", "code_paths", "created_at", "dev_owner"]
+SCREEN_COLUMNS = [
+    "id",
+    "name",
+    "description",
+    "route",
+    "code_paths",
+    "created_at",
+    "dev_owner",
+    "media_json",
+]
 ASSIGNMENT_COLUMNS = ["id", "screen_id", "assignee_email", "deadline", "status", "updated_at"]
 TEST_CASE_COLUMNS = [
     "id",

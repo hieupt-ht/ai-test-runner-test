@@ -2,12 +2,14 @@
 
 from typing import Any
 
+from app.core.models.media import ForeignMediaError, Media, ensure_own_media
 from app.core.models.screen import Screen
 from app.core.models.user import User
 from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.screens import ScreenNotFoundError, ScreenRepository
 from app.core.repositories.test_cases import TestCaseRepository
+from app.core.services.evidence_retention import MediaDeleter
 
 
 class ScreenInUseError(Exception):
@@ -18,6 +20,10 @@ class ScreenHasTestCasesError(Exception):
     """Màn hình đang có test case (kể cả case đã DEPRECATED) nên không xoá được."""
 
 
+class InvalidScreenError(ValueError):
+    """Dữ liệu màn hình không hợp lệ (ví dụ ảnh không thuộc kho lưu trữ của app)."""
+
+
 class ScreenService:
     def __init__(
         self,
@@ -25,11 +31,18 @@ class ScreenService:
         assignments: AssignmentRepository,
         test_cases: TestCaseRepository,
         audit_log: AuditLogRepository,
+        *,
+        cloud_name: str = "",
+        drive_enabled: bool = False,
+        janitor: MediaDeleter | None = None,
     ) -> None:
         self._screens = screens
         self._assignments = assignments
         self._test_cases = test_cases
         self._audit_log = audit_log
+        self._cloud_name = cloud_name
+        self._drive_enabled = drive_enabled
+        self._janitor = janitor
 
     def list_screens(self) -> list[Screen]:
         return self._screens.list_all()
@@ -43,13 +56,16 @@ class ScreenService:
         route: str,
         code_paths: list[str],
         dev_owner: str = "",
+        media: list[Media] | None = None,
     ) -> Screen:
+        self._require_own_media(media or [])
         screen = self._screens.create(
             name=name,
             description=description,
             route=route,
             code_paths=code_paths,
             dev_owner=dev_owner,
+            media=media,
         )
         self._record(actor, "CREATE", screen.id, screen.model_dump(mode="json"))
         return screen
@@ -64,7 +80,10 @@ class ScreenService:
         route: str | None = None,
         code_paths: list[str] | None = None,
         dev_owner: str | None = None,
+        media: list[Media] | None = None,
     ) -> Screen:
+        if media is not None:
+            self._require_own_media(media)
         current = self._screens.get(screen_id)
         if current is None:
             raise ScreenNotFoundError(screen_id)
@@ -74,6 +93,7 @@ class ScreenService:
             "route": route,
             "code_paths": code_paths,
             "dev_owner": dev_owner,
+            "media": media,
         }
         updated = current.model_copy(
             update={field: value for field, value in changes.items() if value is not None}
@@ -98,6 +118,13 @@ class ScreenService:
                 raise ScreenHasTestCasesError(screen_id)
             self._screens.delete(screen_id)
         self._record(actor, "DELETE", screen_id, {})
+
+    def _require_own_media(self, media: list[Media]) -> None:
+        """Mọi ảnh/video phải nằm trong kho của app (Cloudinary/Drive), không thì không ghi gì."""
+        try:
+            ensure_own_media(media, self._cloud_name, self._drive_enabled)
+        except ForeignMediaError as error:
+            raise InvalidScreenError(str(error)) from None
 
     def _record(self, actor: User, action: str, screen_id: str, diff: dict[str, Any]) -> None:
         self._audit_log.record(

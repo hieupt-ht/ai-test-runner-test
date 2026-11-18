@@ -15,9 +15,7 @@ from tests.fakes import FakeSheetsGateway
 def project(
     projects: ProjectRepository, members: ProjectMemberRepository, gateway: FakeSheetsGateway
 ) -> Project:
-    return make_project(
-        projects, members, gateway, member_emails=("lead@x.com", "tester@x.com")
-    )
+    return make_project(projects, members, gateway, member_emails=("lead@x.com", "tester@x.com"))
 
 
 def screens_url(project: Project) -> str:
@@ -35,9 +33,7 @@ def login_screen(**overrides: object) -> dict[str, object]:
     return body
 
 
-def test_create_list_update_delete_screen(
-    client_as_qa_lead: TestClient, project: Project
-) -> None:
+def test_create_list_update_delete_screen(client_as_qa_lead: TestClient, project: Project) -> None:
     first = client_as_qa_lead.post(screens_url(project), json=login_screen())
     second = client_as_qa_lead.post(screens_url(project), json=login_screen(name="Giỏ hàng"))
 
@@ -191,3 +187,57 @@ def test_bad_dev_owner_is_422(client_as_qa_lead: TestClient, project: Project, b
 def test_tester_cannot_set_dev_owner(client_as_tester: TestClient, project: Project) -> None:
     response = client_as_tester.post(screens_url(project), json=login_screen(dev_owner="abc"))
     assert response.status_code == 403
+
+
+def media_json(cloud: str) -> dict[str, str]:
+    return {
+        "kind": "image",
+        "url": f"https://res.cloudinary.com/{cloud}/image/upload/a.png",
+        "public_id": "a",
+    }
+
+
+def test_screen_media_saved_and_returned(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    app.state.services.cloud_name = "mine"
+    created = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(media=[media_json("mine")])
+    )
+    assert created.status_code == 201
+    assert created.json()["media"][0]["public_id"] == "a"
+    listed = client_as_qa_lead.get(screens_url(project)).json()
+    assert listed[0]["media"][0]["public_id"] == "a"
+
+
+def test_screen_media_from_foreign_cloud_is_422(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    app.state.services.cloud_name = "mine"
+    response = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(media=[media_json("other")])
+    )
+    assert response.status_code == 422
+    assert "không thuộc kho lưu trữ" in response.json()["detail"]
+
+
+def test_screen_more_than_five_media_is_422(
+    app, client_as_qa_lead: TestClient, project: Project
+) -> None:
+    app.state.services.cloud_name = "mine"
+    response = client_as_qa_lead.post(
+        screens_url(project), json=login_screen(media=[media_json("mine")] * 6)
+    )
+    assert response.status_code == 422
+
+
+def test_old_screen_row_without_media_reads_empty(
+    client_as_qa_lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    # Giả lập dòng của Sheet cũ: chỉ có 7 cột đầu, không có ô media_json
+    gateway.data[project.spreadsheet_id]["Screens"].append(
+        ["SC-0001", "Cũ", "", "/old", "[]", "2026-11-01T00:00:00+00:00", ""]
+    )
+    listed = client_as_qa_lead.get(screens_url(project)).json()
+    assert listed[0]["id"] == "SC-0001"
+    assert listed[0]["media"] == []
