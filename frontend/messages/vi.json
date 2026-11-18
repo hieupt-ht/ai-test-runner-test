@@ -253,6 +253,8 @@
     "formEdit": "Sửa màn hình {id}",
     "fieldName": "Tên màn hình",
     "fieldDescription": "Mô tả",
+    "fieldMedia": "Ảnh/video màn hình",
+    "mediaHint": "Để tester hình dung màn hình khi viết test case. Có thể dán ảnh (Ctrl+V).",
     "fieldRoute": "Route trong app",
     "fieldDevOwner": "Dev phụ trách (tên GitHub)",
     "devOwnerHint": "Khi test FAIL, issue sẽ được giao cho người này. Có thể gõ @tên, để trống nếu chưa có.",

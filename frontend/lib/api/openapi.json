@@ -3257,6 +3257,15 @@
             "maxLength": 39,
             "title": "Dev Owner",
             "default": ""
+          },
+          "media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Media",
+            "default": []
           }
         },
         "type": "object",
@@ -4242,6 +4251,14 @@
             "type": "string",
             "title": "Dev Owner",
             "default": ""
+          },
+          "media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Media"
           }
         },
         "type": "object",
@@ -4997,6 +5014,21 @@
               }
             ],
             "title": "Dev Owner"
+          },
+          "media": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Media"
+                },
+                "type": "array",
+                "maxItems": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media"
           }
         },
         "type": "object",

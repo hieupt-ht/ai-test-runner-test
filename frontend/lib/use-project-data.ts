@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
 import { ensureOk, unwrap } from "@/lib/api/request"
-import type { Assignment, MemberView, MyAssignment, Screen } from "@/lib/api/types"
+import type { Assignment, MemberView, Media, MyAssignment, Screen } from "@/lib/api/types"
 
 // ----- Khoá cache của TanStack Query -----
 
@@ -32,6 +32,7 @@ export type ScreenInput = {
   route: string
   code_paths: string[]
   dev_owner: string
+  media: Media[]
 }
 
 export function useScreens(projectId: string) {

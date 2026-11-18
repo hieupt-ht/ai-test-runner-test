@@ -12,6 +12,40 @@ vi.mock("@/lib/use-project-data", () => ({
   useSaveScreen: () => ({ mutateAsync, isPending: false }),
 }))
 
+vi.mock("@/lib/use-projects", () => ({
+  useProject: () => ({ data: { storage: "cloudinary" } }),
+}))
+
+const existingMedia = {
+  kind: "image" as const,
+  public_id: "guide/a",
+  url: "https://res.cloudinary.com/demo/image/upload/a.png",
+  note: "",
+}
+const fakeMedia = { ...existingMedia, public_id: "guide/fake" }
+
+// Ô chọn ảnh giả: hai nút để giả lập thêm ảnh và đang tải
+vi.mock("@/components/media/media-picker", () => ({
+  MediaPicker: ({
+    value,
+    onChange,
+    onBusyChange,
+  }: {
+    value: unknown[]
+    onChange: (next: unknown[]) => void
+    onBusyChange?: (busy: boolean) => void
+  }) => (
+    <div>
+      <button type="button" onClick={() => onChange([...value, fakeMedia])}>
+        Thêm ảnh giả
+      </button>
+      <button type="button" onClick={() => onBusyChange?.(true)}>
+        Đang tải giả
+      </button>
+    </div>
+  ),
+}))
+
 const existing = {
   id: "SC-0001",
   name: "Đăng nhập",
@@ -20,6 +54,7 @@ const existing = {
   code_paths: [],
   created_at: "2026-11-17T00:00:00Z",
   dev_owner: "nguyenvana",
+  media: [existingMedia],
 } satisfies Screen
 
 function openDialog(screenToEdit?: Screen) {
@@ -79,5 +114,27 @@ describe("ScreenFormDialog – dev phụ trách", () => {
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled())
     expect(mutateAsync.mock.calls[0][0]).toMatchObject({ dev_owner: "abc" })
+  })
+})
+
+describe("ScreenFormDialog – ảnh/video", () => {
+  afterEach(() => {
+    cleanup()
+    mutateAsync.mockReset()
+  })
+
+  it("hiện ảnh sẵn có khi sửa và gửi media khi lưu", async () => {
+    mutateAsync.mockResolvedValue(existing)
+    openDialog(existing)
+    fireEvent.click(screen.getByText("Thêm ảnh giả"))
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled())
+    expect(mutateAsync.mock.calls[0][0]).toMatchObject({ media: [existingMedia, fakeMedia] })
+  })
+
+  it("khoá nút Lưu khi đang tải ảnh lên", () => {
+    openDialog(existing)
+    fireEvent.click(screen.getByText("Đang tải giả"))
+    expect(screen.getByRole("button", { name: "Lưu" })).toBeDisabled()
   })
 })

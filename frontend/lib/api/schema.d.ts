@@ -1080,6 +1080,11 @@ export interface components {
              * @default
              */
             dev_owner: string;
+            /**
+             * Media
+             * @default []
+             */
+            media: components["schemas"]["Media"][];
         };
         /** CreateTestCaseRequest */
         CreateTestCaseRequest: {
@@ -1531,6 +1536,8 @@ export interface components {
              * @default
              */
             dev_owner: string;
+            /** Media */
+            media?: components["schemas"]["Media"][];
         };
         /** ServiceAccount */
         ServiceAccount: {
@@ -1860,6 +1867,8 @@ export interface components {
             code_paths?: string[] | null;
             /** Dev Owner */
             dev_owner?: string | null;
+            /** Media */
+            media?: components["schemas"]["Media"][] | null;
         };
         /** UpdateTestCaseRequest */
         UpdateTestCaseRequest: {
