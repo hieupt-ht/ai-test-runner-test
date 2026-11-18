@@ -82,9 +82,11 @@ def _failed_step_screenshot(result: Result) -> str | None:
     return None
 
 
-def _extra_lines(result: Result, case: TestCase) -> list[str]:
-    """Ảnh bước lỗi, video, môi trường và phiên bản case lúc chạy (chỉ in phần có dữ liệu)."""
+def _extra_lines(result: Result, case: TestCase, runner_name: str | None = None) -> list[str]:
+    """Người chạy, ảnh bước lỗi, video, môi trường, phiên bản case (chỉ in phần có dữ liệu)."""
     lines: list[str] = []
+    if runner_name:
+        lines.append(f"**Người chạy:** {_safe_text(runner_name, case)} (test tay)")
     shot = _safe_evidence(_failed_step_screenshot(result), case)
     if shot:
         lines.append(f"**Ảnh bước lỗi:** [Mở ảnh]({shot})")
@@ -107,6 +109,7 @@ def format_pass_comment(
     app_url: str,
     project_id: str,
     duration: float = 0,
+    runner_name: str | None = None,
 ) -> str:
     step_count = len(case.steps)
     finished = run.finished_at.isoformat() if run.finished_at else "Chưa hoàn tất"
@@ -119,7 +122,7 @@ def format_pass_comment(
     ]
     if result.step_results:
         lines.extend(["", *_step_table(result, case)])
-    extras = _extra_lines(result, case)
+    extras = _extra_lines(result, case, runner_name)
     if extras:
         lines.extend(["", *extras])
     lines.extend(
@@ -137,6 +140,7 @@ def format_fail_comment(
     project_id: str,
     duration: float = 0,
     assignment_note: str | None = None,
+    runner_name: str | None = None,
 ) -> str:
     failed_step = result.failed_step or 0
     lines = [
@@ -162,7 +166,7 @@ def format_fail_comment(
     lines.extend(["", f"**Lý do:** {_safe_text(result.reason, case)}"])
     if assignment_note:
         lines.append(assignment_note)
-    lines.extend(_extra_lines(result, case))
+    lines.extend(_extra_lines(result, case, runner_name))
     evidence = _safe_evidence(result.evidence.legacy_url, case)
     if evidence:
         lines.append(f"**Bằng chứng:** [Mở bằng chứng]({evidence})")
@@ -223,6 +227,7 @@ def sync_result_issue(
     result: Result,
     case: TestCase,
     duration: float = 0,
+    runner_name: str | None = None,
 ) -> None:
     if result.status not in (ResultStatus.PASS, ResultStatus.FAIL):
         return
@@ -248,6 +253,7 @@ def sync_result_issue(
             app_url=app_url,
             project_id=project_id,
             duration=duration,
+            runner_name=runner_name,
         )
     else:
         body = format_fail_comment(
@@ -258,6 +264,7 @@ def sync_result_issue(
             project_id=project_id,
             duration=duration,
             assignment_note=note,
+            runner_name=runner_name,
         )
     upsert_result_comment(github, repo, issue.number, body)
     sync_issue_state(

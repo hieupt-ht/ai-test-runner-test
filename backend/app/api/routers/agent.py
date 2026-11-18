@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.api.media_upload import require_storage, upload_to_drive
 from app.api.project_scope import scope_for
+from app.api.result_recording import notify_results_recorded, sync_issues_for_results
 from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
 from app.core.media.cloudinary import SignedUpload
@@ -29,11 +30,8 @@ from app.core.models.run import (
     StepResult,
 )
 from app.core.models.test_case import TestCaseStatus
-from app.core.models.user import Role
 from app.core.repositories.runs import InvalidRunStateError, RunInProgressError
 from app.core.services.evidence_retention import prune_evidence
-from app.core.services.notify import Notifier
-from app.core.services.result_issue_sync import sync_result_issue
 from app.core.time import utc_now
 from app.settings import Settings
 
@@ -286,56 +284,20 @@ def write_agent_results(
         run.failed = sum(item.status == ResultStatus.FAIL for item in accepted)
         scope.runs.save(run)
     # Run regression gửi từng đợt: chỉ báo một lần khi cả run đã xong
-    notify = regression_run is None or run.status == RunStatus.COMPLETED
-    try:
-        if notify:
-            member_emails = {
-                member.email for member in services.members.list_for_project(project.id)
-            }
-            recipients = {
-                user.email
-                for user in services.users.list_all()
-                if user.active
-                and (
-                    user.role == Role.ADMIN
-                    or (user.role == Role.QA_LEAD and user.email in member_emails)
-                )
-            }
-            recipients.update(
+    if regression_run is None or run.status == RunStatus.COMPLETED:
+        notify_results_recorded(
+            services,
+            project,
+            run,
+            failed_case_creators=(
                 approved[item.test_case_id].created_by
                 for item in accepted
                 if item.status == ResultStatus.FAIL
-            )
-            Notifier(services.notifications).results_recorded(
-                emails=sorted(recipients), project_id=project.id, run_id=run.id,
-                failed=run.failed, total=run.total,
-            )
-    except Exception:
-        logger.warning("Không xác định được người nhận kết quả run %s", run.id, exc_info=True)
-    if services.github is not None:
-        result_by_case = {result.test_case_id: result for result in results}
-        for item in accepted:
-            result = result_by_case.get(item.test_case_id)
-            if result is None:
-                continue
-            try:
-                sync_result_issue(
-                    services.github,
-                    repo=project.repo_full_name,
-                    project_id=project.id,
-                    app_url=services.app_base_url,
-                    run=run,
-                    result=result,
-                    case=approved[item.test_case_id],
-                    duration=body.duration_seconds,
-                )
-            except Exception:
-                logger.warning(
-                    "Không đồng bộ được issue GitHub cho case %s của dự án %s",
-                    item.test_case_id,
-                    project.id,
-                    exc_info=True,
-                )
+            ),
+        )
+    sync_issues_for_results(
+        services, project, run, results, approved, duration=body.duration_seconds
+    )
     # Dọn bằng chứng cũ của các case vừa chạy (lỗi chỉ ghi log, không ảnh hưởng kết quả)
     prune_evidence(scope.results, services.media_janitor, {item.test_case_id for item in accepted})
     return AgentResultsResponse(run_id=run.id, written=len(results), ignored=ignored)
