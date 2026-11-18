@@ -27,6 +27,13 @@ Thiết kế `docs/superpowers/specs/2026-11-18-google-drive-media-design.md`, k
 - **Còn lại:** thử với Google Drive thật (cần chủ dự án lấy refresh token), review cả nhánh, quyết định merge/PR.
 - Lưu ý: cây làm việc đang có thay đổi chưa commit của chủ dự án ở `SETUP.md`, trang admin/projects, `media-picker`, `case-form`, `create-project-dialog`, `vi.json` — sửa chồng lên, không ghi đè, chỉ stage phần của mình.
 
+## Đang làm (2026-11-18): thùng rác dự án
+
+Thiết kế `docs/superpowers/specs/2026-11-18-project-trash-design.md`, kế hoạch `docs/superpowers/plans/2026-11-18-project-trash.md` (3 task, 1 đợt).
+
+- **Đợt thùng rác xong** (Task 1–3): `DELETE /api/projects/{id}` (chỉ Admin, dự án phải đã lưu trữ, body `{name}` gõ đúng tên; 409 chưa lưu trữ, 422 sai tên; xoá thành viên rồi dòng dự án, ghi AuditLog; không đụng Sheet riêng/GitHub/ảnh). Trang Admin → Dự án có 2 tab Đang dùng/Thùng rác, nút Chuyển vào thùng rác, Khôi phục, Xoá vĩnh viễn (gõ tên). Backend **683 test**, frontend **212 test** qua, mypy/ruff/typecheck/lint sạch. Chưa thử trình duyệt thật.
+- **Còn lại:** review cả nhánh; sau đó viết plan test tay từ spec `2026-11-18-manual-test-run-design.md`.
+
 ## Đang làm (2026-11-18): ảnh/video cho màn hình + trang chi tiết màn hình
 
 Thiết kế `docs/superpowers/specs/2026-11-18-screen-media-and-detail-design.md`, kế hoạch `docs/superpowers/plans/2026-11-18-screen-media-and-detail.md` (5 task / 2 đợt, làm kiểu Native trong một phiên). Giữ nguyên luật: chỉ Admin/QA Lead tạo-sửa-xoá màn hình; tester chỉ viết case trên màn hình được giao nhưng xem được mọi màn hình.
