@@ -8,7 +8,7 @@ import pytest
 
 from app.core.github.client import GitHubError
 from app.core.models.project import Project
-from app.core.models.test_case import Platform, TestCaseStatus
+from app.core.models.test_case import ExecutionMode, Platform, TestCaseStatus
 from app.core.services.issue_sync import BackgroundIssueSync, IssueSyncer
 from tests.fakes import FakeGitHub
 from tests.test_issue_format import make_case
@@ -196,3 +196,32 @@ def test_background_note_runs_after_sync() -> None:
     sink.note_case_edited(project, case, changed=["Các bước"], needs_rerun=False)
 
     assert github.calls.index("create") < github.calls.index("comments:create")
+
+
+def test_manual_draft_case_is_skipped_but_tested_case_creates_issue() -> None:
+    github = FakeGitHub()
+    syncer = IssueSyncer(github)
+    manual = {"execution_mode": ExecutionMode.MANUAL}
+
+    assert (
+        syncer.sync_case(make_project(), make_case(status=TestCaseStatus.APPROVED, **manual))
+        == "skipped"
+    )
+    assert (
+        syncer.sync_case(make_project(), make_case(status=TestCaseStatus.TESTED, **manual))
+        == "created"
+    )
+    assert "mode: manual" in github.issues["org/web"][0][0].labels
+
+
+def test_switching_to_automation_drops_mode_label() -> None:
+    github = FakeGitHub()
+    syncer = IssueSyncer(github)
+    syncer.sync_case(
+        make_project(),
+        make_case(status=TestCaseStatus.TESTED, execution_mode=ExecutionMode.MANUAL),
+    )
+
+    syncer.sync_case(make_project(), make_case(status=TestCaseStatus.APPROVED))
+
+    assert "mode: manual" not in github.issues["org/web"][0][0].labels

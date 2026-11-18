@@ -17,8 +17,8 @@ router = APIRouter(prefix="/api/projects/{project_id}/media", tags=["media"])
 
 class SignRequest(BaseModel):
     kind: MediaKind
-    # Tester chỉ được tải lên thư mục hướng dẫn; thư mục bằng chứng dành cho agent
-    purpose: Literal["guide"]
+    # guide: ảnh hướng dẫn trong case; evidence: bằng chứng khi tester chạy test tay
+    purpose: Literal["guide", "evidence"]
 
 
 @router.post("/sign", response_model=SignedUpload)
@@ -38,8 +38,8 @@ def upload_media(
     file: UploadFile,
     user: CurrentUser,
     services: ServicesDep,
-    # Giống /sign: tester chỉ được tải lên thư mục hướng dẫn
-    purpose: Annotated[Literal["guide"], Form()] = "guide",
+    # Giống /sign: hướng dẫn hoặc bằng chứng test tay
+    purpose: Annotated[Literal["guide", "evidence"], Form()] = "guide",
 ) -> Media:
     """Dự án lưu ở Google Drive: backend nhận file rồi đẩy lên Drive."""
     project = load_project(services, user, project_id, Action.EDIT_TEST_CASE)

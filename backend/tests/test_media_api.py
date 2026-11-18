@@ -65,10 +65,21 @@ def test_sign_endpoint_never_returns_secret(
     assert "api_secret" not in body and SECRET not in json.dumps(body)
 
 
-def test_tester_cannot_sign_for_evidence_folder(
+def test_media_sign_accepts_evidence_purpose(
     an: TestClient, project: Project, signer: CloudinarySigner
 ) -> None:
+    """Tester chạy test tay được tải bằng chứng lên thư mục evidence của chính dự án."""
     response = an.post(sign_path(project), json={"kind": "image", "purpose": "evidence"})
+
+    assert response.status_code == 200
+    assert response.json()["folder"] == f"ai-test-runner/{project.id}/evidence"
+
+
+def test_sign_rejects_unknown_purpose(
+    an: TestClient, project: Project, signer: CloudinarySigner
+) -> None:
+    response = an.post(sign_path(project), json={"kind": "image", "purpose": "other"})
+
     assert response.status_code == 422
 
 
@@ -228,12 +239,21 @@ def test_viewer_cannot_upload(
     assert response.status_code == 403
 
 
-def test_tester_cannot_upload_to_evidence_folder(
+def test_tester_can_upload_evidence_to_drive(
     an: TestClient, drive_project: Project, drive: FakeDrive
 ) -> None:
     response = an.post(
         upload_path(drive_project), files={"file": PNG}, data={"purpose": "evidence"}
     )
+
+    assert response.status_code == 200
+    assert drive.uploads[0]["purpose"] == "evidence"
+
+
+def test_upload_rejects_unknown_purpose(
+    an: TestClient, drive_project: Project, drive: FakeDrive
+) -> None:
+    response = an.post(upload_path(drive_project), files={"file": PNG}, data={"purpose": "x"})
 
     assert response.status_code == 422
     assert drive.uploads == []

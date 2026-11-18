@@ -9,7 +9,7 @@ from app.core.github.client import GitHubClient
 from app.core.github.issue_format import case_label, render_issue
 from app.core.models.project import Project
 from app.core.models.screen import Screen
-from app.core.models.test_case import TestCase, TestCaseStatus
+from app.core.models.test_case import ExecutionMode, TestCase, TestCaseStatus
 from app.core.services.rerun_request import request_rerun_on_issue
 from app.core.time import utc_now
 
@@ -33,7 +33,7 @@ class IssueSink(Protocol):
 
 
 # Nhãn do app tự sinh từ case: được thay mới mỗi lần đồng bộ. Mọi nhãn khác giữ nguyên.
-APP_LABEL_PREFIXES = ("status:", "platform:")
+APP_LABEL_PREFIXES = ("status:", "platform:", "mode:")
 
 
 def _merge_labels(new_labels: list[str], old_labels: list[str]) -> list[str]:
@@ -44,6 +44,13 @@ def _merge_labels(new_labels: list[str], old_labels: list[str]) -> list[str]:
         if label not in new_labels and not label.startswith(APP_LABEL_PREFIXES)
     ]
     return [*new_labels, *kept]
+
+
+def _should_create_issue(case: TestCase) -> bool:
+    """Case Automation: tạo issue khi đã duyệt. Case test tay: khi đã có kết quả (TESTED)."""
+    if case.execution_mode == ExecutionMode.MANUAL:
+        return case.status == TestCaseStatus.TESTED
+    return case.status == TestCaseStatus.APPROVED
 
 
 class IssueSyncer:
@@ -78,7 +85,7 @@ class IssueSyncer:
         )
         # Mã case chỉ duy nhất bên trong một dự án; luôn tìm trong repo của dự án đó.
         existing = github.find_issue_by_label(project.repo_full_name, content.labels[1])
-        if existing is None and case.status != TestCaseStatus.APPROVED:
+        if existing is None and not _should_create_issue(case):
             return "skipped"
 
         for label in content.labels:

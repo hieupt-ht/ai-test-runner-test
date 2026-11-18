@@ -6,9 +6,10 @@ from app.core.media.frames import video_frame_urls
 from app.core.models.media import Media, MediaKind, display_url, thumbnail_url
 from app.core.models.project import Project
 from app.core.models.screen import Screen
-from app.core.models.test_case import Platform, TestCase, TestCaseStatus
+from app.core.models.test_case import ExecutionMode, Platform, TestCase, TestCaseStatus
 
 ISSUE_LABEL = "test-case"
+MODE_MANUAL_LABEL = "mode: manual"  # case test tay: Codex không được chạy
 MAX_BODY_LENGTH = 65536
 TRUNCATION_NOTE = "\n\n_Nội dung quá dài, đã được cắt bớt._"
 
@@ -87,7 +88,8 @@ def render_issue(
         f"<!-- {case_label(case.id)} v{case.version} -->",
         f"# [{case.id}] {_safe_text(case.title)}",
     ]
-    if project_id and app_base_url:
+    # Case test tay do người chạy, không cần hướng dẫn agent báo cáo
+    if project_id and app_base_url and case.execution_mode == ExecutionMode.AUTOMATION:
         endpoint = (
             f"{app_base_url.rstrip('/')}/api/agent/projects/{project_id}/results"
         )
@@ -131,13 +133,12 @@ def render_issue(
     body = "\n".join(lines)
     if len(body) > MAX_BODY_LENGTH:
         body = body[: MAX_BODY_LENGTH - len(TRUNCATION_NOTE)] + TRUNCATION_NOTE
-    return IssueContent(
-        title=f"[{case.id}] {case.title}",
-        body=body,
-        labels=[
-            ISSUE_LABEL,
-            case_label(case.id),
-            status_label(case.status),
-            platform_label(case.platform),
-        ],
-    )
+    labels = [
+        ISSUE_LABEL,
+        case_label(case.id),
+        status_label(case.status),
+        platform_label(case.platform),
+    ]
+    if case.execution_mode == ExecutionMode.MANUAL:
+        labels.append(MODE_MANUAL_LABEL)
+    return IssueContent(title=f"[{case.id}] {case.title}", body=body, labels=labels)

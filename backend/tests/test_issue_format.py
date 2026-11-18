@@ -2,11 +2,12 @@
 
 from datetime import UTC, datetime
 
-from app.core.github.issue_format import render_issue
+from app.core.github.issue_format import MODE_MANUAL_LABEL, render_issue
 from app.core.models.media import Media
 from app.core.models.project import Project
 from app.core.models.screen import Screen
 from app.core.models.test_case import (
+    ExecutionMode,
     Platform,
     Priority,
     Severity,
@@ -34,6 +35,8 @@ def make_case(**changes: object) -> TestCase:
         "created_at": datetime.now(UTC),
         "updated_at": datetime.now(UTC),
         "version": 3,
+        # Các test cũ viết cho case do agent chạy
+        "execution_mode": ExecutionMode.AUTOMATION,
     }
     data.update(changes)
     return TestCase.model_validate(data)
@@ -240,3 +243,24 @@ def test_drive_video_in_issue_has_link_and_cover_but_no_cut_frames() -> None:
     assert "Video: https://drive.google.com/file/d/vid1/view" in body
     assert "Ảnh đại diện: https://drive.google.com/thumbnail?id=vid1&sz=w1600" in body
     assert "Ảnh cắt" not in body
+
+
+def test_manual_issue_has_mode_label_and_no_agent_block() -> None:
+    content = render_issue(
+        make_case(execution_mode=ExecutionMode.MANUAL),
+        project_id="PRJ-0001",
+        app_base_url="https://runner.example.com",
+    )
+
+    assert MODE_MANUAL_LABEL in content.labels
+    assert content.labels[1] == "tc:TC-000123"  # nhãn case luôn là nhãn thứ hai
+    assert "Báo cáo cho AI Test Runner" not in content.body
+
+
+def test_automation_issue_has_no_mode_label() -> None:
+    content = render_issue(
+        make_case(), project_id="PRJ-0001", app_base_url="https://runner.example.com"
+    )
+
+    assert MODE_MANUAL_LABEL not in content.labels
+    assert "Báo cáo cho AI Test Runner" in content.body

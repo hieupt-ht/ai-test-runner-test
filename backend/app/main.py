@@ -11,6 +11,7 @@ from app.api.routers import (
     auth,
     github,
     health,
+    manual_results,
     me,
     media,
     members,
@@ -80,6 +81,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(agent.router)
     app.include_router(media.router)
     app.include_router(test_cases.router)
+    app.include_router(manual_results.router)
     app.include_router(me.router)
     app.include_router(members.router)
     app.include_router(notifications.router)
