@@ -51,7 +51,7 @@
   - `ScreenService.create_screen(..., media: list[Media] | None = None)`, `update_screen(..., media: list[Media] | None = None)`; cả hai gọi `ensure_own_media` trước khi ghi, `ForeignMediaError` → `InvalidScreenError(str(error))`.
   - `CreateScreenRequest.media: MediaList = []`, `UpdateScreenRequest.media: MediaList | None = None`; router truyền `cloud_name=services.cloud_name, drive_enabled=services.drive is not None, janitor=services.media_janitor` vào `ScreenService`; `InvalidScreenError` → 422.
 
-- [ ] **Step 1: Viết test đỏ** trong `test_screens_api.py` (dùng `media_json(cloud)` giống `test_test_cases_api.py:406`):
+- [x] **Step 1: Viết test đỏ** trong `test_screens_api.py` (dùng `media_json(cloud)` giống `test_test_cases_api.py:406`):
 
 ```python
 def test_screen_media_saved_and_returned(app, client_as_qa_lead, project) -> None:
@@ -84,10 +84,10 @@ def test_old_screen_row_without_media_reads_empty(client_as_qa_lead, project, ga
 
 Test cũ `test_tester_can_view_but_not_create` giữ nguyên (tester vẫn 403).
 
-- [ ] **Step 2: Chạy thấy đỏ** — `cd backend && uv run pytest tests/test_screens_api.py -q` → FAIL (`media` không có trong response / 201 thay vì 422).
-- [ ] **Step 3: Viết code** theo Interfaces. Repository: `"media_json": json.dumps([m.model_dump(mode="json") for m in screen.media], ensure_ascii=False)`; đọc `[Media(**item) for item in json.loads(record["media_json"] or "[]")]` (giống `repositories/test_cases.py:81,111`). `update_screen` thêm `"media": media` vào `changes` (giá trị `None` = giữ nguyên, như các trường khác).
-- [ ] **Step 4: Chạy thấy xanh** — `uv run pytest tests/test_screens_api.py tests/test_assignment_races.py tests/test_sheet_list_cache.py -q` → PASS.
-- [ ] **Step 5: Commit** — `feat(backend): màn hình có ảnh/video tham khảo (cột media_json)`.
+- [x] **Step 2: Chạy thấy đỏ** — `cd backend && uv run pytest tests/test_screens_api.py -q` → FAIL (`media` không có trong response / 201 thay vì 422).
+- [x] **Step 3: Viết code** theo Interfaces. Repository: `"media_json": json.dumps([m.model_dump(mode="json") for m in screen.media], ensure_ascii=False)`; đọc `[Media(**item) for item in json.loads(record["media_json"] or "[]")]` (giống `repositories/test_cases.py:81,111`). `update_screen` thêm `"media": media` vào `changes` (giá trị `None` = giữ nguyên, như các trường khác).
+- [x] **Step 4: Chạy thấy xanh** — `uv run pytest tests/test_screens_api.py tests/test_assignment_races.py tests/test_sheet_list_cache.py -q` → PASS.
+- [x] **Step 5: Commit** — `feat(backend): màn hình có ảnh/video tham khảo (cột media_json)`.
 
 ### Task 2: Xoá file khi bỏ ảnh khỏi màn hình hoặc xoá màn hình
 
@@ -99,7 +99,7 @@ Test cũ `test_tester_can_view_but_not_create` giữ nguyên (tester vẫn 403).
 - Consumes: `ScreenService(..., janitor=...)` từ Task 1; `janitor.delete(items: list[Media]) -> None`.
 - Produces: `update_screen` gọi `janitor.delete(<ảnh cũ có public_id không còn trong bản mới>)` khi `media` được gửi; `delete_screen` lấy màn hình (trong khoá), xoá xong thì `janitor.delete(screen.media)`. Không có janitor thì bỏ qua.
 
-- [ ] **Step 1: Viết test đỏ** (janitor giả giống `test_agent_results_api.py:539`, gán vào `app.state.services.media_janitor`):
+- [x] **Step 1: Viết test đỏ** (janitor giả giống `test_agent_results_api.py:539`, gán vào `app.state.services.media_janitor`):
 
 ```python
 def test_removing_screen_media_deletes_file(app, client_as_qa_lead, project) -> None:
@@ -120,10 +120,10 @@ def test_screen_blocked_from_delete_keeps_media(app, client_as_qa_lead, project,
     assert deleted == []
 ```
 
-- [ ] **Step 2: Chạy thấy đỏ** — `uv run pytest tests/test_screens_api.py -q` → FAIL (`deleted` rỗng).
-- [ ] **Step 3: Viết code** trong `ScreenService` (hàm riêng `_clean_removed_media(old: Screen, new: Screen)` so theo `public_id`, như `services/test_cases.py:503`).
-- [ ] **Step 4: Chạy bộ backend đầy đủ** — `uv run pytest -q && uv run mypy app && uv run ruff check` → tất cả PASS, sạch.
-- [ ] **Step 5: Commit** — `feat(backend): xoá ảnh/video khi bỏ khỏi màn hình hoặc xoá màn hình`.
+- [x] **Step 2: Chạy thấy đỏ** — `uv run pytest tests/test_screens_api.py -q` → FAIL (`deleted` rỗng).
+- [x] **Step 3: Viết code** trong `ScreenService` (hàm riêng `_clean_removed_media(old: Screen, new: Screen)` so theo `public_id`, như `services/test_cases.py:503`).
+- [x] **Step 4: Chạy bộ backend đầy đủ** — `uv run pytest -q && uv run mypy app && uv run ruff check` → tất cả PASS, sạch.
+- [x] **Step 5: Commit** — `feat(backend): xoá ảnh/video khi bỏ khỏi màn hình hoặc xoá màn hình`.
 
 **Hết đợt 1:** đánh dấu `[x]`, ghi tiến độ vào `HANDOFF.md`, dừng cho chủ dự án `/compact`.
 

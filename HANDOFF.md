@@ -27,6 +27,14 @@ Thiết kế `docs/superpowers/specs/2026-11-18-google-drive-media-design.md`, k
 - **Còn lại:** thử với Google Drive thật (cần chủ dự án lấy refresh token), review cả nhánh, quyết định merge/PR.
 - Lưu ý: cây làm việc đang có thay đổi chưa commit của chủ dự án ở `SETUP.md`, trang admin/projects, `media-picker`, `case-form`, `create-project-dialog`, `vi.json` — sửa chồng lên, không ghi đè, chỉ stage phần của mình.
 
+## Đang làm (2026-11-18): ảnh/video cho màn hình + trang chi tiết màn hình
+
+Thiết kế `docs/superpowers/specs/2026-11-18-screen-media-and-detail-design.md`, kế hoạch `docs/superpowers/plans/2026-11-18-screen-media-and-detail.md` (5 task / 2 đợt, làm kiểu Native trong một phiên). Giữ nguyên luật: chỉ Admin/QA Lead tạo-sửa-xoá màn hình; tester chỉ viết case trên màn hình được giao nhưng xem được mọi màn hình.
+
+- **Đợt 1 xong** (Task 1–2, backend): `Screen.media` (cột `media_json` cuối tab Screens, Sheet cũ đọc ra rỗng), API tạo/sửa nhận `media` (link sai kho → 422, tối đa 5), bỏ ảnh khỏi màn hình hoặc xoá màn hình thì `MediaJanitor` xoá file; PATCH không gửi `media` thì giữ nguyên. Backend **669 test** qua, mypy/ruff sạch.
+- **Còn lại:** Đợt 2 (Task 3–5, frontend: form màn hình có ô ảnh, trang chi tiết `screens/[screenId]`, `CaseForm` hiện ảnh màn hình), review cả nhánh. Sau đó brainstorm việc 3 (Manual/Automation).
+- Lưu ý: không chạy `ruff format` cả thư mục (nó sửa nhầm 40+ file); chỉ `ruff check`.
+
 ## Đã xong (2026-11-17): đăng nhập bằng email + mật khẩu
 
 Thay hẳn Google OAuth. Thiết kế `docs/superpowers/specs/2026-11-17-password-login-design.md`, kế hoạch `docs/superpowers/plans/2026-11-17-password-login.md` (12 task / 4 đợt, đã làm hết).
