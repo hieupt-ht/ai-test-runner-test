@@ -325,3 +325,25 @@ Chuông 🔔 trên thanh đầu trang hiện số thông báo chưa đọc. Bạ
 | Không thấy dự án nào | Admin chưa thêm bạn vào dự án với vai trò phù hợp |
 | Không thấy màn hình nào trong "Việc của tôi" | QA Lead chưa phân công màn hình cho bạn |
 | Bấm "Gửi duyệt" nhưng không được | Kiểm tra case có đủ bước chưa; vai trò của bạn phải là Tester hoặc cao hơn |
+
+
+---
+
+# Phụ lục — Bật Google Drive làm nơi lưu ảnh/video (không bắt buộc)
+
+Mặc định ảnh/video lưu ở Cloudinary. Nếu muốn lưu ở Google Drive (Gmail cá nhân), làm một lần các bước sau. Mỗi dự án tự có thư mục riêng `ai-test-runner/<mã dự án>/<guide|evidence>` trên Drive; app tự tạo, không cần tạo tay.
+
+1. Vào [Google Cloud Console](https://console.cloud.google.com), chọn project Google Cloud (hoặc tạo mới) → **APIs & Services → Library** → bật **Google Drive API**.
+2. **OAuth consent screen**: chọn loại **External**, điền tên app và email. Bấm **Publish app** (đưa lên Production). Nếu để ở chế độ Testing thì phải thêm Gmail của bạn vào **Test users**, và khi đó refresh token **hết hạn sau 7 ngày** (phải lấy lại).
+3. **Credentials → Create credentials → OAuth client ID**, loại **Desktop app** (hoặc Web app có redirect `http://localhost:8765`). Lưu lại Client ID và Client secret.
+4. Điền vào `.env`: `GOOGLE_OAUTH_CLIENT_ID` và `GOOGLE_OAUTH_CLIENT_SECRET`.
+5. Từ thư mục `backend/` chạy `uv run python -m app.tools.drive_auth`, đăng nhập đúng Gmail sẽ chứa file và bấm cho phép. Script in ra refresh token; dán vào `.env` thành `GOOGLE_OAUTH_REFRESH_TOKEN`. Đừng gửi token này cho ai.
+6. (Tuỳ chọn) Muốn gom mọi dự án vào một thư mục có sẵn: mở thư mục đó trên Drive, copy đoạn ID cuối đường dẫn, đặt `GOOGLE_DRIVE_ROOT_FOLDER_ID`. Để trống thì app tự tạo thư mục `ai-test-runner` ở "My Drive".
+7. Khởi động lại backend. Vào **Admin → Dự án**, ở cột "Nơi lưu ảnh/video" chọn **Google Drive** cho dự án muốn dùng. Chưa cấu hình Drive thì app báo "Chưa cấu hình Google Drive".
+
+**Cần biết:**
+- Scope `drive.file` chỉ cho app thấy file do chính app tạo, không đọc được file khác trong Drive của bạn.
+- Dung lượng 15GB dùng chung với Gmail và Google Photos.
+- Đổi nơi lưu của dự án chỉ áp dụng cho file mới; file cũ vẫn ở chỗ cũ và vẫn xem được.
+- Video lưu ở Drive chỉ có một ảnh đại diện trong GitHub issue (Cloudinary thì có 6 ảnh cắt từ video).
+- Codex không cần cài thêm gì: script `upload_evidence` tự hỏi app dự án lưu ở đâu.

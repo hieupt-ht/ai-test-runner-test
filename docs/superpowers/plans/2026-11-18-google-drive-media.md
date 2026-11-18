@@ -183,7 +183,7 @@
 - Modify: `backend/app/tools/upload_evidence.py`
 - Test: `backend/tests/test_upload_evidence.py`
 
-- [ ] **Step 1: Test đỏ:** script gọi `GET .../media/storage` trước; `cloudinary` → luồng ký như cũ (test cũ giữ nguyên); `drive` → `POST .../media/upload` multipart với token, in `Media` JSON (`kind,url,public_id,note`); lỗi 503/502 → thông điệp tiếng Việt, token không bị in ra. **Step 2:** cài đặt, cập nhật docstring/`--help`. **Step 3:** PASS. **Step 4: Commit** `feat(backend): script bằng chứng của Codex hỗ trợ Google Drive`.
+- [x] **Step 1: Test đỏ:** script gọi `GET .../media/storage` trước; `cloudinary` → luồng ký như cũ (test cũ giữ nguyên); `drive` → `POST .../media/upload` multipart với token, in `Media` JSON (`kind,url,public_id,note`); lỗi 503/502 → thông điệp tiếng Việt, token không bị in ra. **Step 2:** cài đặt, cập nhật docstring/`--help`. **Step 3:** PASS. **Step 4: Commit** `feat(backend): script bằng chứng của Codex hỗ trợ Google Drive`.
 
 ### Task 11: Tài liệu và thiết lập
 
@@ -191,8 +191,8 @@
 - Modify: `SETUP.md` (đang có thay đổi chưa commit của chủ dự án — thêm mục mới ở cuối, không sửa phần đang có), `docs/codex-agent.md`, `HANDOFF.md`, `DECISIONS.md`, `docs/architecture.md` nếu có nhắc Cloudinary
 - Test: không (tài liệu)
 
-- [ ] **Step 1:** Viết mục "Bật Google Drive" trong `SETUP.md`: tạo project Google Cloud → bật Drive API → màn hình đồng ý OAuth (đặt app ở "In production" hoặc thêm email vào Test users; nếu để "Testing" thì refresh token hết hạn sau 7 ngày) → tạo OAuth client "Desktop/Web" (redirect `http://localhost:8765`) → điền `GOOGLE_OAUTH_CLIENT_ID/SECRET` vào `.env` → chạy `uv run python -m app.tools.drive_auth` → dán `GOOGLE_OAUTH_REFRESH_TOKEN` → (tuỳ chọn) `GOOGLE_DRIVE_ROOT_FOLDER_ID` → Admin chọn "Google Drive" ở trang dự án. Ghi giới hạn: 15GB chung Gmail/Photos, video Drive chỉ có ảnh đại diện trong issue GitHub.
-- [ ] **Step 2:** `DECISIONS.md` thêm một quyết định (hai nơi lưu, chọn theo project, Drive đi qua backend, vì sao OAuth thay vì service account). Cập nhật `docs/codex-agent.md` (script tự nhận nơi lưu) và `HANDOFF.md` (tiến độ + việc còn lại: di chuyển file cũ giữa hai nơi, nếu cần).
-- [ ] **Step 3: Commit** `docs: hướng dẫn bật Google Drive làm nơi lưu ảnh/video`.
+- [x] **Step 1:** Viết mục "Bật Google Drive" trong `SETUP.md`: tạo project Google Cloud → bật Drive API → màn hình đồng ý OAuth (đặt app ở "In production" hoặc thêm email vào Test users; nếu để "Testing" thì refresh token hết hạn sau 7 ngày) → tạo OAuth client "Desktop/Web" (redirect `http://localhost:8765`) → điền `GOOGLE_OAUTH_CLIENT_ID/SECRET` vào `.env` → chạy `uv run python -m app.tools.drive_auth` → dán `GOOGLE_OAUTH_REFRESH_TOKEN` → (tuỳ chọn) `GOOGLE_DRIVE_ROOT_FOLDER_ID` → Admin chọn "Google Drive" ở trang dự án. Ghi giới hạn: 15GB chung Gmail/Photos, video Drive chỉ có ảnh đại diện trong issue GitHub.
+- [x] **Step 2:** `DECISIONS.md` thêm một quyết định (hai nơi lưu, chọn theo project, Drive đi qua backend, vì sao OAuth thay vì service account). Cập nhật `docs/codex-agent.md` (script tự nhận nơi lưu) và `HANDOFF.md` (tiến độ + việc còn lại: di chuyển file cũ giữa hai nơi, nếu cần).
+- [x] **Step 3: Commit** `docs: hướng dẫn bật Google Drive làm nơi lưu ảnh/video`.
 
 > **Kết thúc:** chạy đủ hai bộ test, báo kết quả thật, hỏi chủ dự án về push/PR (chưa tự làm).

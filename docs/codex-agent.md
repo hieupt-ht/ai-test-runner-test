@@ -40,7 +40,7 @@ Mở lại Codex, gõ `/mcp` để kiểm tra. Token này chỉ để **Codex đ
 
 Đặt chúng trong môi trường của tiến trình Codex, **không** ghi vào repo, prompt hay issue. Bên app, `APP_BASE_URL` trong `.env` cũng phải là địa chỉ mà máy Codex truy cập được, vì app ghi địa chỉ đó vào issue.
 
-Ba biến `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` chỉ đặt ở `.env` của **app** (máy Codex không cần): Codex xin chữ ký từ app rồi đẩy file thẳng lên Cloudinary.
+Ba biến `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` chỉ đặt ở `.env` của **app** (máy Codex không cần): Codex xin chữ ký từ app rồi đẩy file thẳng lên Cloudinary. Dự án lưu ở Google Drive thì script gửi file cho app và app đẩy lên Drive (Codex không cần thêm biến nào, `GOOGLE_OAUTH_*` cũng chỉ ở `.env` của app).
 
 ## 3. Cài đặt máy Windows (web + Android)
 
@@ -71,13 +71,13 @@ Ba biến `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 
 ## 5. Bằng chứng: ảnh từng bước và video
 
-Mỗi case cần **ảnh chụp sau mỗi bước** và **một video** cả lượt chạy. Mỗi file phải đẩy lên Cloudinary bằng script của app (từ thư mục `backend/`):
+Mỗi case cần **ảnh chụp sau mỗi bước** và **một video** cả lượt chạy. Mỗi file phải đẩy lên nơi lưu của dự án (Cloudinary hoặc Google Drive, script tự nhận) bằng script của app (từ thư mục `backend/`):
 
 ```bash
 uv run python -m app.tools.upload_evidence --project PRJ-0001 --file buoc2.png --note "Bước 2"
 ```
 
-Script in ra một dòng JSON `Media` (`kind`, `url`, `public_id`, `note`). Dán nguyên JSON đó vào `step_results[].screenshot` (ảnh từng bước), `evidence.video` hoặc `evidence.screenshots`. App từ chối link không thuộc đúng kho Cloudinary của nó (HTTP 422).
+Script in ra một dòng JSON `Media` (`kind`, `url`, `public_id`, `note`). Dán nguyên JSON đó vào `step_results[].screenshot` (ảnh từng bước), `evidence.video` hoặc `evidence.screenshots`. App từ chối link không thuộc đúng kho của nó (HTTP 422). Script báo lỗi tiếng Việt khi Drive chưa cấu hình (503), Drive lỗi (502) hoặc file quá lớn (413).
 
 Cách quay video:
 
@@ -141,6 +141,6 @@ curl -X POST "$AI_TEST_RUNNER_URL/api/agent/projects/PRJ-0001/results" \
 
 Mỗi phần tử `step_results` có `step_no` (từ 1), `status` (`PASS`/`FAIL`/`SKIPPED`), `actual` (kết quả thực tế, tuỳ chọn) và `screenshot` (JSON `Media`, tuỳ chọn).
 
-API trả `run_id`, số `written` và danh sách `ignored` (case không tồn tại/chưa duyệt, hoặc không thuộc lần chạy regression). Mỗi request nhận tối đa 200 kết quả. Lỗi thường gặp: 401 token sai; 404 `run_id` không tồn tại; 409 dự án đã lưu trữ, đang có lần ghi khác, hoặc `run_id` không phải run regression đang mở; 422 ảnh/video sai kho Cloudinary; 503 Sheet lỗi (kiểm tra Sheet trước khi gửi lại). Không ghi `test_data` hoặc email người tạo/sửa vào issue của repo công khai.
+API trả `run_id`, số `written` và danh sách `ignored` (case không tồn tại/chưa duyệt, hoặc không thuộc lần chạy regression). Mỗi request nhận tối đa 200 kết quả. Lỗi thường gặp: 401 token sai; 404 `run_id` không tồn tại; 409 dự án đã lưu trữ, đang có lần ghi khác, hoặc `run_id` không phải run regression đang mở; 422 ảnh/video sai kho (Cloudinary/Drive); 503 Sheet lỗi (kiểm tra Sheet trước khi gửi lại). Không ghi `test_data` hoặc email người tạo/sửa vào issue của repo công khai.
 
 Khi case FAIL, app tự giao issue cho **dev phụ trách** của màn hình (đặt ở trang Màn hình), gắn nhãn `bug: cần sửa`; chạy lại PASS thì bỏ nhãn bug. App chỉ giữ bằng chứng của 5 lần chạy gần nhất mỗi case.
