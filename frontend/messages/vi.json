@@ -452,6 +452,9 @@
       "returnedBy": "{actor} · nhận xét:",
       "readOnlyHint": "Bạn chỉ có quyền xem case này.",
       "deprecatedHint": "Case đã ngừng dùng. Khôi phục để sửa lại.",
+      "lastRun": "Lần chạy gần nhất: {result} · {runId} · {time}",
+      "viewResults": "Xem trang Kết quả",
+      "saveBeforeRun": "Hãy lưu thay đổi trước khi chạy test.",
       "createdBy": "Tạo bởi {name}",
       "updatedBy": "Cập nhật bởi {name}",
       "version": "Phiên bản {version}",
@@ -572,9 +575,7 @@
     "submit": "Gửi kết quả",
     "submitting": "Đang gửi...",
     "incomplete": "Cần chọn kết quả cho mọi bước, nhập môi trường và kết quả cả case.",
-    "success": "Đã gửi kết quả ({runId})",
-    "lastRun": "Lần chạy gần nhất",
-    "viewResults": "Xem trang Kết quả"
+    "success": "Đã gửi kết quả ({runId})"
   },
   "media": {
     "add": "Thêm ảnh/video",

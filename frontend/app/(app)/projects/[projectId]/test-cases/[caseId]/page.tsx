@@ -10,10 +10,13 @@ import { CaseForm } from "@/components/test-cases/case-form"
 import { ArchiveAction } from "@/components/test-cases/archive-action"
 import { CaseReadOnly } from "@/components/test-cases/case-read-only"
 import { HistoryPanel, commentOf } from "@/components/test-cases/history-panel"
+import { ManualRunPanel } from "@/components/test-cases/manual-run-panel"
 import { ReviewActions } from "@/components/test-cases/review-actions"
 import { CaseStatusBadge } from "@/components/test-cases/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { formatVietnamTime } from "@/lib/test-cases/history"
 import { latestReturn } from "@/lib/test-cases/returned"
+import { useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
 import { useCaseHistory, useTestCase } from "@/lib/use-test-cases"
@@ -33,6 +36,7 @@ function TestCaseDetailView() {
   const caseQuery = useTestCase(projectId, caseId)
   const historyQuery = useCaseHistory(projectId, caseId)
   const { data: project } = useProject(projectId)
+  const screens = useScreens(projectId).data ?? []
   const reviewEnabled = project?.require_review ?? true
   const [formDirty, setFormDirty] = useState(false)
 
@@ -46,6 +50,15 @@ function TestCaseDetailView() {
   // Case đang ở Nháp mà từng bị trả lại thì cho người viết thấy nhận xét ngay đầu trang.
   const returned = testCase.status === "DRAFT" ? latestReturn(history) : undefined
   const editable = testCase.can_edit && !["DEPRECATED", "ARCHIVED"].includes(testCase.status)
+  // Khung chạy test tay: case Manual đang Nháp/Đã kiểm thử, người có quyền sửa, dự án chưa lưu trữ
+  const canRun =
+    testCase.execution_mode === "MANUAL" &&
+    testCase.can_edit &&
+    !project?.archived &&
+    ["DRAFT", "TESTED"].includes(testCase.status)
+  // Kết quả gần nhất chỉ có nghĩa khi case đang "Đã kiểm thử" (sửa nội dung thì về Nháp)
+  const lastResult = testCase.status === "TESTED" ? testCase.last_result : null
+  const devOwner = screens.find((screen) => screen.id === testCase.screen_id)?.dev_owner ?? ""
 
   return (
     <div className="flex flex-col gap-4">
@@ -67,7 +80,7 @@ function TestCaseDetailView() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm text-muted-foreground">{testCase.id}</span>
-          <CaseStatusBadge status={testCase.status} />
+          <CaseStatusBadge status={testCase.status} lastResult={lastResult?.status} />
           <span className="text-xs text-muted-foreground">
             {t("detail.version", { version: testCase.version })}
           </span>
@@ -81,6 +94,31 @@ function TestCaseDetailView() {
         />
         <ArchiveAction projectId={projectId} testCase={testCase} />
       </div>
+
+      {lastResult && (
+        <p className="text-sm text-muted-foreground">
+          {t("detail.lastRun", {
+            result: t(`lastResult.${lastResult.status}`),
+            runId: lastResult.run_id,
+            time: formatVietnamTime(lastResult.created_at),
+          })}{" "}
+          <Link href={`/projects/${projectId}/results`} className="underline underline-offset-2">
+            {t("detail.viewResults")}
+          </Link>
+        </p>
+      )}
+
+      {canRun &&
+        (formDirty ? (
+          <p className="text-sm text-amber-700 dark:text-amber-300">{t("detail.saveBeforeRun")}</p>
+        ) : (
+          <ManualRunPanel
+            projectId={projectId}
+            storage={project?.storage}
+            testCase={testCase}
+            defaultAssignee={devOwner}
+          />
+        ))}
 
       {testCase.status === "DEPRECATED" && (
         <p className="text-sm text-muted-foreground">{t("detail.deprecatedHint")}</p>
