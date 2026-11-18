@@ -101,6 +101,20 @@ class ProjectMemberRepository:
             self._table.delete_row(row_number)
         self._cache.invalidate()
 
+    def remove_all_for_project(self, project_id: str) -> int:
+        """Xoá mọi thành viên của một dự án; trả về số dòng đã xoá."""
+        with self._lock():
+            rows = [
+                row_number
+                for row_number, record in self._table.read_rows_numbered()
+                if record["project_id"] == project_id
+            ]
+            # Xoá từ dòng cuối lên để số dòng chưa xoá không bị lệch.
+            for row_number in sorted(rows, reverse=True):
+                self._table.delete_row(row_number)
+        self._cache.invalidate()
+        return len(rows)
+
     def _find_row(self, project_id: str, email: str) -> int | None:
         """Số dòng trên Sheet của cặp (dự án, email)."""
         for row_number, record in self._table.read_rows_numbered():

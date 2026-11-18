@@ -148,5 +148,14 @@ class ProjectRepository:
         self._cache.invalidate()
         return project
 
+    def delete(self, project_id: str) -> None:
+        """Xoá hẳn dòng dự án khỏi Sheet hệ thống (không đụng Sheet riêng của dự án)."""
+        with self._lock():
+            row_number = self._table.find_row_number("id", project_id)
+            if row_number is None:
+                raise ProjectNotFoundError(project_id)
+            self._table.delete_row(row_number)
+        self._cache.invalidate()
+
     def _lock(self) -> AbstractContextManager[None]:
         return redis_lock(self._redis, TAB_LOCK_KEY, wait_seconds=self._lock_wait_seconds)
