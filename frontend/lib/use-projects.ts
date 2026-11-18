@@ -91,6 +91,7 @@ export type UpdateProjectInput = {
   android_app_id?: string
   ios_bundle_id?: string
   require_review?: boolean
+  storage?: "cloudinary" | "drive"
 }
 
 export function useUpdateProject(projectId: string) {

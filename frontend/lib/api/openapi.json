@@ -1015,6 +1015,106 @@
         }
       }
     },
+    "/api/agent/projects/{project_id}/media/upload": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Upload Agent Media",
+        "description": "Dự án lưu ở Google Drive: Codex gửi file bằng chứng cho app, app đẩy lên Drive.",
+        "operationId": "upload_agent_media_api_agent_projects__project_id__media_upload_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_agent_media_api_agent_projects__project_id__media_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Media"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/projects/{project_id}/media/storage": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Agent Media Storage",
+        "description": "Codex hỏi dự án lưu ảnh/video ở đâu để chọn đúng cách tải lên.",
+        "operationId": "agent_media_storage_api_agent_projects__project_id__media_storage_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Agent Media Storage Api Agent Projects  Project Id  Media Storage Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agent/projects/{project_id}/results": {
       "post": {
         "tags": [
@@ -1102,6 +1202,59 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SignedUpload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/media/upload": {
+      "post": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Upload Media",
+        "description": "Dự án lưu ở Google Drive: backend nhận file rồi đẩy lên Drive.",
+        "operationId": "upload_media_api_projects__project_id__media_upload_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_media_api_projects__project_id__media_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Media"
                 }
               }
             }
@@ -2921,6 +3074,40 @@
         ],
         "title": "BatchApproveResponse"
       },
+      "Body_upload_agent_media_api_agent_projects__project_id__media_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_agent_media_api_agent_projects__project_id__media_upload_post"
+      },
+      "Body_upload_media_api_projects__project_id__media_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "purpose": {
+            "type": "string",
+            "const": "guide",
+            "title": "Purpose",
+            "default": "guide"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_media_api_projects__project_id__media_upload_post"
+      },
       "ChangeDeadlineRequest": {
         "properties": {
           "deadline": {
@@ -3575,6 +3762,15 @@
             "type": "boolean",
             "title": "Require Review",
             "default": false
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "cloudinary",
+              "drive"
+            ],
+            "title": "Storage",
+            "default": "cloudinary"
           }
         },
         "type": "object",
@@ -3639,6 +3835,15 @@
             "type": "boolean",
             "title": "Require Review",
             "default": false
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "cloudinary",
+              "drive"
+            ],
+            "title": "Storage",
+            "default": "cloudinary"
           },
           "permissions": {
             "items": {
@@ -4705,6 +4910,21 @@
               }
             ],
             "title": "Require Review"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cloudinary",
+                  "drive"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage"
           }
         },
         "type": "object",

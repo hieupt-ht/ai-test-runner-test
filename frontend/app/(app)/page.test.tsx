@@ -62,6 +62,7 @@ const project: Project = {
   android_app_id: "",
   ios_bundle_id: "",
   require_review: false,
+  storage: "cloudinary",
 }
 
 const result: ResultItem = makeResult({

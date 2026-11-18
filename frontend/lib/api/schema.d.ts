@@ -329,6 +329,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/projects/{project_id}/media/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Agent Media
+         * @description Dự án lưu ở Google Drive: Codex gửi file bằng chứng cho app, app đẩy lên Drive.
+         */
+        post: operations["upload_agent_media_api_agent_projects__project_id__media_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/projects/{project_id}/media/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Agent Media Storage
+         * @description Codex hỏi dự án lưu ảnh/video ở đâu để chọn đúng cách tải lên.
+         */
+        get: operations["agent_media_storage_api_agent_projects__project_id__media_storage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/projects/{project_id}/results": {
         parameters: {
             query?: never;
@@ -357,6 +397,26 @@ export interface paths {
         put?: never;
         /** Sign Upload */
         post: operations["sign_upload_api_projects__project_id__media_sign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/media/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Media
+         * @description Dự án lưu ở Google Drive: backend nhận file rồi đẩy lên Drive.
+         */
+        post: operations["upload_media_api_projects__project_id__media_upload_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -938,6 +998,22 @@ export interface components {
             /** Skipped */
             skipped: components["schemas"]["SkippedItem"][];
         };
+        /** Body_upload_agent_media_api_agent_projects__project_id__media_upload_post */
+        Body_upload_agent_media_api_agent_projects__project_id__media_upload_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_upload_media_api_projects__project_id__media_upload_post */
+        Body_upload_media_api_projects__project_id__media_upload_post: {
+            /** File */
+            file: string;
+            /**
+             * Purpose
+             * @default guide
+             * @constant
+             */
+            purpose: "guide";
+        };
         /** ChangeDeadlineRequest */
         ChangeDeadlineRequest: {
             /**
@@ -1243,6 +1319,12 @@ export interface components {
              * @default false
              */
             require_review: boolean;
+            /**
+             * Storage
+             * @default cloudinary
+             * @enum {string}
+             */
+            storage: "cloudinary" | "drive";
         };
         /** ProjectDetail */
         ProjectDetail: {
@@ -1280,6 +1362,12 @@ export interface components {
              * @default false
              */
             require_review: boolean;
+            /**
+             * Storage
+             * @default cloudinary
+             * @enum {string}
+             */
+            storage: "cloudinary" | "drive";
             /** Permissions */
             permissions: components["schemas"]["Action"][];
         };
@@ -1757,6 +1845,8 @@ export interface components {
             ios_bundle_id?: string | null;
             /** Require Review */
             require_review?: boolean | null;
+            /** Storage */
+            storage?: ("cloudinary" | "drive") | null;
         };
         /** UpdateScreenRequest */
         UpdateScreenRequest: {
@@ -2602,6 +2692,74 @@ export interface operations {
             };
         };
     };
+    upload_agent_media_api_agent_projects__project_id__media_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_agent_media_api_agent_projects__project_id__media_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_media_storage_api_agent_projects__project_id__media_storage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     write_agent_results_api_agent_projects__project_id__results_post: {
         parameters: {
             query?: never;
@@ -2659,6 +2817,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SignedUpload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_media_api_projects__project_id__media_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_media_api_projects__project_id__media_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
                 };
             };
             /** @description Validation Error */
