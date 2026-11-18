@@ -2,8 +2,20 @@
 
 from datetime import UTC, datetime
 
-from app.core.github.issue_format import render_issue
-from app.core.models.test_case import Priority, Severity, TestCase, TestCaseStatus, TestStep
+from app.core.github.issue_format import MODE_MANUAL_LABEL, render_issue
+from app.core.models.media import Media
+from app.core.models.project import Project
+from app.core.models.screen import Screen
+from app.core.models.test_case import (
+    ExecutionMode,
+    Platform,
+    Priority,
+    Severity,
+    TestCase,
+    TestCaseStatus,
+    TestStep,
+    TestType,
+)
 
 
 def make_case(**changes: object) -> TestCase:
@@ -23,6 +35,8 @@ def make_case(**changes: object) -> TestCase:
         "created_at": datetime.now(UTC),
         "updated_at": datetime.now(UTC),
         "version": 3,
+        # Các test cũ viết cho case do agent chạy
+        "execution_mode": ExecutionMode.AUTOMATION,
     }
     data.update(changes)
     return TestCase.model_validate(data)
@@ -32,8 +46,13 @@ def test_title_has_case_id_prefix() -> None:
     assert render_issue(make_case()).title == "[TC-000123] Đăng nhập"
 
 
-def test_labels_are_test_case_case_id_and_status() -> None:
-    assert render_issue(make_case()).labels == ["test-case", "tc:TC-000123", "status:APPROVED"]
+def test_labels_are_test_case_case_id_status_and_platform() -> None:
+    assert render_issue(make_case()).labels == [
+        "test-case",
+        "tc:TC-000123",
+        "status:APPROVED",
+        "platform: web",
+    ]
 
 
 def test_body_lists_steps_with_expected_and_expected_result() -> None:
@@ -84,3 +103,164 @@ def test_very_long_case_body_is_truncated_under_github_limit() -> None:
     body = render_issue(case).body
     assert len(body) <= 65536
     assert "đã được cắt bớt" in body
+
+
+def make_project(**changes: object) -> Project:
+    data: dict[str, object] = {
+        "id": "PRJ-0001",
+        "name": "Dự án",
+        "repo_full_name": "org/web",
+        "branch": "main",
+        "staging_url": "",
+        "spreadsheet_id": "sheet-1",
+        "archived": False,
+        "created_at": datetime.now(UTC),
+        "android_app_id": "com.shop.app",
+        "ios_bundle_id": "vn.shop.app",
+    }
+    data.update(changes)
+    return Project.model_validate(data)
+
+
+def make_screen(route: str = "/login") -> Screen:
+    return Screen(
+        id="SCR-001",
+        name="Đăng nhập",
+        description="",
+        route=route,
+        code_paths=[],
+        created_at=datetime.now(UTC),
+    )
+
+
+CLOUD = "https://res.cloudinary.com/demo"
+
+
+def image(note: str = "", name: str = "a") -> Media:
+    return Media(
+        kind="image", url=f"{CLOUD}/image/upload/v1/ai/{name}.png", public_id=name, note=note
+    )
+
+
+def video(name: str = "v") -> Media:
+    return Media(kind="video", url=f"{CLOUD}/video/upload/v1/ai/{name}.mp4", public_id=name)
+
+
+def test_body_has_case_version_for_codex_to_send_back() -> None:
+    assert "- Phiên bản case: v3" in render_issue(make_case()).body
+
+
+def test_body_has_platform_type_regression_and_start_point() -> None:
+    case = make_case(
+        platform=Platform.WEB, test_type=TestType.UI, regression=True, start_point="/cart"
+    )
+    body = render_issue(case, project=make_project(), screen=make_screen()).body
+    assert "- Nền tảng: WEB" in body
+    assert "- Loại test: UI" in body
+    assert "- Regression: có" in body
+    assert "- Điểm bắt đầu: /cart" in body
+
+
+def test_empty_start_point_falls_back_to_screen_route() -> None:
+    body = render_issue(make_case(), screen=make_screen("/login")).body
+    assert "- Điểm bắt đầu: /login" in body
+    assert "- Regression: không" in body
+
+
+def test_android_case_has_android_app_id_and_no_ios_id() -> None:
+    body = render_issue(make_case(platform=Platform.ANDROID), project=make_project()).body
+    assert "android_app_id: com.shop.app" in body
+    assert "vn.shop.app" not in body
+
+
+def test_ios_case_has_bundle_id_and_no_android_id() -> None:
+    body = render_issue(make_case(platform=Platform.IOS), project=make_project()).body
+    assert "ios_bundle_id: vn.shop.app" in body
+    assert "com.shop.app" not in body
+
+
+def test_web_case_has_no_app_ids() -> None:
+    body = render_issue(make_case(), project=make_project()).body
+    assert "com.shop.app" not in body
+    assert "vn.shop.app" not in body
+
+
+def test_platform_label_follows_platform() -> None:
+    labels = render_issue(make_case(platform=Platform.ANDROID)).labels
+    assert "platform: android" in labels
+
+
+def test_step_image_is_listed_under_its_step() -> None:
+    step = TestStep(action="Bấm nút", expected="", guide_media=[image("nút Đăng nhập")])
+    body = render_issue(make_case(steps=[step])).body
+    assert f"![nút Đăng nhập]({CLOUD}/image/upload/v1/ai/a.png)" in body
+
+
+def test_step_video_lists_url_and_frames() -> None:
+    step = TestStep(action="Vuốt", expected="", guide_media=[video()])
+    body = render_issue(make_case(steps=[step])).body
+    assert f"Video: {CLOUD}/video/upload/v1/ai/v.mp4" in body
+    assert f"Ảnh cắt: {CLOUD}/video/upload/so_1/v1/ai/v.jpg" in body
+    assert "so_11/" in body
+
+
+def test_case_level_media_has_its_own_section() -> None:
+    body = render_issue(make_case(guide_media=[image("tổng quan")])).body
+    assert "## Ảnh/video cho cả case" in body
+    assert f"![tổng quan]({CLOUD}/image/upload/v1/ai/a.png)" in body
+
+
+def test_no_case_media_section_when_empty() -> None:
+    assert "## Ảnh/video cho cả case" not in render_issue(make_case()).body
+
+
+def test_media_note_with_email_or_mention_is_neutralised() -> None:
+    step = TestStep(action="Bấm", expected="", guide_media=[image("gửi @admin")])
+    body = render_issue(make_case(steps=[step])).body
+    assert "@admin" not in body
+    assert "@​admin" in body
+
+
+def drive_image(note: str = "") -> Media:
+    return Media(
+        kind="image", url="https://drive.google.com/file/d/img1/view", public_id="img1", note=note
+    )
+
+
+def drive_video() -> Media:
+    return Media(kind="video", url="https://drive.google.com/file/d/vid1/view", public_id="vid1")
+
+
+def test_drive_image_in_issue_uses_thumbnail_link() -> None:
+    step = TestStep(action="Bấm", expected="", guide_media=[drive_image("nút")])
+    body = render_issue(make_case(steps=[step])).body
+    assert "![nút](https://drive.google.com/thumbnail?id=img1&sz=w1600)" in body
+
+
+def test_drive_video_in_issue_has_link_and_cover_but_no_cut_frames() -> None:
+    step = TestStep(action="Vuốt", expected="", guide_media=[drive_video()])
+    body = render_issue(make_case(steps=[step])).body
+    assert "Video: https://drive.google.com/file/d/vid1/view" in body
+    assert "Ảnh đại diện: https://drive.google.com/thumbnail?id=vid1&sz=w1600" in body
+    assert "Ảnh cắt" not in body
+
+
+def test_manual_issue_has_mode_label_and_no_agent_block() -> None:
+    content = render_issue(
+        make_case(execution_mode=ExecutionMode.MANUAL),
+        project_id="PRJ-0001",
+        app_base_url="https://runner.example.com",
+    )
+
+    assert MODE_MANUAL_LABEL in content.labels
+    assert content.labels[1] == "tc:TC-000123"  # nhãn case luôn là nhãn thứ hai
+    assert "Báo cáo cho AI Test Runner" not in content.body
+
+
+def test_automation_issue_has_no_mode_label() -> None:
+    content = render_issue(
+        make_case(), project_id="PRJ-0001", app_base_url="https://runner.example.com"
+    )
+
+    assert MODE_MANUAL_LABEL not in content.labels
+    assert "Báo cáo cho AI Test Runner" in content.body

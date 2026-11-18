@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -34,9 +35,87 @@ export default function ProjectSettingsPage() {
   const projectId = useProjectId()
   const { data: project } = useProject(projectId)
 
-  if (!project || !project.permissions.includes("MANAGE_PROJECTS")) return null
+  if (!project || !project.permissions.includes("MANAGE_PROJECT_SETTINGS")) return null
+  const isAdmin = project.permissions.includes("MANAGE_PROJECTS")
   // key: dựng lại form khi dữ liệu dự án đổi (ví dụ vừa lưu xong)
-  return <SettingsForm key={`${project.name}|${project.branch}|${project.staging_url}`} project={project} />
+  const formKey = `${project.name}|${project.branch}|${project.staging_url}`
+  return (
+    <div className="flex flex-col gap-6">
+      {isAdmin && <SettingsForm key={formKey} project={project} />}
+      <ReviewAndAppIdsCard
+        key={`${project.require_review}|${project.android_app_id}|${project.ios_bundle_id}`}
+        project={project}
+      />
+    </div>
+  )
+}
+
+const APP_ID_PATTERN = /^[A-Za-z0-9._-]*$/
+
+/** Công tắc "Cần QA duyệt" và mã app mobile: QA Lead cũng sửa được. */
+function ReviewAndAppIdsCard({ project }: { project: ProjectDetail }) {
+  const t = useTranslations("projects")
+  const [androidId, setAndroidId] = useState(project.android_app_id)
+  const [iosId, setIosId] = useState(project.ios_bundle_id)
+  const updateProject = useUpdateProject(project.id)
+  const idsValid = APP_ID_PATTERN.test(androidId.trim()) && APP_ID_PATTERN.test(iosId.trim())
+
+  async function save(changes: Parameters<typeof updateProject.mutateAsync>[0]) {
+    try {
+      await updateProject.mutateAsync(changes)
+      toast.success(t("saved"))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="flex max-w-lg flex-col gap-4 pt-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="require-review">{t("requireReview")}</Label>
+            <p className="text-xs text-muted-foreground">{t("requireReviewHint")}</p>
+          </div>
+          <Switch
+            id="require-review"
+            checked={project.require_review}
+            disabled={project.archived || updateProject.isPending}
+            onCheckedChange={(checked) => void save({ require_review: checked })}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="android-app-id">{t("fieldAndroidAppId")}</Label>
+          <Input
+            id="android-app-id"
+            value={androidId}
+            disabled={project.archived}
+            onChange={(e) => setAndroidId(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="ios-bundle-id">{t("fieldIosBundleId")}</Label>
+          <Input
+            id="ios-bundle-id"
+            value={iosId}
+            disabled={project.archived}
+            onChange={(e) => setIosId(e.target.value)}
+          />
+        </div>
+        {!idsValid && <p className="text-xs text-destructive">{t("appIdInvalid")}</p>}
+        <div>
+          <Button
+            disabled={!idsValid || updateProject.isPending || project.archived}
+            onClick={() =>
+              void save({ android_app_id: androidId.trim(), ios_bundle_id: iosId.trim() })
+            }
+          >
+            {t("save")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 function SettingsForm({ project }: { project: ProjectDetail }) {

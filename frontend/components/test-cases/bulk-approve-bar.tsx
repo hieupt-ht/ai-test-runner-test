@@ -24,12 +24,15 @@ type Props = {
   /** Gọi sau khi duyệt xong (kể cả khi có case bị bỏ qua) để trang bỏ chọn */
   onDone: () => void
   onClear: () => void
+  /** Dự án tắt bước duyệt: nút duyệt hàng loạt mờ đi */
+  reviewDisabled?: boolean
 }
 
 /** Thanh hiện khi có case được chọn: "Duyệt N case" kèm hộp xác nhận. */
-export function BulkApproveBar({ projectId, items, onDone, onClear }: Props) {
+export function BulkApproveBar({ projectId, items, onDone, onClear, reviewDisabled }: Props) {
   const t = useTranslations("testCases.bulk")
   const tCommon = useTranslations("common")
+  const tCases = useTranslations("testCases")
   const approve = useApproveTestCases(projectId)
   const [open, setOpen] = useState(false)
 
@@ -57,7 +60,12 @@ export function BulkApproveBar({ projectId, items, onDone, onClear }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm">
       <span>{t("selected", { count: items.length })}</span>
-      <Button size="sm" onClick={() => setOpen(true)}>
+      <Button
+        size="sm"
+        disabled={reviewDisabled}
+        title={reviewDisabled ? tCases("reviewOff") : undefined}
+        onClick={() => setOpen(true)}
+      >
         {t("approve", { count: items.length })}
       </Button>
       <Button size="sm" variant="ghost" onClick={onClear}>

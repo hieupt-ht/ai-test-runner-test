@@ -29,9 +29,19 @@
       }
     },
     "/api/auth/login": {
-      "get": {
+      "post": {
         "summary": "Login",
-        "operationId": "login_api_auth_login_get",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -40,20 +50,14 @@
                 "schema": {}
               }
             }
-          }
-        }
-      }
-    },
-    "/api/auth/callback": {
-      "get": {
-        "summary": "Callback",
-        "operationId": "callback_api_auth_callback_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
+          },
+          "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -67,6 +71,37 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "summary": "Change My Password",
+        "operationId": "change_my_password_api_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -191,6 +226,51 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{email}/reset-password": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Reset Password",
+        "operationId": "reset_password_api_users__email__reset_password_post",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Email"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -347,6 +427,49 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Project",
+        "operationId": "delete_project_api_projects__project_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -882,6 +1005,159 @@
         }
       }
     },
+    "/api/agent/projects/{project_id}/media/sign": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Sign Agent Upload",
+        "description": "Codex xin chữ ký để đẩy ảnh/video bằng chứng thẳng lên Cloudinary (thư mục `evidence`).",
+        "operationId": "sign_agent_upload_api_agent_projects__project_id__media_sign_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentSignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedUpload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/projects/{project_id}/media/upload": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Upload Agent Media",
+        "description": "Dự án lưu ở Google Drive: Codex gửi file bằng chứng cho app, app đẩy lên Drive.",
+        "operationId": "upload_agent_media_api_agent_projects__project_id__media_upload_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_agent_media_api_agent_projects__project_id__media_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Media"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/projects/{project_id}/media/storage": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Agent Media Storage",
+        "description": "Codex hỏi dự án lưu ảnh/video ở đâu để chọn đúng cách tải lên.",
+        "operationId": "agent_media_storage_api_agent_projects__project_id__media_storage_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Agent Media Storage Api Agent Projects  Project Id  Media Storage Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agent/projects/{project_id}/results": {
       "post": {
         "tags": [
@@ -917,6 +1193,111 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentResultsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/media/sign": {
+      "post": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Sign Upload",
+        "operationId": "sign_upload_api_projects__project_id__media_sign_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedUpload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/media/upload": {
+      "post": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Upload Media",
+        "description": "Dự án lưu ở Google Drive: backend nhận file rồi đẩy lên Drive.",
+        "operationId": "upload_media_api_projects__project_id__media_upload_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_media_api_projects__project_id__media_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Media"
                 }
               }
             }
@@ -1818,6 +2199,67 @@
         }
       }
     },
+    "/api/projects/{project_id}/test-cases/{case_id}/manual-results": {
+      "post": {
+        "tags": [
+          "manual-results"
+        ],
+        "summary": "Submit Manual Result",
+        "operationId": "submit_manual_result_api_projects__project_id__test_cases__case_id__manual_results_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualResultRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/overview": {
       "get": {
         "tags": [
@@ -2124,6 +2566,48 @@
               ],
               "title": "Screen Id"
             }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Platform"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "regression_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Regression Only"
+            }
           }
         ],
         "responses": {
@@ -2153,6 +2637,154 @@
           }
         }
       }
+    },
+    "/api/projects/{project_id}/regression-runs": {
+      "get": {
+        "tags": [
+          "regression"
+        ],
+        "summary": "List Open Regression Runs",
+        "description": "Các lần chạy regression còn đang mở (giao diện dùng để hiện nút \"Kết thúc\").",
+        "operationId": "list_open_regression_runs_api_projects__project_id__regression_runs_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Run"
+                  },
+                  "title": "Response List Open Regression Runs Api Projects  Project Id  Regression Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "regression"
+        ],
+        "summary": "Create Regression Run",
+        "operationId": "create_regression_run_api_projects__project_id__regression_runs_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRegressionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/regression-runs/{run_id}/finish": {
+      "post": {
+        "tags": [
+          "regression"
+        ],
+        "summary": "Finish Regression Run",
+        "operationId": "finish_regression_run_api_projects__project_id__regression_runs__run_id__finish_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2162,6 +2794,7 @@
         "enum": [
           "MANAGE_USERS",
           "MANAGE_PROJECTS",
+          "MANAGE_PROJECT_SETTINGS",
           "MANAGE_MEMBERS",
           "MANAGE_SCREENS",
           "EDIT_TEST_CASE",
@@ -2184,6 +2817,31 @@
           "email"
         ],
         "title": "AddMemberRequest"
+      },
+      "AgentEvidence": {
+        "properties": {
+          "video": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Media"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screenshots": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Screenshots"
+          }
+        },
+        "type": "object",
+        "title": "AgentEvidence",
+        "description": "Bằng chứng dạng mới: một video và các ảnh chụp (đã đẩy lên Cloudinary)."
       },
       "AgentResult": {
         "properties": {
@@ -2213,10 +2871,54 @@
             "title": "Failed Step"
           },
           "evidence": {
-            "type": "string",
-            "maxLength": 2000,
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/AgentEvidence"
+              }
+            ],
             "title": "Evidence",
             "default": ""
+          },
+          "step_results": {
+            "items": {
+              "$ref": "#/components/schemas/StepResult"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Step Results"
+          },
+          "actual_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Actual Result",
+            "default": ""
+          },
+          "environment": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Environment",
+            "default": ""
+          },
+          "executed_by": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Executed By",
+            "default": ""
+          },
+          "case_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Version"
           }
         },
         "type": "object",
@@ -2236,12 +2938,30 @@
             "maxItems": 200,
             "title": "Results"
           },
+          "build_version": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Build Version",
+            "default": ""
+          },
           "duration_seconds": {
             "type": "number",
             "maximum": 86400.0,
             "minimum": 0.0,
             "title": "Duration Seconds",
             "default": 0
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
           }
         },
         "type": "object",
@@ -2275,6 +2995,18 @@
           "ignored"
         ],
         "title": "AgentResultsResponse"
+      },
+      "AgentSignRequest": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MediaKind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "AgentSignRequest"
       },
       "ApproveItem": {
         "properties": {
@@ -2446,6 +3178,43 @@
         ],
         "title": "BatchApproveResponse"
       },
+      "Body_upload_agent_media_api_agent_projects__project_id__media_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_agent_media_api_agent_projects__project_id__media_upload_post"
+      },
+      "Body_upload_media_api_projects__project_id__media_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "guide",
+              "evidence"
+            ],
+            "title": "Purpose",
+            "default": "guide"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_media_api_projects__project_id__media_upload_post"
+      },
       "ChangeDeadlineRequest": {
         "properties": {
           "deadline": {
@@ -2459,6 +3228,26 @@
           "deadline"
         ],
         "title": "ChangeDeadlineRequest"
+      },
+      "ChangePasswordRequest": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePasswordRequest"
       },
       "ConflictResponse": {
         "properties": {
@@ -2524,6 +3313,21 @@
         ],
         "title": "CreateProjectRequest"
       },
+      "CreateRegressionRequest": {
+        "properties": {
+          "build_version": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Build Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "build_version"
+        ],
+        "title": "CreateRegressionRequest"
+      },
       "CreateScreenRequest": {
         "properties": {
           "name": {
@@ -2553,6 +3357,21 @@
             "type": "array",
             "maxItems": 20,
             "title": "Code Paths",
+            "default": []
+          },
+          "dev_owner": {
+            "type": "string",
+            "maxLength": 39,
+            "title": "Dev Owner",
+            "default": ""
+          },
+          "media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Media",
             "default": []
           }
         },
@@ -2603,6 +3422,49 @@
           "priority": {
             "$ref": "#/components/schemas/Priority"
           },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
+          },
           "screen_id": {
             "type": "string",
             "title": "Screen Id"
@@ -2634,15 +3496,84 @@
           },
           "role": {
             "$ref": "#/components/schemas/Role"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
           }
         },
         "type": "object",
         "required": [
           "email",
           "name",
-          "role"
+          "role",
+          "password"
         ],
         "title": "CreateUserRequest"
+      },
+      "DeleteProjectRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "DeleteProjectRequest"
+      },
+      "Evidence": {
+        "properties": {
+          "video": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Media"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screenshots": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Screenshots"
+          },
+          "legacy_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Url"
+          },
+          "pruned": {
+            "type": "boolean",
+            "title": "Pruned",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Evidence",
+        "description": "Bằng chứng của một kết quả: video cả lần chạy và ảnh các bước."
+      },
+      "ExecutionMode": {
+        "type": "string",
+        "enum": [
+          "MANUAL",
+          "AUTOMATION"
+        ],
+        "title": "ExecutionMode"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2674,6 +3605,182 @@
           "reason"
         ],
         "title": "IgnoredResult"
+      },
+      "LastResult": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResultStatus"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "run_id",
+          "created_at"
+        ],
+        "title": "LastResult",
+        "description": "Kết quả chạy gần nhất của một case test tay."
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "ManualResultRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "BLOCKED"
+            ],
+            "title": "Status"
+          },
+          "step_results": {
+            "items": {
+              "$ref": "#/components/schemas/StepResult"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Step Results"
+          },
+          "actual_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Actual Result",
+            "default": ""
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason",
+            "default": ""
+          },
+          "failed_step": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Step"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/AgentEvidence"
+          },
+          "environment": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Environment"
+          },
+          "build_version": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Build Version",
+            "default": ""
+          },
+          "assignee": {
+            "type": "string",
+            "maxLength": 39,
+            "pattern": "^([A-Za-z0-9]+(-[A-Za-z0-9]+)*)?$",
+            "title": "Assignee",
+            "default": ""
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "environment",
+          "version"
+        ],
+        "title": "ManualResultRequest"
+      },
+      "ManualResultResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "case": {
+            "$ref": "#/components/schemas/TestCase"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "case"
+        ],
+        "title": "ManualResultResponse"
+      },
+      "Media": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MediaKind"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Url"
+          },
+          "public_id": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Public Id"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "url",
+          "public_id"
+        ],
+        "title": "Media"
+      },
+      "MediaKind": {
+        "type": "string",
+        "enum": [
+          "image",
+          "video"
+        ],
+        "title": "MediaKind"
       },
       "MemberView": {
         "properties": {
@@ -2849,6 +3956,15 @@
         "type": "object",
         "title": "OverviewSummary"
       },
+      "Platform": {
+        "type": "string",
+        "enum": [
+          "WEB",
+          "ANDROID",
+          "IOS"
+        ],
+        "title": "Platform"
+      },
       "Priority": {
         "type": "string",
         "enum": [
@@ -2892,6 +4008,30 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "android_app_id": {
+            "type": "string",
+            "title": "Android App Id",
+            "default": ""
+          },
+          "ios_bundle_id": {
+            "type": "string",
+            "title": "Ios Bundle Id",
+            "default": ""
+          },
+          "require_review": {
+            "type": "boolean",
+            "title": "Require Review",
+            "default": false
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "cloudinary",
+              "drive"
+            ],
+            "title": "Storage",
+            "default": "cloudinary"
           }
         },
         "type": "object",
@@ -2942,6 +4082,30 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "android_app_id": {
+            "type": "string",
+            "title": "Android App Id",
+            "default": ""
+          },
+          "ios_bundle_id": {
+            "type": "string",
+            "title": "Ios Bundle Id",
+            "default": ""
+          },
+          "require_review": {
+            "type": "boolean",
+            "title": "Require Review",
+            "default": false
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "cloudinary",
+              "drive"
+            ],
+            "title": "Storage",
+            "default": "cloudinary"
+          },
           "permissions": {
             "items": {
               "$ref": "#/components/schemas/Action"
@@ -2987,6 +4151,21 @@
         ],
         "title": "RepoInfo"
       },
+      "ResetPasswordRequest": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "ResetPasswordRequest"
+      },
       "ResultItem": {
         "properties": {
           "case_id": {
@@ -3024,8 +4203,7 @@
             "title": "Failed Step"
           },
           "evidence": {
-            "type": "string",
-            "title": "Evidence"
+            "$ref": "#/components/schemas/Evidence"
           },
           "run_id": {
             "type": "string",
@@ -3035,6 +4213,55 @@
             "type": "string",
             "format": "date-time",
             "title": "Finished At"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression"
+          },
+          "case_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Version"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "executed_by": {
+            "type": "string",
+            "title": "Executed By"
+          },
+          "dev_owner": {
+            "type": "string",
+            "title": "Dev Owner"
+          },
+          "actual_result": {
+            "type": "string",
+            "title": "Actual Result"
+          },
+          "step_results": {
+            "items": {
+              "$ref": "#/components/schemas/StepResult"
+            },
+            "type": "array",
+            "title": "Step Results"
+          },
+          "build_version": {
+            "type": "string",
+            "title": "Build Version"
+          },
+          "issue_url": {
+            "type": "string",
+            "title": "Issue Url"
           }
         },
         "type": "object",
@@ -3048,7 +4275,17 @@
           "failed_step",
           "evidence",
           "run_id",
-          "finished_at"
+          "finished_at",
+          "platform",
+          "regression",
+          "case_version",
+          "environment",
+          "executed_by",
+          "dev_owner",
+          "actual_result",
+          "step_results",
+          "build_version",
+          "issue_url"
         ],
         "title": "ResultItem"
       },
@@ -3101,6 +4338,137 @@
         ],
         "title": "Role"
       },
+      "Run": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "triggered_by": {
+            "type": "string",
+            "title": "Triggered By"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/RunScope"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "commit_sha": {
+            "type": "string",
+            "title": "Commit Sha"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "tokens_used": {
+            "type": "integer",
+            "title": "Tokens Used"
+          },
+          "build_version": {
+            "type": "string",
+            "title": "Build Version",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "triggered_by",
+          "scope",
+          "branch",
+          "commit_sha",
+          "status",
+          "started_at",
+          "finished_at",
+          "total",
+          "passed",
+          "failed",
+          "tokens_used"
+        ],
+        "title": "Run"
+      },
+      "RunScope": {
+        "properties": {
+          "screen_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Screen Ids"
+          },
+          "priorities": {
+            "items": {
+              "$ref": "#/components/schemas/Priority"
+            },
+            "type": "array",
+            "title": "Priorities"
+          },
+          "severities": {
+            "items": {
+              "$ref": "#/components/schemas/Severity"
+            },
+            "type": "array",
+            "title": "Severities"
+          },
+          "regression_only": {
+            "type": "boolean",
+            "title": "Regression Only",
+            "default": false
+          },
+          "case_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Case Ids"
+          }
+        },
+        "type": "object",
+        "title": "RunScope",
+        "description": "Phạm vi một lần chạy. Danh sách rỗng nghĩa là \"không lọc theo tiêu chí này\"."
+      },
+      "RunStatus": {
+        "type": "string",
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "COMPLETED",
+          "FAILED",
+          "CANCELLED"
+        ],
+        "title": "RunStatus"
+      },
       "Screen": {
         "properties": {
           "id": {
@@ -3130,6 +4498,19 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "dev_owner": {
+            "type": "string",
+            "title": "Dev Owner",
+            "default": ""
+          },
+          "media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Media"
           }
         },
         "type": "object",
@@ -3164,6 +4545,90 @@
           "HIGH"
         ],
         "title": "Severity"
+      },
+      "SignRequest": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MediaKind"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "guide",
+              "evidence"
+            ],
+            "title": "Purpose"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "purpose"
+        ],
+        "title": "SignRequest"
+      },
+      "SignedUpload": {
+        "properties": {
+          "cloud_name": {
+            "type": "string",
+            "title": "Cloud Name"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key"
+          },
+          "timestamp": {
+            "type": "integer",
+            "title": "Timestamp"
+          },
+          "signature": {
+            "type": "string",
+            "title": "Signature"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "public_id": {
+            "type": "string",
+            "title": "Public Id"
+          },
+          "allowed_formats": {
+            "type": "string",
+            "title": "Allowed Formats"
+          },
+          "resource_type": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ],
+            "title": "Resource Type"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "title": "Max Bytes"
+          },
+          "upload_url": {
+            "type": "string",
+            "title": "Upload Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cloud_name",
+          "api_key",
+          "timestamp",
+          "signature",
+          "folder",
+          "public_id",
+          "allowed_formats",
+          "resource_type",
+          "max_bytes",
+          "upload_url"
+        ],
+        "title": "SignedUpload",
+        "description": "Mọi thứ client cần để đẩy thẳng một file lên Cloudinary (không có secret)."
       },
       "SkippedCase": {
         "properties": {
@@ -3201,6 +4666,47 @@
           "reason"
         ],
         "title": "SkippedItem"
+      },
+      "StepResult": {
+        "properties": {
+          "step_no": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Step No"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "SKIPPED"
+            ],
+            "title": "Status"
+          },
+          "actual": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Actual",
+            "default": ""
+          },
+          "screenshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Media"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_no",
+          "status"
+        ],
+        "title": "StepResult",
+        "description": "Kết quả của riêng một bước trong case."
       },
       "SyncIssuesResult": {
         "properties": {
@@ -3280,6 +4786,49 @@
           },
           "priority": {
             "$ref": "#/components/schemas/Priority"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
           },
           "id": {
             "type": "string",
@@ -3375,6 +4924,49 @@
           "priority": {
             "$ref": "#/components/schemas/Priority"
           },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -3419,6 +5011,16 @@
           "can_archive": {
             "type": "boolean",
             "title": "Can Archive"
+          },
+          "last_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3468,6 +5070,14 @@
             "maxLength": 500,
             "title": "Expected",
             "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
           }
         },
         "type": "object",
@@ -3476,6 +5086,14 @@
         ],
         "title": "TestStep",
         "description": "Một bước kiểm thử: làm gì và kết quả mong đợi (được để trống)."
+      },
+      "TestType": {
+        "type": "string",
+        "enum": [
+          "FUNCTIONAL",
+          "UI"
+        ],
+        "title": "TestType"
       },
       "TransitionRequest": {
         "properties": {
@@ -3545,6 +5163,58 @@
               }
             ],
             "title": "Archived"
+          },
+          "android_app_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[A-Za-z0-9._-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Android App Id"
+          },
+          "ios_bundle_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[A-Za-z0-9._-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ios Bundle Id"
+          },
+          "require_review": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Require Review"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cloudinary",
+                  "drive"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage"
           }
         },
         "type": "object",
@@ -3605,6 +5275,33 @@
               }
             ],
             "title": "Code Paths"
+          },
+          "dev_owner": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 39
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dev Owner"
+          },
+          "media": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Media"
+                },
+                "type": "array",
+                "maxItems": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media"
           }
         },
         "type": "object",
@@ -3650,6 +5347,49 @@
           },
           "priority": {
             "$ref": "#/components/schemas/Priority"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
           },
           "version": {
             "type": "integer",

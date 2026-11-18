@@ -18,7 +18,7 @@ from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import today_in_vietnam
 from tests.conftest import client_for, make_project, make_user
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 
 NEXT_WEEK = (today_in_vietnam() + timedelta(days=7)).isoformat()
 
@@ -29,6 +29,8 @@ BODY: dict[str, Any] = {
     "expected_result": "Đăng nhập được",
     "severity": "HIGH",
     "priority": "P1",
+    # Các test cũ viết cho case do agent chạy (có bước duyệt); case Manual có test riêng
+    "execution_mode": "AUTOMATION",
 }
 
 
@@ -46,18 +48,20 @@ def project(
     ):
         if users.get(user.email) is None:
             users.create(user)
-    return make_project(
+    created = make_project(
         projects,
         members,
         gateway,
         member_emails=("lead@x.com", "an@x.com", "binh@x.com", "viewer@x.com"),
     )
+    # Các test cũ giả định dự án có bước duyệt
+    return projects.update(created.model_copy(update={"require_review": True}))
 
 
 @pytest.fixture
-def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project) -> TestClient:
+def lead(app: FastAPI, users: UserRepository, project: Project) -> TestClient:
     """QA Lead; đã tạo màn hình SC-0001 và giao cho An và Bình."""
-    browser = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+    browser = client_for(app, users, "lead@x.com", Role.QA_LEAD)
     browser.post(f"/api/projects/{project.id}/screens", json={"name": "Đăng nhập"})
     browser.post(
         f"/api/projects/{project.id}/assignments",
@@ -71,13 +75,13 @@ def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
 
 
 @pytest.fixture
-def an(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient) -> TestClient:
-    return client_for(app, oauth, users, "an@x.com", Role.TESTER)
+def an(app: FastAPI, users: UserRepository, lead: TestClient) -> TestClient:
+    return client_for(app, users, "an@x.com", Role.TESTER)
 
 
 @pytest.fixture
-def binh(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient) -> TestClient:
-    return client_for(app, oauth, users, "binh@x.com", Role.TESTER)
+def binh(app: FastAPI, users: UserRepository, lead: TestClient) -> TestClient:
+    return client_for(app, users, "binh@x.com", Role.TESTER)
 
 
 def url(project: Project, suffix: str = "") -> str:
@@ -160,8 +164,21 @@ class RecordingIssueSink:
     def __init__(self, fail: bool = False) -> None:
         self.calls: list[tuple[str, str, str]] = []
         self.fail = fail
+        self.edits: list[tuple[str, list[str], bool]] = []
 
-    def sync_case(self, project: Project, case: TestCase, *, screen_name: str = "") -> None:
+    def note_case_edited(
+        self, project: Project, case: TestCase, *, changed: list[str], needs_rerun: bool
+    ) -> None:
+        self.edits.append((case.id, changed, needs_rerun))
+
+    def sync_case(
+        self,
+        project: Project,
+        case: TestCase,
+        *,
+        screen_name: str = "",
+        screen: object = None,
+    ) -> None:
         self.calls.append((case.id, case.status.value, screen_name))
         if self.fail:
             raise RuntimeError("GitHub giả bị lỗi")
@@ -388,6 +405,28 @@ def test_validation_errors_are_422(
     assert create(an, project, **changes).status_code == 422
 
 
+def media_json(cloud: str) -> dict[str, str]:
+    return {
+        "kind": "image",
+        "url": f"https://res.cloudinary.com/{cloud}/image/upload/a.png",
+        "public_id": "a",
+    }
+
+
+def test_case_with_foreign_cloud_image_is_422_and_own_cloud_is_ok(
+    app: FastAPI, an: TestClient, project: Project
+) -> None:
+    app.state.services.cloud_name = "mine"
+
+    foreign = create(an, project, guide_media=[media_json("other")])
+    own = create(an, project, guide_media=[media_json("mine")])
+
+    assert foreign.status_code == 422
+    assert "không thuộc kho lưu trữ" in foreign.json()["detail"]
+    assert own.status_code == 201
+    assert own.json()["guide_media"][0]["public_id"] == "a"
+
+
 def test_lead_returns_case_with_comment_and_history_shows_it(
     an: TestClient, lead: TestClient, project: Project
 ) -> None:
@@ -410,9 +449,9 @@ def test_lead_returns_case_with_comment_and_history_shows_it(
 
 
 def test_viewer_can_read_but_not_create(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient, project: Project
+    app: FastAPI, users: UserRepository, lead: TestClient, project: Project
 ) -> None:
-    viewer = client_for(app, oauth, users, "viewer@x.com", Role.VIEWER)
+    viewer = client_for(app, users, "viewer@x.com", Role.VIEWER)
 
     assert viewer.get(url(project)).status_code == 200
     forbidden = create(viewer, project)
@@ -421,9 +460,9 @@ def test_viewer_can_read_but_not_create(
 
 
 def test_non_member_gets_404(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
+    app: FastAPI, users: UserRepository, project: Project
 ) -> None:
-    stranger = client_for(app, oauth, users, "la@x.com", Role.TESTER)
+    stranger = client_for(app, users, "la@x.com", Role.TESTER)
 
     assert stranger.get(url(project)).status_code == 404
     assert create(stranger, project).status_code == 404
@@ -431,7 +470,6 @@ def test_non_member_gets_404(
 
 def test_archived_project_rejects_writes(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     an: TestClient,
     project: Project,
@@ -440,7 +478,7 @@ def test_archived_project_rejects_writes(
     create(an, project)
     projects.update(project.model_copy(update={"archived": True}))
     # Thành viên thường không còn thấy dự án đã lưu trữ; Admin thấy nhưng không được ghi.
-    admin = client_for(app, oauth, users, "admin@x.com", Role.ADMIN)
+    admin = client_for(app, users, "admin@x.com", Role.ADMIN)
 
     assert admin.get(url(project)).status_code == 200
     response = admin.post(url(project, "/TC-000001/deprecate"), json={"version": 1})
@@ -450,11 +488,11 @@ def test_archived_project_rejects_writes(
 
 
 def test_parallel_creates_via_api_get_distinct_ids(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient, project: Project
+    app: FastAPI, users: UserRepository, lead: TestClient, project: Project
 ) -> None:
     browsers = [
-        client_for(app, oauth, users, "an@x.com", Role.TESTER),
-        client_for(app, oauth, users, "binh@x.com", Role.TESTER),
+        client_for(app, users, "an@x.com", Role.TESTER),
+        client_for(app, users, "binh@x.com", Role.TESTER),
     ]
     ids: list[str] = []
     failures: list[str] = []
@@ -482,7 +520,6 @@ def test_parallel_creates_via_api_get_distinct_ids(
 
 def test_archived_project_case_cannot_be_edited_or_reviewed(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     an: TestClient,
     project: Project,
@@ -490,7 +527,7 @@ def test_archived_project_case_cannot_be_edited_or_reviewed(
 ) -> None:
     create(an, project)
     projects.update(project.model_copy(update={"archived": True}))
-    admin = client_for(app, oauth, users, "admin@x.com", Role.ADMIN)
+    admin = client_for(app, users, "admin@x.com", Role.ADMIN)
 
     detail = admin.get(url(project, "/TC-000001")).json()
 
@@ -537,3 +574,179 @@ def test_batch_approve_forbidden_for_tester(an: TestClient, project: Project) ->
 
 def test_batch_approve_rejects_empty_list(lead: TestClient, project: Project) -> None:
     assert lead.post(url(project, "/approve-batch"), json={"items": []}).status_code == 422
+
+
+# ----- Công tắc "cần QA duyệt" (Task 6) -----
+
+
+def set_review(client: TestClient, project: Project, value: bool) -> Any:
+    return client.patch(f"/api/projects/{project.id}", json={"require_review": value})
+
+
+def statuses(gateway: FakeSheetsGateway, project: Project) -> dict[str, str]:
+    rows = gateway.data[project.spreadsheet_id]["TestCases"]
+    header = rows[0]
+    return {row[0]: row[header.index("status")] for row in rows[1:]}
+
+
+def test_turning_review_off_approves_in_review_once(
+    an: TestClient, lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    set_review(lead, project, True)
+    for _ in range(2):
+        case = create(an, project).json()
+        an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    create(an, project)  # case thứ 3 vẫn là DRAFT
+    gateway.batch_update_calls = 0
+
+    response = set_review(lead, project, False)
+
+    assert response.status_code == 200
+    assert statuses(gateway, project) == {
+        "TC-000001": "APPROVED",
+        "TC-000002": "APPROVED",
+        "TC-000003": "DRAFT",
+    }
+    assert gateway.batch_update_calls == 1
+    audit = [r for r in gateway.data[project.spreadsheet_id]["AuditLog"] if "AUTO_APPROVE" in r]
+    assert len(audit) == 2
+
+
+def test_turning_off_with_nothing_in_review_writes_nothing(
+    an: TestClient, lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    set_review(lead, project, True)
+    create(an, project)
+    gateway.batch_update_calls = 0
+
+    assert set_review(lead, project, False).status_code == 200
+
+    assert gateway.batch_update_calls == 0
+
+
+def test_turning_on_does_not_touch_cases(
+    an: TestClient, lead: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    create(an, project)
+    gateway.batch_update_calls = 0
+
+    assert set_review(lead, project, True).status_code == 200
+
+    assert gateway.batch_update_calls == 0
+    assert statuses(gateway, project) == {"TC-000001": "DRAFT"}
+
+
+def test_tester_cannot_change_require_review(an: TestClient, project: Project) -> None:
+    assert set_review(an, project, True).status_code == 403
+
+
+def test_lead_cannot_rename_project(lead: TestClient, project: Project) -> None:
+    # Đổi tên vẫn là việc của Admin
+    response = lead.patch(f"/api/projects/{project.id}", json={"name": "Tên mới"})
+    assert response.status_code == 403
+
+
+def test_app_ids_saved_and_reject_spaces(lead: TestClient, project: Project) -> None:
+    ok = lead.patch(
+        f"/api/projects/{project.id}",
+        json={"android_app_id": "com.shop.app", "ios_bundle_id": "vn.shop"},
+    )
+    bad = lead.patch(f"/api/projects/{project.id}", json={"android_app_id": "com shop"})
+
+    assert ok.status_code == 200
+    assert ok.json()["android_app_id"] == "com.shop.app"
+    assert bad.status_code == 422
+
+
+# ----- Tắt bước duyệt: gửi là duyệt luôn (Task 7) -----
+
+
+@pytest.fixture
+def review_off(projects: ProjectRepository, project: Project) -> Project:
+    return projects.update(project.model_copy(update={"require_review": False}))
+
+
+def test_submit_goes_straight_to_approved_when_review_off(
+    app: FastAPI, an: TestClient, project: Project, review_off: Project,
+    redis: fakeredis.FakeRedis, gateway: FakeSheetsGateway,
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    case = create(an, project).json()
+
+    response = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "APPROVED"
+    assert sink.calls[-1][1] == "APPROVED"
+    assert not any(i.type == "case_submitted" for i in NotificationStore(redis).list("lead@x.com"))
+    audit = [r for r in gateway.data[project.spreadsheet_id]["AuditLog"] if "SUBMIT" in r]
+    assert audit and "APPROVED" in audit[-1][-1] and "DRAFT" in audit[-1][-1]
+
+
+@pytest.mark.parametrize("path", ["approve", "return"])
+def test_review_endpoints_409_when_off(
+    an: TestClient, lead: TestClient, project: Project, review_off: Project, path: str
+) -> None:
+    case = create(an, project).json()
+    response = lead.post(
+        url(project, f"/{case['id']}/{path}"), json={"version": 1, "comment": "x"}
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Dự án đang tắt bước duyệt"
+
+
+def test_approve_batch_409_when_off(
+    an: TestClient, lead: TestClient, project: Project, review_off: Project
+) -> None:
+    case = create(an, project).json()
+    response = lead.post(
+        url(project, "/approve-batch"), json={"items": [{"case_id": case["id"], "version": 1}]}
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Dự án đang tắt bước duyệt"
+
+
+def test_review_on_keeps_old_flow(an: TestClient, project: Project) -> None:
+    case = create(an, project).json()
+    response = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
+    assert response.json()["status"] == "IN_REVIEW"
+
+
+def test_edit_approved_case_with_results_requests_rerun_through_api(
+    app: FastAPI, an: TestClient, project: Project, review_off: Project,
+    gateway: FakeSheetsGateway,
+) -> None:
+    sink = RecordingIssueSink()
+    app.state.services.issue_sync = sink
+    case = create(an, project).json()
+    approved = an.post(url(project, f"/{case['id']}/submit"), json={"version": 1}).json()
+    # Giả lập đã có một kết quả chạy cho case này
+    from datetime import UTC, datetime
+
+    from app.core.models.run import Result, ResultStatus
+    from app.core.repositories.runs import ResultRepository
+
+    ResultRepository(gateway, project.spreadsheet_id).append_batch([
+        Result(id="RUN-1-" + case["id"], run_id="RUN-1", test_case_id=case["id"],
+               status=ResultStatus.PASS, reason="", failed_step=None,
+               created_at=datetime.now(UTC))
+    ])
+    body = {**BODY, "version": approved["version"], "steps": [
+        {"action": "Bước mới", "expected": ""}]}
+
+    response = an.put(url(project, f"/{case['id']}"), json=body)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "APPROVED"
+    assert sink.edits == [(case["id"], ["Các bước"], True)]
+
+
+def test_api_create_defaults_to_manual(an: TestClient, project: Project) -> None:
+    body = {key: value for key, value in BODY.items() if key != "execution_mode"}
+    created = an.post(url(project), json=body)
+
+    assert created.status_code == 201
+    assert created.json()["execution_mode"] == "MANUAL"

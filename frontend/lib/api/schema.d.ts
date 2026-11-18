@@ -31,27 +31,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /** Login */
-        get: operations["login_api_auth_login_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auth/callback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Callback */
-        get: operations["callback_api_auth_callback_get"];
-        put?: never;
-        post?: never;
+        post: operations["login_api_auth_login_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -69,6 +52,23 @@ export interface paths {
         put?: never;
         /** Logout */
         post: operations["logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change My Password */
+        post: operations["change_my_password_api_auth_change_password_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -127,6 +127,23 @@ export interface paths {
         patch: operations["update_user_api_users__email__patch"];
         trace?: never;
     };
+    "/api/users/{email}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Password */
+        post: operations["reset_password_api_users__email__reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects": {
         parameters: {
             query?: never;
@@ -156,7 +173,8 @@ export interface paths {
         get: operations["get_project_api_projects__project_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Project */
+        delete: operations["delete_project_api_projects__project_id__delete"];
         options?: never;
         head?: never;
         /** Update Project */
@@ -292,6 +310,66 @@ export interface paths {
         patch: operations["change_deadline_api_projects__project_id__assignments__assignment_id__patch"];
         trace?: never;
     };
+    "/api/agent/projects/{project_id}/media/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign Agent Upload
+         * @description Codex xin chữ ký để đẩy ảnh/video bằng chứng thẳng lên Cloudinary (thư mục `evidence`).
+         */
+        post: operations["sign_agent_upload_api_agent_projects__project_id__media_sign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/projects/{project_id}/media/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Agent Media
+         * @description Dự án lưu ở Google Drive: Codex gửi file bằng chứng cho app, app đẩy lên Drive.
+         */
+        post: operations["upload_agent_media_api_agent_projects__project_id__media_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/projects/{project_id}/media/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Agent Media Storage
+         * @description Codex hỏi dự án lưu ảnh/video ở đâu để chọn đúng cách tải lên.
+         */
+        get: operations["agent_media_storage_api_agent_projects__project_id__media_storage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/projects/{project_id}/results": {
         parameters: {
             query?: never;
@@ -303,6 +381,43 @@ export interface paths {
         put?: never;
         /** Write Agent Results */
         post: operations["write_agent_results_api_agent_projects__project_id__results_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/media/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign Upload */
+        post: operations["sign_upload_api_projects__project_id__media_sign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/media/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Media
+         * @description Dự án lưu ở Google Drive: backend nhận file rồi đẩy lên Drive.
+         */
+        post: operations["upload_media_api_projects__project_id__media_upload_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -538,6 +653,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/{case_id}/manual-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Manual Result */
+        post: operations["submit_manual_result_api_projects__project_id__test_cases__case_id__manual_results_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/overview": {
         parameters: {
             query?: never;
@@ -681,6 +813,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/regression-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Open Regression Runs
+         * @description Các lần chạy regression còn đang mở (giao diện dùng để hiện nút "Kết thúc").
+         */
+        get: operations["list_open_regression_runs_api_projects__project_id__regression_runs_get"];
+        put?: never;
+        /** Create Regression Run */
+        post: operations["create_regression_run_api_projects__project_id__regression_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/regression-runs/{run_id}/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish Regression Run */
+        post: operations["finish_regression_run_api_projects__project_id__regression_runs__run_id__finish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -689,11 +859,20 @@ export interface components {
          * Action
          * @enum {string}
          */
-        Action: "MANAGE_USERS" | "MANAGE_PROJECTS" | "MANAGE_MEMBERS" | "MANAGE_SCREENS" | "EDIT_TEST_CASE" | "REVIEW_TEST_CASE" | "TRIGGER_RUN" | "REVIEW_RESULTS" | "VIEW_PROJECT";
+        Action: "MANAGE_USERS" | "MANAGE_PROJECTS" | "MANAGE_PROJECT_SETTINGS" | "MANAGE_MEMBERS" | "MANAGE_SCREENS" | "EDIT_TEST_CASE" | "REVIEW_TEST_CASE" | "TRIGGER_RUN" | "REVIEW_RESULTS" | "VIEW_PROJECT";
         /** AddMemberRequest */
         AddMemberRequest: {
             /** Email */
             email: string;
+        };
+        /**
+         * AgentEvidence
+         * @description Bằng chứng dạng mới: một video và các ảnh chụp (đã đẩy lên Cloudinary).
+         */
+        AgentEvidence: {
+            video?: components["schemas"]["Media"] | null;
+            /** Screenshots */
+            screenshots?: components["schemas"]["Media"][];
         };
         /** AgentResult */
         AgentResult: {
@@ -711,17 +890,43 @@ export interface components {
              * Evidence
              * @default
              */
-            evidence: string;
+            evidence: string | components["schemas"]["AgentEvidence"];
+            /** Step Results */
+            step_results?: components["schemas"]["StepResult"][];
+            /**
+             * Actual Result
+             * @default
+             */
+            actual_result: string;
+            /**
+             * Environment
+             * @default
+             */
+            environment: string;
+            /**
+             * Executed By
+             * @default
+             */
+            executed_by: string;
+            /** Case Version */
+            case_version?: number | null;
         };
         /** AgentResultsRequest */
         AgentResultsRequest: {
             /** Results */
             results: components["schemas"]["AgentResult"][];
             /**
+             * Build Version
+             * @default
+             */
+            build_version: string;
+            /**
              * Duration Seconds
              * @default 0
              */
             duration_seconds: number;
+            /** Run Id */
+            run_id?: string | null;
         };
         /** AgentResultsResponse */
         AgentResultsResponse: {
@@ -731,6 +936,10 @@ export interface components {
             written: number;
             /** Ignored */
             ignored: components["schemas"]["IgnoredResult"][];
+        };
+        /** AgentSignRequest */
+        AgentSignRequest: {
+            kind: components["schemas"]["MediaKind"];
         };
         /** ApproveItem */
         ApproveItem: {
@@ -807,6 +1016,22 @@ export interface components {
             /** Skipped */
             skipped: components["schemas"]["SkippedItem"][];
         };
+        /** Body_upload_agent_media_api_agent_projects__project_id__media_upload_post */
+        Body_upload_agent_media_api_agent_projects__project_id__media_upload_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_upload_media_api_projects__project_id__media_upload_post */
+        Body_upload_media_api_projects__project_id__media_upload_post: {
+            /** File */
+            file: string;
+            /**
+             * Purpose
+             * @default guide
+             * @enum {string}
+             */
+            purpose: "guide" | "evidence";
+        };
         /** ChangeDeadlineRequest */
         ChangeDeadlineRequest: {
             /**
@@ -814,6 +1039,13 @@ export interface components {
              * Format: date
              */
             deadline: string;
+        };
+        /** ChangePasswordRequest */
+        ChangePasswordRequest: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
         };
         /**
          * ConflictResponse
@@ -837,6 +1069,11 @@ export interface components {
             /** Spreadsheet */
             spreadsheet: string;
         };
+        /** CreateRegressionRequest */
+        CreateRegressionRequest: {
+            /** Build Version */
+            build_version: string;
+        };
         /** CreateScreenRequest */
         CreateScreenRequest: {
             /** Name */
@@ -856,6 +1093,16 @@ export interface components {
              * @default []
              */
             code_paths: string[];
+            /**
+             * Dev Owner
+             * @default
+             */
+            dev_owner: string;
+            /**
+             * Media
+             * @default []
+             */
+            media: components["schemas"]["Media"][];
         };
         /** CreateTestCaseRequest */
         CreateTestCaseRequest: {
@@ -877,6 +1124,34 @@ export interface components {
             expected_result: string;
             severity: components["schemas"]["Severity"];
             priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
             /** Screen Id */
             screen_id: string;
         };
@@ -890,7 +1165,35 @@ export interface components {
             /** Name */
             name: string;
             role: components["schemas"]["Role"];
+            /** Password */
+            password: string;
         };
+        /** DeleteProjectRequest */
+        DeleteProjectRequest: {
+            /** Name */
+            name: string;
+        };
+        /**
+         * Evidence
+         * @description Bằng chứng của một kết quả: video cả lần chạy và ảnh các bước.
+         */
+        Evidence: {
+            video?: components["schemas"]["Media"] | null;
+            /** Screenshots */
+            screenshots?: components["schemas"]["Media"][];
+            /** Legacy Url */
+            legacy_url?: string | null;
+            /**
+             * Pruned
+             * @default false
+             */
+            pruned: boolean;
+        };
+        /**
+         * ExecutionMode
+         * @enum {string}
+         */
+        ExecutionMode: "MANUAL" | "AUTOMATION";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -903,6 +1206,88 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /**
+         * LastResult
+         * @description Kết quả chạy gần nhất của một case test tay.
+         */
+        LastResult: {
+            status: components["schemas"]["ResultStatus"];
+            /** Run Id */
+            run_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** ManualResultRequest */
+        ManualResultRequest: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PASS" | "FAIL" | "BLOCKED";
+            /** Step Results */
+            step_results?: components["schemas"]["StepResult"][];
+            /**
+             * Actual Result
+             * @default
+             */
+            actual_result: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Failed Step */
+            failed_step?: number | null;
+            evidence?: components["schemas"]["AgentEvidence"];
+            /** Environment */
+            environment: string;
+            /**
+             * Build Version
+             * @default
+             */
+            build_version: string;
+            /**
+             * Assignee
+             * @default
+             */
+            assignee: string;
+            /** Version */
+            version: number;
+        };
+        /** ManualResultResponse */
+        ManualResultResponse: {
+            /** Run Id */
+            run_id: string;
+            case: components["schemas"]["TestCase"];
+        };
+        /** Media */
+        Media: {
+            kind: components["schemas"]["MediaKind"];
+            /** Url */
+            url: string;
+            /** Public Id */
+            public_id: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /**
+         * MediaKind
+         * @enum {string}
+         */
+        MediaKind: "image" | "video";
         /** MemberView */
         MemberView: {
             /** Email */
@@ -981,6 +1366,11 @@ export interface components {
             latest_result?: components["schemas"]["ResultItem"] | null;
         };
         /**
+         * Platform
+         * @enum {string}
+         */
+        Platform: "WEB" | "ANDROID" | "IOS";
+        /**
          * Priority
          * @enum {string}
          */
@@ -1006,6 +1396,27 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Android App Id
+             * @default
+             */
+            android_app_id: string;
+            /**
+             * Ios Bundle Id
+             * @default
+             */
+            ios_bundle_id: string;
+            /**
+             * Require Review
+             * @default false
+             */
+            require_review: boolean;
+            /**
+             * Storage
+             * @default cloudinary
+             * @enum {string}
+             */
+            storage: "cloudinary" | "drive";
         };
         /** ProjectDetail */
         ProjectDetail: {
@@ -1028,6 +1439,27 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Android App Id
+             * @default
+             */
+            android_app_id: string;
+            /**
+             * Ios Bundle Id
+             * @default
+             */
+            ios_bundle_id: string;
+            /**
+             * Require Review
+             * @default false
+             */
+            require_review: boolean;
+            /**
+             * Storage
+             * @default cloudinary
+             * @enum {string}
+             */
+            storage: "cloudinary" | "drive";
             /** Permissions */
             permissions: components["schemas"]["Action"][];
         };
@@ -1039,6 +1471,11 @@ export interface components {
             default_branch: string;
             /** Private */
             private: boolean;
+        };
+        /** ResetPasswordRequest */
+        ResetPasswordRequest: {
+            /** Password */
+            password: string;
         };
         /** ResultItem */
         ResultItem: {
@@ -1055,8 +1492,7 @@ export interface components {
             reason: string;
             /** Failed Step */
             failed_step: number | null;
-            /** Evidence */
-            evidence: string;
+            evidence: components["schemas"]["Evidence"];
             /** Run Id */
             run_id: string;
             /**
@@ -1064,6 +1500,25 @@ export interface components {
              * Format: date-time
              */
             finished_at: string;
+            platform: components["schemas"]["Platform"];
+            /** Regression */
+            regression: boolean;
+            /** Case Version */
+            case_version: number | null;
+            /** Environment */
+            environment: string;
+            /** Executed By */
+            executed_by: string;
+            /** Dev Owner */
+            dev_owner: string;
+            /** Actual Result */
+            actual_result: string;
+            /** Step Results */
+            step_results: components["schemas"]["StepResult"][];
+            /** Build Version */
+            build_version: string;
+            /** Issue Url */
+            issue_url: string;
         };
         /**
          * ResultStatus
@@ -1089,6 +1544,63 @@ export interface components {
          * @enum {string}
          */
         Role: "ADMIN" | "QA_LEAD" | "TESTER" | "VIEWER";
+        /** Run */
+        Run: {
+            /** Id */
+            id: string;
+            /** Triggered By */
+            triggered_by: string;
+            scope: components["schemas"]["RunScope"];
+            /** Branch */
+            branch: string;
+            /** Commit Sha */
+            commit_sha: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Total */
+            total: number;
+            /** Passed */
+            passed: number;
+            /** Failed */
+            failed: number;
+            /** Tokens Used */
+            tokens_used: number;
+            /**
+             * Build Version
+             * @default
+             */
+            build_version: string;
+        };
+        /**
+         * RunScope
+         * @description Phạm vi một lần chạy. Danh sách rỗng nghĩa là "không lọc theo tiêu chí này".
+         */
+        RunScope: {
+            /** Screen Ids */
+            screen_ids?: string[];
+            /** Priorities */
+            priorities?: components["schemas"]["Priority"][];
+            /** Severities */
+            severities?: components["schemas"]["Severity"][];
+            /**
+             * Regression Only
+             * @default false
+             */
+            regression_only: boolean;
+            /** Case Ids */
+            case_ids?: string[];
+        };
+        /**
+         * RunStatus
+         * @enum {string}
+         */
+        RunStatus: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
         /** Screen */
         Screen: {
             /** Id */
@@ -1106,6 +1618,13 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Dev Owner
+             * @default
+             */
+            dev_owner: string;
+            /** Media */
+            media?: components["schemas"]["Media"][];
         };
         /** ServiceAccount */
         ServiceAccount: {
@@ -1117,6 +1636,44 @@ export interface components {
          * @enum {string}
          */
         Severity: "LOW" | "MEDIUM" | "HIGH";
+        /** SignRequest */
+        SignRequest: {
+            kind: components["schemas"]["MediaKind"];
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "guide" | "evidence";
+        };
+        /**
+         * SignedUpload
+         * @description Mọi thứ client cần để đẩy thẳng một file lên Cloudinary (không có secret).
+         */
+        SignedUpload: {
+            /** Cloud Name */
+            cloud_name: string;
+            /** Api Key */
+            api_key: string;
+            /** Timestamp */
+            timestamp: number;
+            /** Signature */
+            signature: string;
+            /** Folder */
+            folder: string;
+            /** Public Id */
+            public_id: string;
+            /** Allowed Formats */
+            allowed_formats: string;
+            /**
+             * Resource Type
+             * @enum {string}
+             */
+            resource_type: "image" | "video";
+            /** Max Bytes */
+            max_bytes: number;
+            /** Upload Url */
+            upload_url: string;
+        };
         /**
          * SkippedCase
          * @description Một case bị bỏ qua khi duyệt hàng loạt, kèm lý do để hiện cho người duyệt.
@@ -1133,6 +1690,25 @@ export interface components {
             case_id: string;
             /** Reason */
             reason: string;
+        };
+        /**
+         * StepResult
+         * @description Kết quả của riêng một bước trong case.
+         */
+        StepResult: {
+            /** Step No */
+            step_no: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PASS" | "FAIL" | "SKIPPED";
+            /**
+             * Actual
+             * @default
+             */
+            actual: string;
+            screenshot?: components["schemas"]["Media"] | null;
         };
         /** SyncIssuesResult */
         SyncIssuesResult: {
@@ -1187,6 +1763,34 @@ export interface components {
             expected_result: string;
             severity: components["schemas"]["Severity"];
             priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
             /** Id */
             id: string;
             /** Screen Id */
@@ -1232,6 +1836,34 @@ export interface components {
             expected_result: string;
             severity: components["schemas"]["Severity"];
             priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
             /** Id */
             id: string;
             /** Screen Id */
@@ -1259,6 +1891,7 @@ export interface components {
             can_review: boolean;
             /** Can Archive */
             can_archive: boolean;
+            last_result?: components["schemas"]["LastResult"] | null;
         };
         /**
          * TestCaseStatus
@@ -1277,7 +1910,14 @@ export interface components {
              * @default
              */
             expected: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
         };
+        /**
+         * TestType
+         * @enum {string}
+         */
+        TestType: "FUNCTIONAL" | "UI";
         /** TransitionRequest */
         TransitionRequest: {
             /** Version */
@@ -1298,6 +1938,14 @@ export interface components {
             staging_url?: string | null;
             /** Archived */
             archived?: boolean | null;
+            /** Android App Id */
+            android_app_id?: string | null;
+            /** Ios Bundle Id */
+            ios_bundle_id?: string | null;
+            /** Require Review */
+            require_review?: boolean | null;
+            /** Storage */
+            storage?: ("cloudinary" | "drive") | null;
         };
         /** UpdateScreenRequest */
         UpdateScreenRequest: {
@@ -1309,6 +1957,10 @@ export interface components {
             route?: string | null;
             /** Code Paths */
             code_paths?: string[] | null;
+            /** Dev Owner */
+            dev_owner?: string | null;
+            /** Media */
+            media?: components["schemas"]["Media"][] | null;
         };
         /** UpdateTestCaseRequest */
         UpdateTestCaseRequest: {
@@ -1330,6 +1982,34 @@ export interface components {
             expected_result: string;
             severity: components["schemas"]["Severity"];
             priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
             /** Version */
             version: number;
         };
@@ -1400,14 +2080,18 @@ export interface operations {
             };
         };
     };
-    login_api_auth_login_get: {
+    login_api_auth_login_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1418,24 +2102,13 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-        };
-    };
-    callback_api_auth_callback_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1455,6 +2128,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    change_my_password_api_auth_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
@@ -1566,6 +2270,39 @@ export interface operations {
             };
         };
     };
+    reset_password_api_users__email__reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_projects_api_projects_get: {
         parameters: {
             query?: never;
@@ -1638,6 +2375,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProjectDetail"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_project_api_projects__project_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteProjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2023,6 +2793,109 @@ export interface operations {
             };
         };
     };
+    sign_agent_upload_api_agent_projects__project_id__media_sign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedUpload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_agent_media_api_agent_projects__project_id__media_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_agent_media_api_agent_projects__project_id__media_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_media_storage_api_agent_projects__project_id__media_storage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     write_agent_results_api_agent_projects__project_id__results_post: {
         parameters: {
             query?: never;
@@ -2045,6 +2918,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentResultsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sign_upload_api_projects__project_id__media_sign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedUpload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_media_api_projects__project_id__media_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_media_api_projects__project_id__media_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Media"];
                 };
             };
             /** @description Validation Error */
@@ -2624,6 +3567,42 @@ export interface operations {
             };
         };
     };
+    submit_manual_result_api_projects__project_id__test_cases__case_id__manual_results_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualResultRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualResultResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     my_overview_api_me_overview_get: {
         parameters: {
             query?: never;
@@ -2832,6 +3811,9 @@ export interface operations {
             query?: {
                 status?: components["schemas"]["ResultStatus"] | null;
                 screen_id?: string | null;
+                platform?: components["schemas"]["Platform"] | null;
+                run_id?: string | null;
+                regression_only?: boolean;
             };
             header?: never;
             path: {
@@ -2848,6 +3830,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_open_regression_runs_api_projects__project_id__regression_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_regression_run_api_projects__project_id__regression_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRegressionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finish_regression_run_api_projects__project_id__regression_runs__run_id__finish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
                 };
             };
             /** @description Validation Error */

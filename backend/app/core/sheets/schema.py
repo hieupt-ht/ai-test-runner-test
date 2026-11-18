@@ -5,7 +5,7 @@ PROJECTS_TAB = "Projects"
 PROJECT_MEMBERS_TAB = "ProjectMembers"
 AUDIT_LOG_TAB = "AuditLog"
 
-USER_COLUMNS = ["email", "name", "role", "active", "created_at"]
+USER_COLUMNS = ["email", "name", "role", "active", "created_at", "password_hash"]
 PROJECT_COLUMNS = [
     "id",
     "name",
@@ -15,6 +15,11 @@ PROJECT_COLUMNS = [
     "spreadsheet_id",
     "archived",
     "created_at",
+    # Cột thêm sau: luôn nối vào CUỐI để Sheet cũ được tự nâng cấp
+    "android_app_id",
+    "ios_bundle_id",
+    "require_review",
+    "storage",
 ]
 PROJECT_MEMBER_COLUMNS = ["project_id", "email", "added_at"]
 AUDIT_LOG_COLUMNS = ["at", "actor", "action", "entity", "entity_id", "diff_json"]
@@ -36,7 +41,16 @@ RUNS_TAB = "Runs"
 RESULTS_TAB = "Results"
 
 META_COLUMNS = ["key", "value"]
-SCREEN_COLUMNS = ["id", "name", "description", "route", "code_paths", "created_at"]
+SCREEN_COLUMNS = [
+    "id",
+    "name",
+    "description",
+    "route",
+    "code_paths",
+    "created_at",
+    "dev_owner",
+    "media_json",
+]
 ASSIGNMENT_COLUMNS = ["id", "screen_id", "assignee_email", "deadline", "status", "updated_at"]
 TEST_CASE_COLUMNS = [
     "id",
@@ -54,6 +68,15 @@ TEST_CASE_COLUMNS = [
     "created_at",
     "updated_at",
     "version",
+    # Cột thêm sau: luôn nối vào CUỐI
+    "platform",
+    "test_type",
+    "regression",
+    "start_point",
+    "guide_media_json",
+    "postcondition",
+    "requirement_ref",
+    "execution_mode",
 ]
 RUN_COLUMNS = [
     "id",
@@ -68,6 +91,7 @@ RUN_COLUMNS = [
     "passed",
     "failed",
     "tokens_used",
+    "build_version",  # cột thêm sau, luôn nối vào CUỐI
 ]
 RESULT_COLUMNS = [
     "id",
@@ -82,6 +106,14 @@ RESULT_COLUMNS = [
     "reviewed_by",
     "review_note",
     "created_at",
+    # Cột thêm sau, luôn nối vào CUỐI
+    "step_results_json",
+    "actual_result",
+    "environment",
+    "executed_by",
+    "case_version",
+    "dev_owner",
+    "defect_url",
 ]
 
 PROJECT_TABS: dict[str, list[str]] = {

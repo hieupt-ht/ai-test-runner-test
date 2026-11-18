@@ -15,20 +15,15 @@ import { useProjectId } from "@/lib/use-project-id"
 import { cn } from "@/lib/utils"
 import { useMe } from "@/lib/use-me"
 import { useRequestRerun, useResults } from "@/lib/use-results"
+import { ResultDetail } from "@/components/results/result-detail"
+import { OpenRegressionRuns, RegressionDialog } from "@/components/results/regression-dialog"
+import { ResultFilters, type ResultFilterValues } from "@/components/results/result-filters"
+import { safeEvidenceUrl } from "@/lib/safe-url"
 import type { ResultItem, ResultStatus } from "@/lib/api/types"
 
 const STATUSES: ResultStatus[] = ["PASS", "FAIL", "BLOCKED", "INCONCLUSIVE"]
 
 const GROUPS = ["FAIL", "BLOCKED", "PASS"] as const
-
-function safeEvidenceUrl(value: string): string | null {
-  try {
-    const url = new URL(value)
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null
-  } catch {
-    return null
-  }
-}
 
 type ScreenSummary = {
   id: string
@@ -104,7 +99,13 @@ function ResultsContent() {
   const screenId = searchParams.get("screen") || undefined
   const [status, setStatus] = useState<ResultStatus | undefined>()
   const [collapsed, setCollapsed] = useState<ResultStatus[]>(["PASS"])
-  const { data = [], isLoading, isError } = useResults(projectId, undefined, screenId)
+  const [filters, setFilters] = useState<ResultFilterValues>({
+    platform: undefined,
+    runId: undefined,
+    regressionOnly: false,
+  })
+  const [selected, setSelected] = useState<ResultItem | null>(null)
+  const { data = [], isLoading, isError } = useResults(projectId, undefined, screenId, filters)
   const { user } = useMe()
   const rerun = useRequestRerun(projectId)
   // Chỉ QA Lead/Admin được yêu cầu chạy lại
@@ -185,6 +186,17 @@ function ResultsContent() {
         )}
       </div>
 
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <ResultFilters value={filters} onChange={setFilters} />
+        {canRerun && (
+          <RegressionDialog
+            projectId={projectId}
+            onCreated={(run) => setFilters((current) => ({ ...current, runId: run.id }))}
+          />
+        )}
+      </div>
+      <OpenRegressionRuns projectId={projectId} canManage={canRerun} />
+
       {isLoading ? (
         <Skeleton className="h-48 w-full" aria-label={t("loading")} />
       ) : isError ? (
@@ -255,12 +267,15 @@ function ResultsContent() {
                         <TableHead>{t("reasonColumn")}</TableHead>
                         <TableHead>{t("failedStepColumn")}</TableHead>
                         <TableHead>{t("evidence")}</TableHead>
+                        <TableHead>{t("viewDetail")}</TableHead>
                         {canRerun && <TableHead className="w-32 text-right">{t("actionsColumn")}</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {rows.map((result) => {
-                        const evidenceUrl = result.evidence ? safeEvidenceUrl(result.evidence) : null
+                        const evidenceUrl = result.evidence.legacy_url
+                          ? safeEvidenceUrl(result.evidence.legacy_url)
+                          : null
                         return (
                           <TableRow key={`${result.case_id}-${result.run_id}`}>
                             <TableCell className="font-mono text-xs text-muted-foreground">{result.case_id}</TableCell>
@@ -280,6 +295,17 @@ function ResultsContent() {
                                   {t("evidence")}
                                 </a>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                aria-label={`${t("viewDetail")} ${result.case_id}`}
+                                onClick={() => setSelected(result)}
+                              >
+                                {t("viewDetail")}
+                              </Button>
                             </TableCell>
                             {canRerun && (
                               <TableCell className="text-right">
@@ -314,6 +340,7 @@ function ResultsContent() {
           })}
         </div>
       )}
+      <ResultDetail result={selected} onClose={() => setSelected(null)} />
     </section>
   )
 }

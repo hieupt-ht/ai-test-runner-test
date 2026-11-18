@@ -8,6 +8,7 @@ from redis import Redis
 from app.core.cache import CachedList
 from app.core.ids import IdGenerator
 from app.core.locks.redis_lock import redis_lock
+from app.core.models.media import Media
 from app.core.models.screen import Screen
 from app.core.sheets.gateway import SheetsGateway
 from app.core.sheets.schema import SCREEN_COLUMNS, SCREENS_TAB
@@ -28,6 +29,10 @@ def _to_record(screen: Screen) -> Record:
         # Danh sách đường dẫn lưu thành chuỗi JSON trong một ô
         "code_paths": json.dumps(screen.code_paths, ensure_ascii=False),
         "created_at": to_iso(screen.created_at),
+        "dev_owner": screen.dev_owner,
+        "media_json": json.dumps(
+            [item.model_dump(mode="json") for item in screen.media], ensure_ascii=False
+        ),
     }
 
 
@@ -39,6 +44,8 @@ def _from_record(record: Record) -> Screen:
         route=record["route"],
         code_paths=json.loads(record["code_paths"] or "[]"),
         created_at=from_iso(record["created_at"]),
+        dev_owner=record["dev_owner"],
+        media=[Media(**item) for item in json.loads(record["media_json"] or "[]")],
     )
 
 
@@ -72,7 +79,16 @@ class ScreenRepository:
     def get(self, screen_id: str) -> Screen | None:
         return next((screen for screen in self.list_all() if screen.id == screen_id), None)
 
-    def create(self, *, name: str, description: str, route: str, code_paths: list[str]) -> Screen:
+    def create(
+        self,
+        *,
+        name: str,
+        description: str,
+        route: str,
+        code_paths: list[str],
+        dev_owner: str = "",
+        media: list[Media] | None = None,
+    ) -> Screen:
         screen = Screen(
             id=self._ids.next_id("screen", "SC"),
             name=name,
@@ -80,6 +96,8 @@ class ScreenRepository:
             route=route,
             code_paths=code_paths,
             created_at=utc_now(),
+            dev_owner=dev_owner,
+            media=media or [],
         )
         with self._lock():
             self._table.append(_to_record(screen))

@@ -4,14 +4,17 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.api.project_scope import scope_for
+from app.core.github.client import GitHubError
 from app.core.models.project import Project
+from app.core.models.test_case import TestCaseStatus
 from app.core.models.user import Role
 from app.core.notifications import NotificationStore
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from tests.conftest import SHEET_B, client_for, make_project, make_user
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 from tests.test_test_cases_api import NEXT_WEEK, create
 
 RESULT = {"test_case_id": "TC-000001", "status": "PASS", "reason": "Đạt"}
@@ -29,8 +32,8 @@ def project(
 
 
 @pytest.fixture
-def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project) -> TestClient:
-    browser = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+def lead(app: FastAPI, users: UserRepository, project: Project) -> TestClient:
+    browser = client_for(app, users, "lead@x.com", Role.QA_LEAD)
     browser.post(f"/api/projects/{project.id}/screens", json={"name": "Đăng nhập"})
     browser.post(
         f"/api/projects/{project.id}/assignments",
@@ -44,8 +47,8 @@ def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project
 
 
 @pytest.fixture
-def an(app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient) -> TestClient:
-    return client_for(app, oauth, users, "an@x.com", Role.TESTER)
+def an(app: FastAPI, users: UserRepository, lead: TestClient) -> TestClient:
+    return client_for(app, users, "an@x.com", Role.TESTER)
 
 
 def path(project: Project) -> str:
@@ -401,3 +404,212 @@ def test_results_write_failure_marks_run_failed(
     run_rows = gateway.data[project.spreadsheet_id]["Runs"]
     run = dict(zip(run_rows[0], run_rows[1], strict=True))
     assert run["status"] == "FAILED"
+
+
+# ---------- Task 15: kết quả mở rộng (từng bước, video, môi trường) ----------
+
+AUTH = {"Authorization": "Bearer test-token"}
+
+
+def media(cloud: str, name: str = "a", kind: str = "image") -> dict[str, str]:
+    return {
+        "kind": kind,
+        "url": f"https://res.cloudinary.com/{cloud}/{kind}/upload/{name}.png",
+        "public_id": name,
+    }
+
+
+def stored_results(project: Project, gateway: FakeSheetsGateway) -> list[dict[str, str]]:
+    rows = gateway.data[project.spreadsheet_id]["Results"]
+    return [dict(zip(rows[0], row, strict=False)) for row in rows[1:]]
+
+
+def post_results(
+    app: FastAPI,
+    client: TestClient,
+    project: Project,
+    results: list[dict[str, object]],
+    **extra: object,
+) -> object:
+    app.state.settings.agent_api_token = "test-token"
+    return client.post(path(project), json={"results": results, **extra}, headers=AUTH)
+
+
+def test_old_string_evidence_still_accepted(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    approve_case(an, lead, project)
+    response = post_results(
+        app, client, project, [{**RESULT, "evidence": "https://example.com/a.png"}]
+    )
+    assert response.status_code == 200
+    assert "https://example.com/a.png" in stored_results(project, gateway)[0]["evidence_json"]
+    assert "legacy_url" in stored_results(project, gateway)[0]["evidence_json"]
+
+
+def test_old_string_evidence_not_https_is_dropped(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    approve_case(an, lead, project)
+    post_results(app, client, project, [{**RESULT, "evidence": "javascript:alert(1)"}])
+    assert stored_results(project, gateway)[0]["evidence_json"] == ""
+
+
+def test_new_evidence_and_steps_stored(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.cloud_name = "mine"
+    approve_case(an, lead, project)
+    response = post_results(
+        app, client, project,
+        [{
+            **RESULT,
+            "evidence": {
+                "video": media("mine", "v", "video"),
+                "screenshots": [media("mine", "s1")],
+            },
+            "step_results": [
+                {"step_no": 1, "status": "PASS", "actual": "ok"},
+                {"step_no": 2, "status": "FAIL", "screenshot": media("mine", "s2")},
+            ],
+            "actual_result": "Thấy lỗi",
+            "environment": "Pixel 7 / Android 14",
+            "executed_by": "codex-windows",
+            "case_version": 3,
+        }],
+    )
+    assert response.status_code == 200
+    row = stored_results(project, gateway)[0]
+    assert '"v"' in row["evidence_json"] and '"s1"' in row["evidence_json"]
+    assert '"s2"' in row["step_results_json"]
+    assert row["actual_result"] == "Thấy lỗi"
+    assert row["environment"] == "Pixel 7 / Android 14"
+    assert row["executed_by"] == "codex-windows"
+    assert row["case_version"] == "3"
+
+
+def test_foreign_cloud_rejected_and_no_run_created(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.cloud_name = "mine"
+    approve_case(an, lead, project)
+    response = post_results(
+        app, client, project,
+        [{**RESULT, "evidence": {"screenshots": [media("other")]}}],
+    )
+    assert response.status_code == 422
+    assert len(gateway.data[project.spreadsheet_id]["Runs"]) == 1  # chỉ còn dòng tiêu đề
+    assert len(gateway.data[project.spreadsheet_id]["Results"]) == 1
+
+
+def test_dev_owner_snapshot_from_screen(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    approve_case(an, lead, project)
+    screens = app.state.services
+    scope = scope_for(screens, screens.projects.get(project.id))
+    screen = scope.screens.list_all()[0]
+    scope.screens.update(screen.model_copy(update={"dev_owner": "nguyenvana"}))
+    post_results(app, client, project, [RESULT])
+    assert stored_results(project, gateway)[0]["dev_owner"] == "nguyenvana"
+
+
+def test_build_version_saved_on_run(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    approve_case(an, lead, project)
+    post_results(app, client, project, [RESULT], build_version="1.4.2")
+    rows = gateway.data[project.spreadsheet_id]["Runs"]
+    run = dict(zip(rows[0], rows[1], strict=False))
+    assert run["build_version"] == "1.4.2"
+
+
+def test_sixth_run_prunes_oldest_evidence_and_deletes_files(
+    app: FastAPI, client: TestClient, an: TestClient, lead: TestClient,
+    project: Project, gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.cloud_name = "mine"
+    deleted: list[str] = []
+
+    class Janitor:
+        def delete(self, items: list[object]) -> None:
+            deleted.extend(item.public_id for item in items)  # type: ignore[attr-defined]
+
+    app.state.services.media_janitor = Janitor()
+    approve_case(an, lead, project)
+    for n in range(1, 7):
+        post_results(
+            app, client, project,
+            [{**RESULT, "evidence": {"screenshots": [media("mine", f"s{n}")]}}],
+        )
+    rows = stored_results(project, gateway)
+    assert deleted == ["s1"]
+    assert rows[0]["evidence_json"] == '{"pruned": true}'
+    assert all("pruned" not in row["evidence_json"] for row in rows[1:])
+
+
+def test_fail_assigns_issue_to_screen_dev_and_survives_assign_error(
+    app: FastAPI,
+    client: TestClient,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    github: FakeGitHub,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    lead.patch(f"/api/projects/{project.id}/screens/SC-0001", json={"dev_owner": "@nguyenvana"})
+    case = create(an, project).json()
+    an.post(f"/api/projects/{project.id}/test-cases/{case['id']}/submit", json={"version": 1})
+    lead.post(f"/api/projects/{project.id}/test-cases/{case['id']}/approve", json={"version": 2})
+    github.create_issue(
+        project.repo_full_name, title="t", body="", labels=[f"tc:{case['id']}", "test-case"]
+    )
+    fail = {**RESULT, "test_case_id": case["id"], "status": "FAIL", "reason": "Lỗi"}
+    headers = {"Authorization": "Bearer test-token"}
+
+    assert client.post(path(project), json={"results": [fail]}, headers=headers).status_code == 200
+    assert github.assignees[1] == ["nguyenvana"]
+
+    github.fail_assign_with = GitHubError("Không gán được @nguyenvana")
+    again = client.post(path(project), json={"results": [fail]}, headers=headers)
+    assert again.status_code == 200
+    assert "⚠️ Không gán được issue cho @nguyenvana" in (
+        github.issue_comments[project.repo_full_name][1][0].body
+    )
+
+
+def test_agent_ignores_manual_case(
+    app: FastAPI,
+    client: TestClient,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+) -> None:
+    app.state.settings.agent_api_token = "test-token"
+    case = create(an, project, execution_mode="MANUAL").json()
+    scope = scope_for(app.state.services, project)
+    # Dù case Manual có ở trạng thái đã duyệt, agent vẫn không được ghi kết quả cho nó
+    scope.test_cases.save(
+        scope.test_cases.get(case["id"]).model_copy(update={"status": TestCaseStatus.APPROVED}),  # type: ignore[union-attr]
+        expected_version=1,
+        actor="lead@x.com",
+    )
+
+    response = client.post(
+        path(project),
+        json={"results": [{**RESULT, "test_case_id": case["id"]}]},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["written"] == 0
+    assert body["ignored"] == [{"test_case_id": case["id"], "reason": "Case test tay"}]
+    assert scope.test_cases.get(case["id"]).status == TestCaseStatus.APPROVED  # type: ignore[union-attr]

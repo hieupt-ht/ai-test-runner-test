@@ -90,6 +90,10 @@ class GitHubClient(Protocol):
         labels: list[str],
     ) -> None: ...
 
+    def add_assignees(
+        self, repo_full_name: str, issue_number: int, assignees: list[str]
+    ) -> None: ...
+
 
 def normalize_private_key(value: str) -> str:
     """Khoá trong .env thường viết trên một dòng với "\\n"; đổi lại thành xuống dòng thật."""
@@ -231,6 +235,22 @@ class GitHubAppClient:
             f"/repos/{repo_full_name}/issues/{issue_number}",
             json={"state": state, "labels": labels},
         )
+
+    def add_assignees(
+        self, repo_full_name: str, issue_number: int, assignees: list[str]
+    ) -> None:
+        """Giao issue cho người khác. GitHub trả 201 dù bỏ qua người không hợp lệ,
+        nên phải so danh sách `assignees` trong phản hồi với danh sách đã gửi."""
+        response = self._request(
+            "POST",
+            self._repo_token(repo_full_name),
+            f"/repos/{repo_full_name}/issues/{issue_number}/assignees",
+            json={"assignees": assignees},
+        )
+        assigned = {user["login"].casefold() for user in response.json().get("assignees", [])}
+        for name in assignees:
+            if name.casefold() not in assigned:
+                raise GitHubError(f"Không gán được @{name}")
 
     # ----- Xác thực -----
 

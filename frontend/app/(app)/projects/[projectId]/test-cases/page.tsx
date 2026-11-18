@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table"
 import { filterTestCases, paginate, type CaseFilters } from "@/lib/test-cases/filter"
 import { approvableIds, batchItems, toggleAll, toggleId } from "@/lib/test-cases/selection"
+import { useResults } from "@/lib/use-results"
 import { useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
@@ -49,6 +50,8 @@ function TestCaseList() {
   const casesQuery = useTestCases(projectId, includeArchived)
   const syncIssues = useSyncIssues(projectId)
   const screensQuery = useScreens(projectId)
+  // Kết quả gần nhất của từng case: một request cho cả danh sách (không gọi mỗi dòng)
+  const resultsQuery = useResults(projectId)
 
   // ?screen=SC-0001 chỉ đặt bộ lọc ban đầu; sau đó người dùng tự đổi trong thanh lọc.
   const [filters, setFilters] = useState<CaseFilters>({
@@ -60,6 +63,10 @@ function TestCaseList() {
 
   const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data])
   const screens = screensQuery.data ?? []
+  const lastResults = useMemo(
+    () => new Map((resultsQuery.data ?? []).map((item) => [item.case_id, item.status])),
+    [resultsQuery.data],
+  )
   const screenNames = new Map(screens.map((screen) => [screen.id, screen.name]))
   const creators = useMemo(
     () => [...new Set(cases.map((testCase) => testCase.created_by))].sort(),
@@ -77,7 +84,7 @@ function TestCaseList() {
   const items = useMemo(() => batchItems(selected, cases), [selected, cases])
   const allApprovableSelected = approvable.length > 0 && approvable.every((id) => selected.has(id))
   const canReview = Boolean(project?.permissions.includes("REVIEW_TEST_CASE")) && !project?.archived
-  const columnCount = canReview ? 9 : 8
+  const columnCount = canReview ? 10 : 9
 
   const canCreate = Boolean(project?.permissions.includes("EDIT_TEST_CASE")) && !project?.archived
 
@@ -158,6 +165,7 @@ function TestCaseList() {
           items={items}
           onDone={() => setSelected(new Set())}
           onClear={() => setSelected(new Set())}
+          reviewDisabled={project ? !project.require_review : false}
         />
       )}
 
@@ -182,6 +190,7 @@ function TestCaseList() {
               <TableHead>{t("colScreen")}</TableHead>
               <TableHead>{t("colSeverity")}</TableHead>
               <TableHead>{t("colPriority")}</TableHead>
+              <TableHead>{t("colExecutionMode")}</TableHead>
               <TableHead>{t("colStatus")}</TableHead>
               <TableHead>{t("colCreator")}</TableHead>
               <TableHead>{t("colUpdatedAt")}</TableHead>
@@ -231,8 +240,12 @@ function TestCaseList() {
                 </TableCell>
                 <TableCell>{t(`severity.${testCase.severity}`)}</TableCell>
                 <TableCell>{testCase.priority}</TableCell>
+                <TableCell className="text-xs">{t(`executionMode.${testCase.execution_mode}`)}</TableCell>
                 <TableCell>
-                  <CaseStatusBadge status={testCase.status} />
+                  <CaseStatusBadge
+                    status={testCase.status}
+                    lastResult={lastResults.get(testCase.id)}
+                  />
                 </TableCell>
                 <TableCell className="text-xs">{testCase.created_by}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">

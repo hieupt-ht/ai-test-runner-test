@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import OverviewPage from "@/app/(app)/page"
 import type { MyAssignment, Project, ResultItem, Role, User } from "@/lib/api/types"
+import { makeResult } from "@/components/results/result-fixture"
 import messages from "@/messages/vi.json"
 
 const mocks = vi.hoisted(() => ({
@@ -58,20 +59,19 @@ const project: Project = {
   spreadsheet_id: "sheet-1",
   archived: false,
   created_at: "2026-11-01T00:00:00Z",
+  android_app_id: "",
+  ios_bundle_id: "",
+  require_review: false,
+  storage: "cloudinary",
 }
 
-const result: ResultItem = {
+const result: ResultItem = makeResult({
   case_id: "TC-1",
-  case_title: "Đăng nhập thành công",
-  screen_id: "SC-login",
-  screen_name: "Đăng nhập",
   status: "PASS",
   reason: "Đúng kết quả mong đợi",
   failed_step: null,
-  evidence: "",
   run_id: "run-1",
-  finished_at: "2026-11-14T10:00:00Z",
-}
+})
 
 function renderPage() {
   return render(

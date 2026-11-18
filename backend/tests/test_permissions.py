@@ -12,6 +12,7 @@ A, Q, T, V = Role.ADMIN, Role.QA_LEAD, Role.TESTER, Role.VIEWER
 SPEC_TABLE: dict[Action, set[Role]] = {
     Action.MANAGE_USERS: {A},
     Action.MANAGE_PROJECTS: {A},
+    Action.MANAGE_PROJECT_SETTINGS: {A, Q},
     Action.MANAGE_MEMBERS: {A, Q},
     Action.MANAGE_SCREENS: {A, Q},
     Action.EDIT_TEST_CASE: {A, Q, T},

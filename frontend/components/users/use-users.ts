@@ -23,7 +23,7 @@ export function useUsers({ enabled }: { enabled: boolean }) {
   })
 }
 
-export type CreateUserInput = { email: string; name: string; role: Role }
+export type CreateUserInput = { email: string; name: string; role: Role; password: string }
 export type UpdateUserInput = { email: string; name?: string; role?: Role; active?: boolean }
 
 export function useCreateUser() {
@@ -54,5 +54,19 @@ export function useUpdateUser() {
       return data
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY }),
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async ({ email, password }: { email: string; password: string }): Promise<void> => {
+      const { error, response } = await api.POST("/api/users/{email}/reset-password", {
+        params: { path: { email } },
+        body: { password },
+      })
+      if (!response.ok) {
+        throw new ApiError(response.status, errorMessage(error, FALLBACK_ERROR))
+      }
+    },
   })
 }

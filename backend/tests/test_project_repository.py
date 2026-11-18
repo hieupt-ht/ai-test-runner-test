@@ -77,3 +77,75 @@ def test_create_rejects_spreadsheet_already_used(projects: ProjectRepository) ->
         create(projects, "B", "sheet-a")
 
     assert [p.name for p in projects.list_all()] == ["A"]
+
+
+def test_new_project_columns_default_when_cells_empty(
+    projects: ProjectRepository, gateway: FakeSheetsGateway
+) -> None:
+    project_id = create(projects, "A", "sheet-a")
+    # Giả lập dòng cũ: ba ô mới bị Google bỏ trống ở cuối dòng
+    row = gateway.data[SYSTEM_SHEET_ID]["Projects"][1]
+    gateway.data[SYSTEM_SHEET_ID]["Projects"][1] = row[:8]
+    projects._cache.invalidate()
+
+    project = projects.get(project_id)
+
+    assert project is not None
+    assert project.android_app_id == "" and project.ios_bundle_id == ""
+    assert project.require_review is False
+
+
+def test_require_review_and_app_ids_round_trip(
+    projects: ProjectRepository, gateway: FakeSheetsGateway
+) -> None:
+    project_id = create(projects, "A", "sheet-a")
+    project = projects.get(project_id)
+    assert project is not None
+
+    projects.update(
+        project.model_copy(
+            update={
+                "require_review": True,
+                "android_app_id": "com.shop.app",
+                "ios_bundle_id": "vn.shop",
+            }
+        )
+    )
+
+    header = gateway.data[SYSTEM_SHEET_ID]["Projects"][0]
+    row = gateway.data[SYSTEM_SHEET_ID]["Projects"][1]
+    assert row[header.index("require_review")] == "TRUE"
+    saved = projects.get(project_id)
+    assert saved is not None
+    assert saved.require_review is True
+    assert (saved.android_app_id, saved.ios_bundle_id) == ("com.shop.app", "vn.shop")
+
+
+def test_storage_defaults_to_cloudinary_and_round_trips(
+    projects: ProjectRepository, gateway: FakeSheetsGateway
+) -> None:
+    project_id = create(projects, "A", "sheet-a")
+    project = projects.get(project_id)
+    assert project is not None and project.storage == "cloudinary"
+
+    projects.update(project.model_copy(update={"storage": "drive"}))
+
+    header = gateway.data[SYSTEM_SHEET_ID]["Projects"][0]
+    row = gateway.data[SYSTEM_SHEET_ID]["Projects"][1]
+    assert row[header.index("storage")] == "drive"
+    saved = projects.get(project_id)
+    assert saved is not None and saved.storage == "drive"
+
+
+def test_blank_storage_cell_reads_as_cloudinary(
+    projects: ProjectRepository, gateway: FakeSheetsGateway
+) -> None:
+    # Dòng cũ chưa có cột storage (Google bỏ trống ô cuối dòng)
+    project_id = create(projects, "A", "sheet-a")
+    row = gateway.data[SYSTEM_SHEET_ID]["Projects"][1]
+    gateway.data[SYSTEM_SHEET_ID]["Projects"][1] = row[:-1]
+    projects._cache.invalidate()
+
+    project = projects.get(project_id)
+
+    assert project is not None and project.storage == "cloudinary"

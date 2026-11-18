@@ -12,6 +12,7 @@ import { selectableScreens } from "@/lib/test-cases/selectable-screens"
 import { useMe } from "@/lib/use-me"
 import { useAssignments, useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
+import { useProject } from "@/lib/use-projects"
 
 // useSearchParams (đọc ?screen=) cần nằm trong <Suspense> vì đang bật cacheComponents.
 export default function NewTestCasePage() {
@@ -29,13 +30,14 @@ function NewTestCase() {
   const screensQuery = useScreens(projectId)
   const assignmentsQuery = useAssignments(projectId)
   const { user: me, isLoading: meLoading } = useMe()
+  const { data: project } = useProject(projectId)
 
   if (screensQuery.isLoading || assignmentsQuery.isLoading || meLoading) return <Skeleton className="h-96 w-full" />
 
   const screens = selectableScreens(screensQuery.data ?? [], assignmentsQuery.data ?? [], me)
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <Link
         href={`/projects/${projectId}/test-cases`}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -47,6 +49,7 @@ function NewTestCase() {
         projectId={projectId}
         screens={screens}
         defaultScreenId={searchParams.get("screen") ?? undefined}
+        reviewEnabled={project?.require_review ?? true}
       />
     </div>
   )

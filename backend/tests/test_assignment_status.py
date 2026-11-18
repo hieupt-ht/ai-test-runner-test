@@ -9,6 +9,7 @@ from app.core.assignment_status import AssignmentStatusUpdater, derive_assignmen
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.assignment import AssignmentStatus
 from app.core.models.test_case import (
+    ExecutionMode,
     Priority,
     Severity,
     TestCase,
@@ -174,3 +175,28 @@ def test_refresh_reads_cases_inside_lock(gateway: FakeSheetsGateway, setup: Setu
 
     assert blocked == [True]
     assert setup.assignments.list_all()[0].status == AssignmentStatus.WRITING
+
+
+def _with_mode(case: TestCase, mode: ExecutionMode) -> TestCase:
+    return case.model_copy(update={"execution_mode": mode})
+
+
+def test_all_manual_tested_is_tested() -> None:
+    cases = [
+        _with_mode(make_case("TESTED", case_id="TC-000001"), ExecutionMode.MANUAL),
+        _with_mode(make_case("TESTED", case_id="TC-000002"), ExecutionMode.MANUAL),
+    ]
+    assert derive(cases) == AssignmentStatus.TESTED
+
+
+def test_mixed_manual_tested_and_automation_approved_is_approved() -> None:
+    cases = [
+        _with_mode(make_case("TESTED", case_id="TC-000001"), ExecutionMode.MANUAL),
+        _with_mode(make_case("APPROVED", case_id="TC-000002"), ExecutionMode.AUTOMATION),
+    ]
+    assert derive(cases) == AssignmentStatus.APPROVED
+
+
+def test_manual_draft_is_writing() -> None:
+    cases = [_with_mode(make_case("DRAFT"), ExecutionMode.MANUAL)]
+    assert derive(cases) == AssignmentStatus.WRITING

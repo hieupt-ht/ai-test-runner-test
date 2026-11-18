@@ -26,7 +26,7 @@ from app.core.repositories.test_cases import TestCaseRepository
 from app.core.repositories.users import UserRepository
 from app.core.time import today_in_vietnam
 from tests.conftest import SHEET_A, SHEET_B, client_for, make_project, make_user
-from tests.fakes import FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeSheetsGateway
 
 NEXT_WEEK = (today_in_vietnam() + timedelta(days=7)).isoformat()
 YESTERDAY = (today_in_vietnam() - timedelta(days=1)).isoformat()
@@ -62,8 +62,8 @@ def project(
 
 
 @pytest.fixture
-def lead(app: FastAPI, oauth: FakeOAuth, users: UserRepository, project: Project) -> TestClient:
-    browser = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+def lead(app: FastAPI, users: UserRepository, project: Project) -> TestClient:
+    browser = client_for(app, users, "lead@x.com", Role.QA_LEAD)
     browser.post(f"/api/projects/{project.id}/screens", json={"name": "Đăng nhập"})
     return browser
 
@@ -178,16 +178,15 @@ def test_delete_screen_with_assignment_is_409(lead: TestClient, project: Project
 
 
 def test_tester_cannot_assign(
-    app: FastAPI, oauth: FakeOAuth, users: UserRepository, lead: TestClient, project: Project
+    app: FastAPI, users: UserRepository, lead: TestClient, project: Project
 ) -> None:
-    tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)
+    tester = client_for(app, users, "tester@x.com", Role.TESTER)
 
     assert assign(tester, project, ["tester2@x.com"]).status_code == 403
 
 
 def test_my_assignments_across_projects(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     lead: TestClient,
     project: Project,
@@ -209,7 +208,7 @@ def test_my_assignments_across_projects(
     assign(lead, other, ["tester@x.com"], deadline=soon)
     projects.update(other.model_copy(update={"archived": True}))  # dự án lưu trữ bị bỏ qua
 
-    tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)
+    tester = client_for(app, users, "tester@x.com", Role.TESTER)
     mine = tester.get("/api/me/assignments").json()
 
     assert [(a["project_name"], a["screen_name"]) for a in mine] == [("Dự án A", "Đăng nhập")]
@@ -228,7 +227,6 @@ def test_non_member_gets_404(client_as_tester: TestClient, project: Project) -> 
 @pytest.mark.parametrize("breakage", ["denied", "missing_columns"])
 def test_my_assignments_skips_project_with_broken_sheet(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     lead: TestClient,
     project: Project,
@@ -252,7 +250,7 @@ def test_my_assignments_skips_project_with_broken_sheet(
     else:
         gateway.data[SHEET_B]["Assignments"][0] = ["id"]
 
-    tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)
+    tester = client_for(app, users, "tester@x.com", Role.TESTER)
     response = tester.get("/api/me/assignments")
 
     assert response.status_code == 200
@@ -303,7 +301,6 @@ def test_reassign_tester_keeps_derived_status(
 
 def test_my_assignments_include_case_counts(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     lead: TestClient,
     project: Project,
@@ -325,7 +322,7 @@ def test_my_assignments_include_case_counts(
         ),
     ).refresh_screen("SC-0001")
 
-    tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)
+    tester = client_for(app, users, "tester@x.com", Role.TESTER)
     mine = tester.get("/api/me/assignments").json()
 
     assert mine[0]["status"] == "WRITING"
@@ -340,7 +337,6 @@ def test_my_assignments_include_case_counts(
 
 def test_my_assignments_list_returned_cases_with_reason(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     lead: TestClient,
     project: Project,
@@ -358,7 +354,7 @@ def test_my_assignments_list_returned_cases_with_reason(
         diff={"status": ["IN_REVIEW", "DRAFT"], "comment": "Thiếu bước đăng xuất"},
     )
 
-    tester = client_for(app, oauth, users, "tester@x.com", Role.TESTER)
+    tester = client_for(app, users, "tester@x.com", Role.TESTER)
     mine = tester.get("/api/me/assignments").json()
 
     assert mine[0]["returned_cases"] == [

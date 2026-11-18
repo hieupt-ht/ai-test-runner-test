@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
@@ -13,7 +14,7 @@ from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
 from app.core.models.run import ResultStatus
-from app.core.models.test_case import TestCase, TestCaseContent
+from app.core.models.test_case import ExecutionMode, TestCase, TestCaseContent
 from app.core.models.user import User
 from app.core.permissions import Action
 from app.core.repositories.audit_log import AuditEntry
@@ -39,6 +40,14 @@ BUSY = "Dữ liệu đang được cập nhật, vui lòng thử lại"
 MAX_BATCH_SIZE = 200
 
 
+class LastResult(BaseModel):
+    """Kết quả chạy gần nhất của một case test tay."""
+
+    status: ResultStatus
+    run_id: str
+    created_at: datetime
+
+
 class TestCaseDetail(TestCase):
     """Test case kèm quyền của người đang xem, để giao diện ẩn/hiện nút."""
 
@@ -47,6 +56,7 @@ class TestCaseDetail(TestCase):
     can_edit: bool
     can_review: bool
     can_archive: bool
+    last_result: LastResult | None = None  # chỉ có với case test tay đã có kết quả
 
 
 class ConflictResponse(BaseModel):
@@ -89,10 +99,10 @@ class TransitionRequest(BaseModel):
 
 
 def _service(services: Services, user: User, project_id: str, action: Action) -> TestCaseService:
-    return _service_for(services, load_project(services, user, project_id, action))
+    return service_for(services, load_project(services, user, project_id, action))
 
 
-def _service_for(services: Services, project: Project) -> TestCaseService:
+def service_for(services: Services, project: Project) -> TestCaseService:
     scope = scope_for(services, project)
     return TestCaseService(
         project_id=project.id,
@@ -111,7 +121,24 @@ def _service_for(services: Services, project: Project) -> TestCaseService:
         ),
         notifier=Notifier(services.notifications),
         users=services.users,
+        has_results=_has_results_checker(services, project),
+        cloud_name=services.cloud_name,
+        drive_enabled=services.drive is not None,
+        janitor=services.media_janitor,
     )
+
+
+def _has_results_checker(services: Services, project: Project) -> Callable[[str], bool]:
+    """Hàm "case này đã có kết quả chạy chưa"; chỉ đọc Sheet Results một lần, khi cần."""
+    case_ids: set[str] | None = None
+
+    def has_results(case_id: str) -> bool:
+        nonlocal case_ids
+        if case_ids is None:
+            case_ids = {r.test_case_id for r in scope_for(services, project).results.list_all()}
+        return case_id in case_ids
+
+    return has_results
 
 
 def _content_of(body: TestCaseContent) -> TestCaseContent:
@@ -183,7 +210,7 @@ def get_test_case(
     project_id: str, case_id: str, user: CurrentUser, services: ServicesDep
 ) -> TestCaseDetail:
     project = load_project(services, user, project_id, Action.VIEW_PROJECT)
-    service = _service_for(services, project)
+    service = service_for(services, project)
     try:
         case = service.get_case(case_id)
     except TestCaseNotFoundError:
@@ -194,7 +221,19 @@ def get_test_case(
         can_edit=not project.archived and service.can_edit(user, case),
         can_review=not project.archived and service.can_review(user),
         can_archive=not project.archived and service.can_archive(user, case),
+        last_result=_last_result(services, project, case),
     )
+
+
+def _last_result(services: Services, project: Project, case: TestCase) -> LastResult | None:
+    """Kết quả mới nhất của case test tay (đọc Sheet Results một lần); Automation thì không có."""
+    if case.execution_mode != ExecutionMode.MANUAL:
+        return None
+    mine = [r for r in scope_for(services, project).results.list_all() if r.test_case_id == case.id]
+    if not mine:
+        return None
+    latest = max(mine, key=lambda result: (result.created_at, result.run_id))
+    return LastResult(status=latest.status, run_id=latest.run_id, created_at=latest.created_at)
 
 
 @router.put("/{case_id}", response_model=TestCase, responses={409: {"model": ConflictResponse}})
@@ -292,6 +331,8 @@ def approve_test_cases(
         result = service.approve_many(user, [(item.case_id, item.version) for item in body.items])
     except TestCasePermissionError:
         raise HTTPException(status.HTTP_403_FORBIDDEN, NO_PERMISSION) from None
+    except InvalidTransitionError as error:  # dự án đang tắt bước duyệt
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from None
     except LockTimeout:
         raise HTTPException(status.HTTP_409_CONFLICT, BUSY) from None
     return BatchApproveResponse(

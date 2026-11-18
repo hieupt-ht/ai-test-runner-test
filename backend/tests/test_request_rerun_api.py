@@ -14,7 +14,7 @@ from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from tests.conftest import client_for, make_project, make_user
-from tests.fakes import FakeGitHub, FakeOAuth, FakeSheetsGateway
+from tests.fakes import FakeGitHub, FakeSheetsGateway
 from tests.test_results_api import seed_results
 
 RERUN_MARKER = "<!-- ai-test-runner-rerun -->"
@@ -56,14 +56,13 @@ def closed_issue(github: FakeGitHub, project: Project, case_id: str) -> None:
 
 def test_qa_lead_request_rerun_does_three_github_actions(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
     github: FakeGitHub,
 ) -> None:
     failed_id, _ = seed_results(app, project)  # case đầu có kết quả mới nhất là FAIL
     closed_issue(github, project, failed_id)
-    lead = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+    lead = client_for(app, users, "lead@x.com", Role.QA_LEAD)
 
     response = lead.post(rerun_url(project, failed_id))
 
@@ -86,13 +85,12 @@ def test_qa_lead_request_rerun_does_three_github_actions(
 
 def test_tester_cannot_request_rerun(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
     failed_id, _ = seed_results(app, project)
 
-    response = client_for(app, oauth, users, "an@x.com", Role.TESTER).post(
+    response = client_for(app, users, "an@x.com", Role.TESTER).post(
         rerun_url(project, failed_id)
     )
 
@@ -101,13 +99,12 @@ def test_tester_cannot_request_rerun(
 
 def test_pass_case_is_rejected(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
     _, passed_id = seed_results(app, project)
 
-    response = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD).post(
+    response = client_for(app, users, "lead@x.com", Role.QA_LEAD).post(
         rerun_url(project, passed_id)
     )
 
@@ -117,11 +114,10 @@ def test_pass_case_is_rejected(
 
 def test_case_without_result_is_rejected(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
-    response = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD).post(
+    response = client_for(app, users, "lead@x.com", Role.QA_LEAD).post(
         rerun_url(project, "TC-999999")
     )
 
@@ -130,14 +126,13 @@ def test_case_without_result_is_rejected(
 
 def test_without_github_is_503(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
 ) -> None:
     failed_id, _ = seed_results(app, project)
     app.state.services.github = None
 
-    response = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD).post(
+    response = client_for(app, users, "lead@x.com", Role.QA_LEAD).post(
         rerun_url(project, failed_id)
     )
 
@@ -147,7 +142,6 @@ def test_without_github_is_503(
 
 def test_github_error_still_returns_204_and_logs_warning(
     app: FastAPI,
-    oauth: FakeOAuth,
     users: UserRepository,
     project: Project,
     github: FakeGitHub,
@@ -156,7 +150,7 @@ def test_github_error_still_returns_204_and_logs_warning(
     failed_id, _ = seed_results(app, project)
     closed_issue(github, project, failed_id)
     github.fail_with = GitHubError("GitHub tạm lỗi")
-    lead: TestClient = client_for(app, oauth, users, "lead@x.com", Role.QA_LEAD)
+    lead: TestClient = client_for(app, users, "lead@x.com", Role.QA_LEAD)
 
     with caplog.at_level(logging.WARNING):
         response = lead.post(rerun_url(project, failed_id))
