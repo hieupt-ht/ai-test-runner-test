@@ -5,7 +5,7 @@ from typing import Any
 
 from app.core.bootstrap import bootstrap_project_spreadsheet
 from app.core.github.client import GitHubClient, GitHubNotConfiguredError
-from app.core.models.project import Project
+from app.core.models.project import Project, Storage
 from app.core.models.user import Role, User
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
@@ -90,6 +90,7 @@ class ProjectService:
         android_app_id: str | None = None,
         ios_bundle_id: str | None = None,
         require_review: bool | None = None,
+        storage: Storage | None = None,
         approve_pending: Callable[[], None] | None = None,
     ) -> Project:
         """`approve_pending` chạy khi công tắc "cần duyệt" đổi từ bật sang tắt."""
@@ -104,6 +105,7 @@ class ProjectService:
             "android_app_id": android_app_id,
             "ios_bundle_id": ios_bundle_id,
             "require_review": require_review,
+            "storage": storage,
         }
         updated = project.model_copy(
             update={field: value for field, value in changes.items() if value is not None}

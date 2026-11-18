@@ -47,6 +47,7 @@ def _to_record(project: Project) -> Record:
         "android_app_id": project.android_app_id,
         "ios_bundle_id": project.ios_bundle_id,
         "require_review": "TRUE" if project.require_review else "FALSE",
+        "storage": project.storage,
     }
 
 
@@ -63,6 +64,7 @@ def _from_record(record: Record) -> Project:
         android_app_id=record["android_app_id"],
         ios_bundle_id=record["ios_bundle_id"],
         require_review=record["require_review"].strip().upper() == "TRUE",
+        storage="drive" if record["storage"].strip().lower() == "drive" else "cloudinary",
     )
 
 

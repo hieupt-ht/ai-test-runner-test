@@ -238,3 +238,52 @@ def test_create_with_existing_tab_missing_columns_appends_them(
     header = gateway.data[SHEET_A]["Screens"][0]
     assert header[:2] == ["Tên màn hình", "Ghi chú"]
     assert "id" in header
+
+
+# ----- Nơi lưu ảnh/video của dự án -----
+
+
+def test_admin_sets_storage_to_drive_when_drive_is_configured(
+    app: FastAPI,
+    client_as_admin: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.drive = object()  # giả là đã cấu hình Drive
+    project = make_project(projects, members, gateway)
+
+    response = client_as_admin.patch(f"/api/projects/{project.id}", json={"storage": "drive"})
+
+    assert response.status_code == 200
+    assert response.json()["storage"] == "drive"
+
+
+def test_cannot_choose_drive_when_drive_is_not_configured(
+    client_as_admin: TestClient,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    project = make_project(projects, members, gateway)
+
+    response = client_as_admin.patch(f"/api/projects/{project.id}", json={"storage": "drive"})
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Chưa cấu hình Google Drive"}
+
+
+def test_qa_lead_cannot_change_storage(
+    app: FastAPI,
+    users: UserRepository,
+    projects: ProjectRepository,
+    members: ProjectMemberRepository,
+    gateway: FakeSheetsGateway,
+) -> None:
+    app.state.services.drive = object()
+    project = make_project(projects, members, gateway, member_emails=("lead@x.com",))
+    lead = client_for(app, users, "lead@x.com", Role.QA_LEAD)
+
+    response = lead.patch(f"/api/projects/{project.id}", json={"storage": "drive"})
+
+    assert response.status_code == 403

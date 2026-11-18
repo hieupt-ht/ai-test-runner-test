@@ -119,3 +119,33 @@ def test_require_review_and_app_ids_round_trip(
     assert saved is not None
     assert saved.require_review is True
     assert (saved.android_app_id, saved.ios_bundle_id) == ("com.shop.app", "vn.shop")
+
+
+def test_storage_defaults_to_cloudinary_and_round_trips(
+    projects: ProjectRepository, gateway: FakeSheetsGateway
+) -> None:
+    project_id = create(projects, "A", "sheet-a")
+    project = projects.get(project_id)
+    assert project is not None and project.storage == "cloudinary"
+
+    projects.update(project.model_copy(update={"storage": "drive"}))
+
+    header = gateway.data[SYSTEM_SHEET_ID]["Projects"][0]
+    row = gateway.data[SYSTEM_SHEET_ID]["Projects"][1]
+    assert row[header.index("storage")] == "drive"
+    saved = projects.get(project_id)
+    assert saved is not None and saved.storage == "drive"
+
+
+def test_blank_storage_cell_reads_as_cloudinary(
+    projects: ProjectRepository, gateway: FakeSheetsGateway
+) -> None:
+    # Dòng cũ chưa có cột storage (Google bỏ trống ô cuối dòng)
+    project_id = create(projects, "A", "sheet-a")
+    row = gateway.data[SYSTEM_SHEET_ID]["Projects"][1]
+    gateway.data[SYSTEM_SHEET_ID]["Projects"][1] = row[:-1]
+    projects._cache.invalidate()
+
+    project = projects.get(project_id)
+
+    assert project is not None and project.storage == "cloudinary"

@@ -19,6 +19,7 @@ PROJECT_COLUMNS = [
     "android_app_id",
     "ios_bundle_id",
     "require_review",
+    "storage",
 ]
 PROJECT_MEMBER_COLUMNS = ["project_id", "email", "added_at"]
 AUDIT_LOG_COLUMNS = ["at", "actor", "action", "entity", "entity_id", "diff_json"]

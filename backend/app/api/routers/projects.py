@@ -10,7 +10,8 @@ from app.api.routers.test_cases import service_for
 from app.api.services import Services
 from app.core.github.client import GitHubError, GitHubNotConfiguredError
 from app.core.locks.redis_lock import LockTimeout
-from app.core.models.project import Project
+from app.core.models.media import NOT_CONFIGURED_DRIVE
+from app.core.models.project import Project, Storage
 from app.core.models.user import User
 from app.core.permissions import Action
 from app.core.repositories.projects import SpreadsheetInUseError
@@ -51,6 +52,7 @@ class UpdateProjectRequest(BaseModel):
     android_app_id: AppId | None = None
     ios_bundle_id: AppId | None = None
     require_review: bool | None = None
+    storage: Storage | None = None  # chỉ Admin đổi (không nằm trong _SETTINGS_FIELDS)
 
 
 # Các trường mà QA Lead (thành viên dự án) cũng được đổi; trường còn lại chỉ Admin.
@@ -125,6 +127,8 @@ def update_project(
     only_settings = body.model_fields_set <= _SETTINGS_FIELDS
     action = Action.MANAGE_PROJECT_SETTINGS if only_settings else Action.MANAGE_PROJECTS
     project = load_project(services, user, project_id, action, allow_archived=True)
+    if body.storage == "drive" and services.drive is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, NOT_CONFIGURED_DRIVE)
     try:
         return _service(services).update_project(
             user,
@@ -139,6 +143,7 @@ def update_project(
             android_app_id=body.android_app_id,
             ios_bundle_id=body.ios_bundle_id,
             require_review=body.require_review,
+            storage=body.storage,
             approve_pending=lambda: _approve_pending(services, user, project),
         )
     except InvalidProjectInputError as error:

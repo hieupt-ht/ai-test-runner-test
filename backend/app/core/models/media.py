@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 CLOUDINARY_PREFIX = "https://res.cloudinary.com/"
 FOREIGN_MEDIA = "Link ảnh/video không thuộc kho Cloudinary của app"
 NOT_CONFIGURED = "Chưa cấu hình Cloudinary"
+NOT_CONFIGURED_DRIVE = "Chưa cấu hình Google Drive"
 
 
 class MediaKind(StrEnum):

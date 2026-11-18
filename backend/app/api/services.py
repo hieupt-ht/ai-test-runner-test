@@ -41,6 +41,7 @@ class Services:
     issue_sync: IssueSink | None = None
     cloudinary_signer: CloudinarySigner | None = None  # None khi chưa cấu hình Cloudinary
     media_janitor: MediaJanitor | None = None
+    drive: Any | None = None  # None khi chưa cấu hình Google Drive (Task 3 đổi sang DriveClient)
     cloud_name: str = ""
     app_base_url: str = "http://localhost:3000"
     lock_wait_seconds: float = 5.0
