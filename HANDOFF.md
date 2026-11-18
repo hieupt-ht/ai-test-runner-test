@@ -39,7 +39,8 @@ Thiết kế `docs/superpowers/specs/2026-11-18-project-trash-design.md`, kế h
 Thiết kế `docs/superpowers/specs/2026-11-18-manual-test-run-design.md`, kế hoạch `docs/superpowers/plans/2026-11-18-manual-test-run.md` (7 task / 2 đợt, Native, từng đợt).
 
 - **Đợt 1 backend xong** (Task 1–4): trường `execution_mode` (mặc định MANUAL; ô trống ở Sheet cũ = AUTOMATION); case Manual không gửi duyệt, `mark_tested` đưa DRAFT→TESTED, sửa/đổi cách chạy thì về Nháp; `POST /api/projects/{pid}/test-cases/{cid}/manual-results` tạo Run + Result, báo người liên quan, tạo/cập nhật issue (nhãn `mode: manual`, ghi tên người chạy); tester được ký/tải ảnh vào thư mục `evidence`; `last_result` ở chi tiết case; agent và regression bỏ qua case Manual. Backend **727 test**, mypy/ruff sạch.
-- **Còn lại:** Đợt 2 frontend (Task 5–7: form chọn cách chạy, khung "Chạy test tay", nhãn Pass/Fail), rồi review cả nhánh. Chưa thử trình duyệt thật.
+- **Đợt 2 frontend xong** (Task 5–7, commit `26a95bc`, `b554e05`, `04a738d`): form có hai nút Test tay/Tự động (mặc định Test tay, case Manual không có nút gửi duyệt); danh sách có cột + bộ lọc "Cách chạy" và nhãn "Đã kiểm thử · Pass/Fail" (một request `useResults`, không gọi mỗi dòng); `ManualRunPanel` (kết quả từng bước, ảnh/video bằng chứng, bước lỗi, giao cho dev, nhớ Môi trường); `MediaPicker`/`uploadMedia` nhận `purpose`; trang case hiện khung cho case Manual (Nháp/Đã kiểm thử, có quyền sửa, dự án chưa lưu trữ) và dòng "Lần chạy gần nhất". Frontend **269 test**, typecheck + lint sạch (test hay quá 5 giây khi máy nặng: chạy lại với `--testTimeout=30000`).
+- **Còn lại:** review cả nhánh (reviewer mới, kèm Review Focus của plan). Chưa thử trình duyệt thật.
 
 ## Đang làm (2026-11-18): ảnh/video cho màn hình + trang chi tiết màn hình
 

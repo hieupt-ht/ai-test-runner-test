@@ -22,7 +22,14 @@
   4. Hai test cũ "tester không được ký/tải vào thư mục evidence" đổi thành "được phép" (đúng yêu cầu spec); `purpose` lạ vẫn 422.
   5. Ảnh Drive không kiểm thư mục (ID file không có đường dẫn); chỉ Cloudinary kiểm tiền tố `ai-test-runner/{pid}/evidence/`.
   6. Nhãn `mode: manual` đặt cuối danh sách nhãn để `labels[1]` vẫn là nhãn case.
-- **Đợt 2 (frontend, Task 5–7): chưa làm.**
+- **Đợt 2 (frontend, Task 5–7) xong** — commit `26a95bc`, `b554e05`, `04a738d`. Frontend **269 test** qua, typecheck + lint sạch; backend vẫn 727.
+- Ruling (Đợt 2):
+  7. Cột "Cách chạy", nhãn Pass/Fail ở danh sách và `CaseStatusBadge.lastResult` làm chung trong commit Task 5 (cùng một file trang danh sách); Task 7 chỉ còn trang chi tiết case. Nếu sai: lịch sử commit gộp hơi lệch so với plan.
+  8. Form giữ nhãn nút "Lưu nháp" cho cả hai cách chạy (ít đổi test cũ); case Manual chỉ ẩn nút "Lưu và gửi duyệt". Test cũ cần nút gửi duyệt bấm "Tự động" trước.
+  9. Trang case ẩn khung Chạy test tay khi form sửa dở (hiện nhắc lưu trước), vì chạy xong case lên phiên bản mới sẽ nạp lại form và mất phần đang sửa.
+  10. Chuỗi tiếng Việt: `manualRun.*` ở cấp trên cùng; `testCases.executionMode.*`, `testCases.lastResult.*`, `testCases.detail.lastRun/viewResults/saveBeforeRun`.
+  11. Bằng chứng giới hạn 1 video + 20 ảnh ở phía trình duyệt (`limitEvidence`), khớp backend.
+- Chưa làm: review cả nhánh (reviewer mới).
 
 ## Global Constraints
 
