@@ -229,7 +229,8 @@ export function CaseForm({
       {/* Thanh nút dính ở trên: cuộn đến đâu vẫn bấm Lưu được */}
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b bg-background py-2">
         <Button type="submit" variant="outline" disabled={busy}>
-          {t("form.saveDraft")}
+          {/* Test tay không có bước duyệt nên không gọi là "nháp" */}
+          {executionMode === "MANUAL" ? t("form.saveManual") : t("form.saveDraft")}
         </Button>
         {showSubmitButton && (
           <Button

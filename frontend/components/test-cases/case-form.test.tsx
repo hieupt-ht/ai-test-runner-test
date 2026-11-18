@@ -60,6 +60,9 @@ describe("CaseForm", () => {
     expect(screen.getByRole("button", { name: "Test tay" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByRole("button", { name: "Tự động" })).toHaveAttribute("aria-pressed", "false")
     expect(screen.queryByRole("button", { name: "Lưu và gửi duyệt" })).not.toBeInTheDocument()
+    // Test tay không có bước duyệt nên nút lưu không gọi là "nháp"
+    expect(screen.getByRole("button", { name: "Lưu test case" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Lưu nháp" })).not.toBeInTheDocument()
   })
 
   it("bấm Tự động thì hiện ghi chú về agent và có lại nút gửi duyệt", () => {
@@ -69,6 +72,7 @@ describe("CaseForm", () => {
     expect(screen.getByRole("button", { name: "Tự động" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByText(/Agent sẽ chạy sau khi case được duyệt/)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Lưu và gửi duyệt" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Lưu nháp" })).toBeInTheDocument()
   })
 
   it.each([
@@ -81,7 +85,7 @@ describe("CaseForm", () => {
     fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Đăng nhập đúng" } })
     fireEvent.change(screen.getByLabelText("Thao tác 1"), { target: { value: "Mở trang" } })
     fireEvent.change(screen.getByLabelText("Kết quả mong đợi"), { target: { value: "Vào được" } })
-    fireEvent.click(screen.getByRole("button", { name: "Lưu nháp" }))
+    fireEvent.click(screen.getByRole("button", { name: automation ? "Lưu nháp" : "Lưu test case" }))
     await vi.waitFor(() =>
       expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ execution_mode: expected })),
     )

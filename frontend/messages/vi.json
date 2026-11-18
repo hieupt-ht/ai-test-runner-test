@@ -402,6 +402,7 @@
       "severity": "Mức độ",
       "priority": "Ưu tiên",
       "saveDraft": "Lưu nháp",
+      "saveManual": "Lưu test case",
       "saveAndSubmit": "Lưu và gửi duyệt",
       "saveAndSend": "Gửi",
       "created": "Đã tạo {id}",
