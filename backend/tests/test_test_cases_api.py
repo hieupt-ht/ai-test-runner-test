@@ -29,6 +29,8 @@ BODY: dict[str, Any] = {
     "expected_result": "Đăng nhập được",
     "severity": "HIGH",
     "priority": "P1",
+    # Các test cũ viết cho case do agent chạy (có bước duyệt); case Manual có test riêng
+    "execution_mode": "AUTOMATION",
 }
 
 
@@ -743,7 +745,8 @@ def test_edit_approved_case_with_results_requests_rerun_through_api(
 
 
 def test_api_create_defaults_to_manual(an: TestClient, project: Project) -> None:
-    created = create(an, project)
+    body = {key: value for key, value in BODY.items() if key != "execution_mode"}
+    created = an.post(url(project), json=body)
 
     assert created.status_code == 201
     assert created.json()["execution_mode"] == "MANUAL"

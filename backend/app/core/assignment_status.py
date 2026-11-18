@@ -1,7 +1,7 @@
 """Trạng thái việc được giao, tự suy ra từ các test case của tester."""
 
 from app.core.models.assignment import AssignmentStatus
-from app.core.models.test_case import TestCase, TestCaseStatus
+from app.core.models.test_case import ExecutionMode, TestCase, TestCaseStatus
 from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.test_cases import TestCaseRepository
 
@@ -31,6 +31,12 @@ def derive_assignment_status(
         return AssignmentStatus.WRITING
     if TestCaseStatus.IN_REVIEW in statuses:
         return AssignmentStatus.IN_REVIEW
+    # Mọi case đều là test tay đã chạy xong thì việc đã test (không cần chờ duyệt).
+    if all(
+        case.execution_mode == ExecutionMode.MANUAL and case.status == TestCaseStatus.TESTED
+        for case in mine
+    ):
+        return AssignmentStatus.TESTED
     # Còn lại toàn APPROVED: đã chạy hết thì TESTED.
     if all(case.id in tested_case_ids for case in mine):
         return AssignmentStatus.TESTED

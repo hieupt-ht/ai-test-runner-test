@@ -12,6 +12,7 @@ from app.core.models.assignment import AssignmentStatus
 from app.core.models.media import Media, MediaKind
 from app.core.models.project import Project
 from app.core.models.test_case import (
+    ExecutionMode,
     Priority,
     Severity,
     TestCase,
@@ -50,6 +51,8 @@ def content(title: str = "Đăng nhập đúng") -> TestCaseContent:
         expected_result="Vào được trang chính",
         severity=Severity.HIGH,
         priority=Priority.P1,
+        # Các test cũ viết cho case do agent chạy (có bước duyệt)
+        execution_mode=ExecutionMode.AUTOMATION,
     )
 
 

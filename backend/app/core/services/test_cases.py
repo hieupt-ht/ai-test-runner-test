@@ -22,6 +22,7 @@ from app.core.models.screen import Screen
 from app.core.models.test_case import (
     CHANGED_FIELD_LABELS,
     RERUN_FIELDS,
+    ExecutionMode,
     TestCase,
     TestCaseContent,
     TestCaseStatus,
@@ -50,6 +51,7 @@ AUDIT_ENTITY = "test_case"
 MAX_COMMENT_LENGTH = 1000
 MAX_SYNC_BATCH_SIZE = 200
 REVIEW_OFF = "Dự án đang tắt bước duyệt"
+MANUAL_NO_REVIEW = "Case test tay không cần gửi duyệt"
 
 
 class CaseAction(StrEnum):
@@ -281,9 +283,23 @@ class TestCaseService:
         }
         # lấy từng trường (không dùng model_dump) để `steps` vẫn là TestStep chứ không thành dict
         changes: dict[str, Any] = {field: getattr(content, field) for field in _CONTENT_FIELDS}
-        keep_status = not self.review_enabled and case.status == TestCaseStatus.APPROVED
-        if case.status in (TestCaseStatus.IN_REVIEW, TestCaseStatus.APPROVED) and not keep_status:
-            # Nội dung đã đổi thì phải duyệt lại từ đầu.
+        # Chỉ case Automation mới được giữ trạng thái "đã duyệt" khi dự án tắt bước duyệt
+        keep_status = (
+            not self.review_enabled
+            and case.status == TestCaseStatus.APPROVED
+            and case.execution_mode == ExecutionMode.AUTOMATION
+            and content.execution_mode == ExecutionMode.AUTOMATION
+        )
+        mode_changed = content.execution_mode != case.execution_mode
+        manual_tested = (
+            case.execution_mode == ExecutionMode.MANUAL and case.status == TestCaseStatus.TESTED
+        )
+        review_states = (TestCaseStatus.IN_REVIEW, TestCaseStatus.APPROVED)
+        needs_draft = case.status in review_states or manual_tested
+        if mode_changed and case.status == TestCaseStatus.TESTED:
+            needs_draft = True  # đổi cách chạy thì kết quả cũ không còn đúng
+        if needs_draft and not keep_status:
+            # Nội dung đã đổi thì phải duyệt/chạy lại từ đầu.
             diff["status"] = [case.status.value, TestCaseStatus.DRAFT.value]
             changes["status"] = TestCaseStatus.DRAFT
         saved = self._save(user, case, changes, version, "UPDATE", diff)
@@ -297,6 +313,24 @@ class TestCaseService:
     ) -> TestCase:
         case = self.get_case(case_id)
         return self._transition_case(user, case, action, version, comment, refresh=True)
+
+    def mark_tested(self, user: User, case_id: str, *, version: int) -> TestCase:
+        """Case test tay đã có kết quả: DRAFT -> TESTED (đang TESTED thì giữ nguyên, không ghi)."""
+        case = self.get_case(case_id)
+        self._require_edit(user, case)
+        if case.execution_mode != ExecutionMode.MANUAL:
+            raise InvalidTransitionError("Chỉ case test tay mới ghi nhận kết quả như vậy")
+        if case.status == TestCaseStatus.TESTED:
+            return case
+        if case.status != TestCaseStatus.DRAFT:
+            raise InvalidTransitionError(
+                f"Không thể ghi kết quả khi case đang ở trạng thái {case.status.value}"
+            )
+        self._require_version(case, version)
+        diff = {"status": [case.status.value, TestCaseStatus.TESTED.value]}
+        return self._save(
+            user, case, {"status": TestCaseStatus.TESTED}, version, "MANUAL_TEST", diff
+        )
 
     def approve_many(self, user: User, items: list[tuple[str, int]]) -> BatchApproveResult:
         """Duyệt nhiều case một lượt; `items` là danh sách (case_id, version người duyệt đang xem).
@@ -399,6 +433,11 @@ class TestCaseService:
         self._require_version(case, version)
 
         allowed_from, target = _TRANSITIONS[action]
+        manual = case.execution_mode == ExecutionMode.MANUAL
+        if action == CaseAction.SUBMIT and manual:
+            raise InvalidTransitionError(MANUAL_NO_REVIEW)
+        if action == CaseAction.DEPRECATE and manual:
+            allowed_from = {*allowed_from, TestCaseStatus.TESTED}
         if action == CaseAction.SUBMIT and not self.review_enabled:
             target = TestCaseStatus.APPROVED  # tắt bước duyệt: gửi là duyệt luôn
         if case.status not in allowed_from:
