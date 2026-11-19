@@ -54,3 +54,40 @@ def test_digits_controls_padding() -> None:
 
     assert ids.next_id("tc", "TC", digits=6) == "TC-000001"
     assert ["next_tc_id", "2"] in gateway.data[SHEET][META_TAB]
+
+
+def test_next_ids_continues_counter() -> None:
+    ids, _ = make_generator()
+
+    assert ids.next_id("tc", "TC", digits=6) == "TC-000001"
+    assert ids.next_ids("tc", "TC", 3, digits=6) == ["TC-000002", "TC-000003", "TC-000004"]
+    assert ids.next_id("tc", "TC", digits=6) == "TC-000005"
+
+
+def test_next_ids_on_empty_meta() -> None:
+    ids, gateway = make_generator()
+
+    assert ids.next_ids("tc", "TC", 2, digits=6) == ["TC-000001", "TC-000002"]
+    assert ["next_tc_id", "3"] in gateway.data[SHEET][META_TAB]
+
+
+def test_next_ids_zero_count_does_not_call_google() -> None:
+    ids, gateway = make_generator()
+
+    assert ids.next_ids("tc", "TC", 0) == []
+    assert gateway.calls == []
+
+
+def test_next_ids_call_count_is_constant() -> None:
+    ids, gateway = make_generator()
+    ids.next_ids("tc", "TC", 1)  # tạo sẵn dòng đếm để hai lần đo cùng đường đi
+
+    before = len(gateway.calls)
+    ids.next_ids("tc", "TC", 1)
+    one_id_calls = len(gateway.calls) - before
+
+    before = len(gateway.calls)
+    ids.next_ids("tc", "TC", 100)
+    many_ids_calls = len(gateway.calls) - before
+
+    assert many_ids_calls == one_id_calls

@@ -177,6 +177,33 @@ class TestCaseRepository:
             self._cache.invalidate()
         return case
 
+    def create_many(
+        self, items: list[tuple[str, TestCaseContent]], *, actor: str
+    ) -> list[TestCase]:
+        """Tạo nhiều case một lượt: `items` là (screen_id, nội dung); cấp mã và ghi một lần."""
+        if not items:
+            return []
+        now = _now_like_sheet()
+        with self.lock():
+            case_ids = self._ids.next_ids("tc", "TC", len(items), digits=6)
+            cases = [
+                TestCase(
+                    **content.model_dump(),
+                    id=case_id,
+                    screen_id=screen_id,
+                    status=TestCaseStatus.DRAFT,
+                    created_by=actor,
+                    updated_by=actor,
+                    created_at=now,
+                    updated_at=now,
+                    version=1,
+                )
+                for case_id, (screen_id, content) in zip(case_ids, items, strict=True)
+            ]
+            self._table.append_many([_to_record(case) for case in cases])
+            self._cache.invalidate()
+        return cases
+
     def save(self, case: TestCase, *, expected_version: int, actor: str) -> TestCase:
         """Ghi `case` nếu version trên Sheet còn đúng `expected_version`.
 
