@@ -500,6 +500,26 @@
     },
     "conflict": {
       "title": "Case đã bị thay đổi",
+    "import": {
+      "action": "Nhập từ Excel",
+      "title": "Nhập test case từ Excel",
+      "description": "Chọn file .xlsx theo mẫu. Hệ thống kiểm tra trước, chưa tạo gì cho đến khi bạn bấm Nhập.",
+      "template": "Tải file mẫu",
+      "fileLabel": "File Excel",
+      "checking": "Đang kiểm tra file...",
+      "summary": "Xem trước: {cases} case · {steps} bước · {screens} màn hình",
+      "colGroup": "Mã nhóm",
+      "colScreen": "Màn hình",
+      "colTitle": "Tiêu đề",
+      "colSteps": "Số bước",
+      "errorsTitle": "Lỗi cần sửa trong file",
+      "warningsTitle": "Cảnh báo",
+      "row": "Dòng {row}",
+      "submit": "Nhập {count} case",
+      "importing": "Đang nhập...",
+      "success": "Đã nhập {count} case",
+      "close": "Đóng"
+    },
       "reload": "Tải lại",
       "hint": "Tải lại sẽ thay nội dung bạn đang sửa bằng bản mới nhất."
     },
