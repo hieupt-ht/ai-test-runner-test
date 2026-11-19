@@ -39,6 +39,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-chart-pass: var(--chart-pass);
+  --color-chart-fail: var(--chart-fail);
+  --color-chart-other: var(--chart-other);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -81,6 +84,9 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --chart-pass: oklch(0.63 0.17 149);
+  --chart-fail: oklch(0.58 0.22 27);
+  --chart-other: oklch(0.71 0.01 286);
 }
 
 .dark {
@@ -115,6 +121,51 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --chart-pass: oklch(0.79 0.18 152);
+  --chart-fail: oklch(0.71 0.17 22);
+  --chart-other: oklch(0.55 0.01 286);
+}
+
+/* Giao diện "Kẹo ngọt": sáng, pastel hồng - tím - bạc hà.
+   Không thêm vào @custom-variant dark: đây là giao diện sáng nên
+   các badge dùng `dark:` vẫn hiện màu bản sáng. */
+.candy {
+  --background: #FFF7FB;
+  --foreground: #3A2350;
+  --card: #FFFFFF;
+  --card-foreground: #3A2350;
+  --popover: #FFFFFF;
+  --popover-foreground: #3A2350;
+  --primary: #B15CFF;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F6E8FF;
+  --secondary-foreground: #3A2350;
+  --muted: #FBEFF7;
+  /* Đậm hơn mẫu #9C7FB0 để chữ nhỏ trên nền trắng đạt tương phản 4.5:1 */
+  --muted-foreground: #85679B;
+  --accent: #FBE3F4;
+  --accent-foreground: #3A2350;
+  --destructive: #E5487A;
+  --border: #F3DDF0;
+  --input: #EBCDE6;
+  --ring: #C9A0FF;
+  --chart-1: #C4A1FF;
+  --chart-2: #FF9FCB;
+  --chart-3: #8BE3C9;
+  --chart-4: #FFD08A;
+  --chart-5: #8FC8FF;
+  --chart-pass: #3FBF97;
+  --chart-fail: #FF6FA8;
+  --chart-other: #C9B8D6;
+  --radius: 0.875rem;
+  --sidebar: #FBE9F7;
+  --sidebar-foreground: #3A2350;
+  --sidebar-primary: #B15CFF;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F6D9EF;
+  --sidebar-accent-foreground: #3A2350;
+  --sidebar-border: #F3DDF0;
+  --sidebar-ring: #C9A0FF;
 }
 
 @layer base {
