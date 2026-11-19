@@ -15,7 +15,6 @@ from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 
 from app.core.assignment_status import AssignmentStatusUpdater
-from app.core.locks.redis_lock import LockTimeout
 from app.core.media.cloudinary import MediaJanitor
 from app.core.models.assignment import Assignment
 from app.core.models.media import ForeignMediaError, ensure_own_media
@@ -475,7 +474,10 @@ class TestCaseService:
         touched = list(dict.fromkeys(case.screen_id for case in created))
         for screen_id in touched:
             self._refresh_status(screen_id)
-        self._notify_imported(user, created, assignments, screen_names)
+        try:
+            self._notify_imported(user, created, assignments, screen_names)
+        except Exception:
+            logger.warning("Không gửi được thông báo nhập %d case", len(created), exc_info=True)
         return ImportOutcome(created=created)
 
     def _require_import(self, user: User) -> None:
@@ -737,7 +739,7 @@ class TestCaseService:
         """
         try:
             self._status_updater.refresh_screen(screen_id)
-        except (LockTimeout, SheetAccessDeniedError, MissingColumnsError, HttpError):
+        except Exception:  # lỗi mạng/SSL/Redis cũng không được làm hỏng việc đã ghi xong
             logger.warning("Không tính lại được trạng thái việc của %s", screen_id, exc_info=True)
 
     def _audit(self, user: User, action: str, case_id: str, diff: dict[str, Any]) -> None:

@@ -1,5 +1,7 @@
 """Test bộ đọc file Excel test case (hàm thuần, không đụng Google Sheets)."""
 
+import unicodedata
+import zipfile
 from datetime import UTC, date, datetime
 from io import BytesIO
 from typing import Any
@@ -287,3 +289,27 @@ def test_sparse_sheet_with_huge_blank_range_is_stopped_early() -> None:
     assert len(result.errors) == 1
     assert result.errors[0].row is None
     assert result.cases == []
+
+
+def test_zip_bomb_is_rejected_before_loading() -> None:
+    """File nén nhỏ nhưng giải nén ra rất lớn bị chặn sớm, không nạp vào bộ nhớ."""
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("xl/big.xml", b"0" * (60 * 1024 * 1024))  # nén còn rất nhỏ
+    assert len(buffer.getvalue()) < MAX_FILE_BYTES
+
+    result = parse_workbook(buffer.getvalue(), SCREENS)
+
+    assert result.errors == [ImportIssue(row=None, message="File quá lớn sau khi giải nén")]
+
+
+def test_nfd_header_and_screen_name_are_accepted() -> None:
+    """Gõ tiếng Việt kiểu tổ hợp (NFD) vẫn khớp tiêu đề cột và tên màn hình."""
+    nfd = lambda text: unicodedata.normalize("NFD", text)  # noqa: E731
+    header = [nfd(h) for h in HEADERS]
+    row = _with(_row(), "Màn hình", nfd("Đăng nhập"))
+
+    result = parse_workbook(make_xlsx([row], header=header), SCREENS)
+
+    assert result.errors == []
+    assert result.cases[0].screen_id == "SC-0001"

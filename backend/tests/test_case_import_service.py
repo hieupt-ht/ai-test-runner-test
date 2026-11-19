@@ -304,6 +304,23 @@ def test_google_error_in_status_refresh_does_not_fail_import(
     assert notification.title == "Có 2 case mới cần chạy ở: Đăng nhập, Giỏ hàng"
 
 
+def test_non_http_error_in_status_refresh_does_not_fail_import(
+    env: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Lỗi mạng (TimeoutError...) lúc tính lại trạng thái cũng không làm hỏng việc nhập:
+    case đã ghi rồi, báo lỗi 500 sẽ khiến người dùng nhập lại và sinh case trùng."""
+
+    def broken(screen_id: str) -> None:
+        raise TimeoutError("mạng chậm")
+
+    monkeypatch.setattr(env.status_updater, "refresh_screen", broken)
+
+    outcome = env.service.import_cases(LEAD, make_xlsx([row("A1", "SC-0001")]))
+
+    assert len(outcome.created) == 1
+    assert len(env.test_cases.list_all()) == 1
+
+
 # --- check_import (hàm thuần) ---
 
 

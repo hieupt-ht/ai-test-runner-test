@@ -4,6 +4,8 @@
 Google Sheets. `parse_workbook` không xét quyền và trùng tiêu đề, việc đó do `check_import`.
 """
 
+import unicodedata
+import zipfile
 from dataclasses import dataclass
 from datetime import date, datetime
 from io import BytesIO
@@ -109,7 +111,8 @@ def _cell_text(value: Any) -> str:
         return str(int(value))
     if isinstance(value, datetime | date):
         return value.isoformat()
-    return str(value).strip()
+    # NFC: chữ có dấu gõ kiểu tổ hợp (NFD) vẫn so khớp được với chữ dựng sẵn
+    return unicodedata.normalize("NFC", str(value)).strip()
 
 
 class _TooManyRows(Exception):
@@ -120,6 +123,20 @@ class _TooManyRows(Exception):
 _MAX_SCANNED_ROWS = MAX_DATA_ROWS * 5 + 1
 
 
+# Tổng dung lượng các phần trong file .xlsx sau khi giải nén (chặn file nén bom)
+_MAX_UNPACKED_BYTES = 50 * 1024 * 1024
+_UNREADABLE = "Không đọc được file .xlsx"
+
+
+def _unpacked_size(data: bytes) -> int | None:
+    """Tổng dung lượng sau giải nén theo khai báo trong file zip; None nếu không phải zip."""
+    try:
+        with zipfile.ZipFile(BytesIO(data)) as archive:
+            return sum(item.file_size for item in archive.infolist())
+    except zipfile.BadZipFile:
+        return None
+
+
 def _read_rows(data: bytes) -> list[list[str]] | None:
     """Đọc sheet dữ liệu thành các dòng 16 ô (dòng 1 là tiêu đề). None nếu không mở được.
 
@@ -128,23 +145,30 @@ def _read_rows(data: bytes) -> list[list[str]] | None:
     """
     try:
         wb = load_workbook(BytesIO(data), read_only=True, data_only=True)
-        ws = wb[SHEET_NAME] if SHEET_NAME in wb.sheetnames else wb.worksheets[0]
-        ws.reset_dimensions()  # file xuất từ công cụ khác đôi khi khai báo kích thước sai
-        rows: list[list[str]] = []
-        for scanned, raw in enumerate(ws.iter_rows(values_only=True), start=1):
-            cells = [_cell_text(v) for v in raw[: len(COLUMNS)]]
-            cells += [""] * (len(COLUMNS) - len(cells))
-            # Giữ dòng 1 (tiêu đề), còn lại chỉ giữ dòng có dữ liệu, kèm số dòng thật
-            if scanned == 1 or any(cells):
-                rows.append([str(scanned), *cells])
-            if scanned > _MAX_SCANNED_ROWS or len(rows) > MAX_DATA_ROWS + 1:
-                raise _TooManyRows
-        wb.close()
-        return rows
+        try:
+            return _scan_sheet(wb)
+        finally:
+            wb.close()
     except _TooManyRows:
         raise
     except Exception:
         return None
+
+
+def _scan_sheet(wb: Any) -> list[list[str]]:
+    """Đọc các dòng của sheet dữ liệu trong workbook đã mở."""
+    ws = wb[SHEET_NAME] if SHEET_NAME in wb.sheetnames else wb.worksheets[0]
+    ws.reset_dimensions()  # file xuất từ công cụ khác đôi khi khai báo kích thước sai
+    rows: list[list[str]] = []
+    for scanned, raw in enumerate(ws.iter_rows(values_only=True), start=1):
+        cells = [_cell_text(v) for v in raw[: len(COLUMNS)]]
+        cells += [""] * (len(COLUMNS) - len(cells))
+        # Giữ dòng 1 (tiêu đề), còn lại chỉ giữ dòng có dữ liệu, kèm số dòng thật
+        if scanned == 1 or any(cells):
+            rows.append([str(scanned), *cells])
+        if scanned > _MAX_SCANNED_ROWS or len(rows) > MAX_DATA_ROWS + 1:
+            raise _TooManyRows
+    return rows
 
 
 def _check_header(header: list[str]) -> ImportIssue | None:
@@ -161,11 +185,11 @@ def _check_header(header: list[str]) -> ImportIssue | None:
 
 def _find_screen(text: str, screens: list[Screen]) -> tuple[Screen | None, str]:
     """Tìm màn hình theo mã hoặc tên. Trả (màn hình, lỗi); lỗi rỗng nếu ổn."""
-    key = text.casefold()
+    key = unicodedata.normalize("NFC", text).casefold()
     for screen in screens:
         if screen.id.casefold() == key:
             return screen, ""
-    named = [s for s in screens if s.name.strip().casefold() == key]
+    named = [s for s in screens if unicodedata.normalize("NFC", s.name).strip().casefold() == key]
     if len(named) > 1:
         return None, "Có nhiều màn hình tên này, hãy ghi mã màn hình"
     if not named:
@@ -307,12 +331,17 @@ def parse_workbook(data: bytes, screens: list[Screen]) -> ParseResult:
     """Đọc file .xlsx theo mẫu. Lỗi xếp theo số dòng (lỗi chung của file đứng đầu)."""
     if len(data) > MAX_FILE_BYTES:
         return _file_error("File quá lớn, tối đa 2 MB")
+    unpacked = _unpacked_size(data)
+    if unpacked is None:
+        return _file_error(_UNREADABLE)
+    if unpacked > _MAX_UNPACKED_BYTES:
+        return _file_error("File quá lớn sau khi giải nén")
     try:
         all_rows = _read_rows(data)
     except _TooManyRows:
         return _file_error(f"File có quá {MAX_DATA_ROWS} dòng dữ liệu")
     if all_rows is None:
-        return _file_error("Không đọc được file .xlsx")
+        return _file_error(_UNREADABLE)
 
     header = all_rows[0][1:] if all_rows else [""] * len(COLUMNS)
     header_error = _check_header(header)
@@ -380,7 +409,7 @@ _EXAMPLE_SCREEN = "Đăng nhập"
 _GUIDE_LINES = (
     "HƯỚNG DẪN NHẬP TEST CASE TỪ FILE EXCEL",
     "",
-    "Cách làm: điền sheet 'Test case', lưu file .xlsx, rồi chọn file trong màn hình Nhập từ file.",
+    "Cách làm: điền sheet 'Test case', lưu file .xlsx, rồi chọn file ở nút Nhập từ Excel.",
     "Giữ nguyên dòng 1 (tiêu đề cột): không đổi chữ, không đổi thứ tự, không xoá cột.",
     "Dữ liệu bắt đầu từ dòng 2. Dòng trống hoàn toàn sẽ được bỏ qua.",
     "",

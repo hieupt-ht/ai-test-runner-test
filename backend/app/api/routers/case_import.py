@@ -44,9 +44,9 @@ class ImportRejected(BaseModel):
     errors: list[ImportIssue]
 
 
-async def _read_upload(file: UploadFile) -> bytes:
+def _read_upload(file: UploadFile) -> bytes:
     # Chỉ đọc tối đa MAX_FILE_BYTES + 1 byte: đủ để biết file quá lớn mà không nạp cả file khổng lồ
-    return await file.read(MAX_FILE_BYTES + 1)
+    return file.file.read(MAX_FILE_BYTES + 1)
 
 
 def _file_problem(file: UploadFile, data: bytes) -> ImportIssue | None:
@@ -77,11 +77,11 @@ def download_template(project_id: str, user: CurrentUser, services: ServicesDep)
 
 
 @router.post("/preview")
-async def preview_import(
+def preview_import(
     project_id: str, file: UploadFile, user: CurrentUser, services: ServicesDep
 ) -> ParseResult:
     project = load_project(services, user, project_id, Action.EDIT_TEST_CASE)
-    data = await _read_upload(file)
+    data = _read_upload(file)
     problem = _file_problem(file, data)
     if problem:
         return ParseResult(errors=[problem])
@@ -103,11 +103,11 @@ async def preview_import(
     response_model=ImportCreated,
     responses={422: {"model": ImportRejected}},
 )
-async def import_cases(
+def import_cases(
     project_id: str, file: UploadFile, user: CurrentUser, services: ServicesDep
 ) -> ImportCreated | JSONResponse:
     project = load_project(services, user, project_id, Action.EDIT_TEST_CASE)
-    data = await _read_upload(file)
+    data = _read_upload(file)
     problem = _file_problem(file, data)
     if problem:
         return _rejected([problem])

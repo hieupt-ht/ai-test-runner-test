@@ -102,26 +102,23 @@ def _assignments_in(services: Services, project: Project, email: str) -> list[My
             screen_name=screen_names.get(a.screen_id, a.screen_id),
             deadline=a.deadline,
             status=a.status,
-            case_counts=_count_by_status(cases, a.screen_id, email),
+            case_counts=_count_by_status(cases, a.screen_id),
             returned_cases=returned.get(a.screen_id, []),
         )
         for a in mine
     ]
 
 
-def _count_by_status(
-    cases: list[TestCase], screen_id: str, email: str
-) -> dict[TestCaseStatus, int]:
-    """Đếm case do `email` tạo trên màn hình, đủ 4 trạng thái (không có thì 0)."""
+def _count_by_status(cases: list[TestCase], screen_id: str) -> dict[TestCaseStatus, int]:
+    """Đếm mọi case (không tính Lưu trữ) trên màn hình, kể cả case do người khác tạo hoặc nhập hộ.
+
+    Đủ các trạng thái còn lại (không có thì 0).
+    """
     counts: dict[TestCaseStatus, int] = {
         status: 0 for status in TestCaseStatus if status != TestCaseStatus.ARCHIVED
     }
     for case in cases:
-        if (
-            case.status != TestCaseStatus.ARCHIVED
-            and case.screen_id == screen_id
-            and case.created_by == email
-        ):
+        if case.status != TestCaseStatus.ARCHIVED and case.screen_id == screen_id:
             counts[case.status] += 1
     return counts
 
