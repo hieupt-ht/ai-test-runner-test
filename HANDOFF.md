@@ -10,6 +10,14 @@ M1–M3 đã nằm ở `develop`. Kế hoạch mới ở `docs/superpowers/plans
 
 Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026-11-14-notifications-results-dashboard.md` đã hoàn thành đủ 10 task. Ứng dụng hiện có chuông thông báo, trang Kết quả, hai tab "Đang làm"/"Đã xong", trang Tổng quan theo vai trò và hộp thoại dùng tốt hơn trên màn hình hẹp. Thông báo lưu trong Redis 30 ngày, tối đa 100 cái mỗi người; mất thông báo không làm mất dữ liệu chính. Cách cấu hình Codex và prompt mẫu ở `docs/codex-agent.md`. Tính năng **Chạy lại** đã xong: nút ở trang Kết quả (QA Lead/Admin) gọi `POST /api/projects/{project_id}/test-cases/{case_id}/request-rerun`, app comment + mở lại issue + gắn nhãn `needs-rerun`; khi có kết quả mới app tự bỏ nhãn này. Đã chạy thử trên repo thật `hieupt-ht/ShopHub` (RUN-0005). Codex **không** tự comment lên issue, app làm việc đó bằng GitHub App. Kiểm tra cuối: backend **388 test**, frontend **105 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
 
+## Đang làm (2026-11-19): nhập test case từ Excel
+
+Thiết kế `docs/superpowers/specs/2026-11-19-import-test-cases-design.md`, kế hoạch `docs/superpowers/plans/2026-11-19-import-test-cases.md` (10 task / 3 đợt, làm kiểu subagent: mỗi task một người làm + một người kiểm tra).
+
+- **Đợt 1 xong** (Task 1–3, commit `22cd6ba`, `13b1410`, `6f3aedb`): trạng thái việc đếm mọi case của màn hình (nhãn WRITING = "Đang làm"); tách `can_edit` (người tạo / lead) và `can_run` (thêm tester được giao màn hình; `Action.RUN_TEST_CASE`); kết quả test tay FAIL bắt buộc có ít nhất một ảnh/video (422); trang case hiện khung chạy cho người chỉ được chạy. Backend **743 test**, frontend **272 test**, mypy/ruff/tsc/eslint sạch.
+- **Việc còn lại:** Đợt 2 (Task 4–7: đọc file, ghi hàng loạt, API), Đợt 3 (Task 8–10: giao diện, tài liệu).
+- **Cần xem lại:** `backend/app/api/routers/me.py` `case_counts` vẫn lọc theo `created_by`, lệch luật trạng thái mới (thẻ "Việc của tôi" có thể đếm ít hơn trạng thái).
+
 ## Đang làm (2026-11-16)
 
 Bằng chứng ảnh/video (Cloudinary), test Android/iOS, giao bug cho dev. Thiết kế: `docs/superpowers/specs/2026-11-16-evidence-mobile-and-bug-assignment-design.md`. Kế hoạch 27 task, 8 đợt: `docs/superpowers/plans/2026-11-16-evidence-mobile-and-bug-assignment.md`. **Làm từng đợt một**: xong đợt thì đánh dấu `[x]` trong kế hoạch, ghi tiến độ ở đây, dừng cho chủ dự án `/compact`.

@@ -43,6 +43,8 @@
 
 ## Đợt 1 — Luật trạng thái, quyền chạy, bằng chứng FAIL
 
+> **Tiến độ: XONG (2026-11-19)** — Task 1–3, commit `22cd6ba`, `13b1410`, `6f3aedb`; mỗi task đã qua kiểm tra. Việc còn treo: `me.py` `case_counts` lệch luật mới.
+
 ### Task 1: Trạng thái việc đếm mọi case của màn hình
 
 **Files:**
