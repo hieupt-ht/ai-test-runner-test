@@ -498,8 +498,6 @@
       },
       "fields": "Đã đổi: {fields}"
     },
-    "conflict": {
-      "title": "Case đã bị thay đổi",
     "import": {
       "action": "Nhập từ Excel",
       "title": "Nhập test case từ Excel",
@@ -516,10 +514,13 @@
       "warningsTitle": "Cảnh báo",
       "row": "Dòng {row}",
       "submit": "Nhập {count} case",
+      "submitIdle": "Nhập",
       "importing": "Đang nhập...",
       "success": "Đã nhập {count} case",
       "close": "Đóng"
     },
+    "conflict": {
+      "title": "Case đã bị thay đổi",
       "reload": "Tải lại",
       "hint": "Tải lại sẽ thay nội dung bạn đang sửa bằng bản mới nhất."
     },

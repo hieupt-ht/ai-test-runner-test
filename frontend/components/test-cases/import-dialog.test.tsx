@@ -31,10 +31,10 @@ function parsed(group: string, screenId: string, row: number) {
   }
 }
 
-// 12 case, mỗi case 4 bước → 48; đổi để ra đúng 41 bước, 3 màn hình
+// 12 case: 5 case x 4 bước + 7 case x 3 bước = 41 bước, trải trên 3 màn hình
 function okResult() {
   const cases = Array.from({ length: 12 }, (_, i) => parsed(`G${i + 1}`, `SC-000${(i % 3) + 1}`, i + 2))
-  cases.forEach((c, i) => (c.step_count = i === 0 ? 1 : 4 - (i > 7 ? 1 : 0)))
+  cases.forEach((c, i) => (c.step_count = i < 5 ? 4 : 3))
   return { cases, errors: [], warnings: [] }
 }
 
@@ -67,8 +67,7 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     renderDialog()
     const file = await pickFile()
     expect(mocks.preview).toHaveBeenCalledWith(file)
-    const steps = okResult().cases.reduce((sum, c) => sum + c.step_count, 0)
-    expect(await screen.findByText(`Xem trước: 12 case · ${steps} bước · 3 màn hình`)).toBeInTheDocument()
+    expect(await screen.findByText("Xem trước: 12 case · 41 bước · 3 màn hình")).toBeInTheDocument()
     for (const name of ["Mã nhóm", "Màn hình", "Tiêu đề", "Số bước"]) {
       expect(screen.getByRole("columnheader", { name })).toBeInTheDocument()
     }
@@ -156,5 +155,49 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [new File(["y"], "b.xlsx")] } })
     await waitFor(() => expect(mocks.preview).toHaveBeenCalledTimes(2))
+  })
+
+  it("trước khi chọn file nút Nhập không ghi số case", () => {
+    renderDialog()
+    expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()
+  })
+
+  it("xem trước của file cũ về chậm thì bị bỏ qua", async () => {
+    let resolveFirst: (value: unknown) => void = () => {}
+    mocks.preview.mockReturnValueOnce(new Promise((resolve) => (resolveFirst = resolve)))
+    const second = { ...okResult(), cases: okResult().cases.slice(0, 2) }
+    mocks.preview.mockResolvedValueOnce(second)
+    renderDialog()
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [new File(["a"], "a.xlsx")] } })
+    fireEvent.change(input, { target: { files: [new File(["b"], "b.xlsx")] } })
+    expect(await screen.findByRole("button", { name: "Nhập 2 case" })).toBeEnabled()
+    resolveFirst(okResult())
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(screen.getByRole("button", { name: "Nhập 2 case" })).toBeInTheDocument()
+  })
+
+  it("đóng rồi mở lại thì xem trước cũ biến mất", async () => {
+    mocks.preview.mockResolvedValue(okResult())
+    const view = render(
+      <NextIntlClientProvider locale="vi" messages={messages}>
+        <ImportDialog projectId="p1" open onOpenChange={() => {}} />
+      </NextIntlClientProvider>,
+    )
+    await pickFile()
+    await screen.findByRole("button", { name: "Nhập 12 case" })
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }))
+    view.rerender(
+      <NextIntlClientProvider locale="vi" messages={messages}>
+        <ImportDialog projectId="p1" open={false} onOpenChange={() => {}} />
+      </NextIntlClientProvider>,
+    )
+    view.rerender(
+      <NextIntlClientProvider locale="vi" messages={messages}>
+        <ImportDialog projectId="p1" open onOpenChange={() => {}} />
+      </NextIntlClientProvider>,
+    )
+    expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()
+    expect(screen.queryByText(/Xem trước:/)).not.toBeInTheDocument()
   })
 })

@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -56,6 +56,19 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<ParseResult | null>(null)
   const [message, setMessage] = useState<string | null>(null) // câu lỗi chung từ backend
+  // Số thứ tự lần chọn file mới nhất: kết quả của lần chọn cũ (về chậm) sẽ bị bỏ qua.
+  const latestPick = useRef(0)
+
+  /** Đóng hộp thoại và xóa sạch trạng thái, để lần mở sau bắt đầu từ đầu. */
+  function handleOpenChange(next: boolean) {
+    if (!next) {
+      latestPick.current += 1
+      setFile(null)
+      setResult(null)
+      setMessage(null)
+    }
+    onOpenChange(next)
+  }
 
   /** "Dòng 7 · Cột: lỗi"; lỗi chung của file (không có dòng) thì không có tiền tố. */
   function describe(issue: Issue): string {
@@ -66,12 +79,15 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
 
   async function onPickFile(picked: File | undefined) {
     if (!picked) return
+    const pick = ++latestPick.current
     setFile(picked)
     setResult(null)
     setMessage(null)
     try {
-      setResult(await preview.mutateAsync(picked))
+      const parsed = await preview.mutateAsync(picked)
+      if (pick === latestPick.current) setResult(parsed)
     } catch (error) {
+      if (pick !== latestPick.current) return
       const issues = issuesFromError(error)
       if (issues) setResult({ cases: [], errors: issues, warnings: [] })
       else setMessage(error instanceof Error ? error.message : String(error))
@@ -84,7 +100,7 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
     try {
       const created = await importCases.mutateAsync(file)
       toast.success(t("success", { count: created.created.length }))
-      onOpenChange(false)
+      handleOpenChange(false)
     } catch (error) {
       const issues = issuesFromError(error)
       if (issues) setResult({ cases: result?.cases ?? [], errors: issues, warnings: [] })
@@ -101,7 +117,7 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   const canSubmit = result !== null && errors.length === 0 && cases.length > 0 && !busy
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
@@ -183,11 +199,15 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t("close")}
           </Button>
           <Button disabled={!canSubmit} onClick={() => void onImport()}>
-            {importCases.isPending ? t("importing") : t("submit", { count: cases.length })}
+            {importCases.isPending
+              ? t("importing")
+              : cases.length > 0
+                ? t("submit", { count: cases.length })
+                : t("submitIdle")}
           </Button>
         </DialogFooter>
       </DialogContent>
