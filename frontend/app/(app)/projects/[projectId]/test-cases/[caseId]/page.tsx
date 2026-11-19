@@ -53,7 +53,7 @@ function TestCaseDetailView() {
   // Khung chạy test tay: case Manual đang Nháp/Đã kiểm thử, người có quyền sửa, dự án chưa lưu trữ
   const canRun =
     testCase.execution_mode === "MANUAL" &&
-    testCase.can_edit &&
+    testCase.can_run &&
     !project?.archived &&
     ["DRAFT", "TESTED"].includes(testCase.status)
   // Kết quả gần nhất chỉ có nghĩa khi case đang "Đã kiểm thử" (sửa nội dung thì về Nháp)
@@ -136,7 +136,9 @@ function TestCaseDetailView() {
       ) : (
         <>
           {!testCase.can_edit && (
-            <p className="text-sm text-muted-foreground">{t("detail.readOnlyHint")}</p>
+            <p className="text-sm text-muted-foreground">
+              {testCase.can_run ? t("detail.runOnlyHint") : t("detail.readOnlyHint")}
+            </p>
           )}
           <CaseReadOnly testCase={testCase} />
         </>

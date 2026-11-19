@@ -55,6 +55,7 @@ function makeCase(overrides: Record<string, unknown> = {}) {
     version: 2,
     execution_mode: "MANUAL",
     can_edit: true,
+    can_run: true,
     can_review: false,
     steps: [{ action: "Mở", expected: "", guide_media: [] }],
     last_result: null,
@@ -91,10 +92,21 @@ describe("Trang chi tiết case – chạy test tay", () => {
     expect(screen.getByText("nút-duyệt")).toBeInTheDocument()
   })
 
-  it("không có quyền sửa thì không có khung", () => {
-    mocks.testCase = makeCase({ can_edit: false })
+  it("không có quyền chạy thì không có khung", () => {
+    mocks.testCase = makeCase({ can_edit: false, can_run: false })
     renderPage()
     expect(screen.queryByText(/khung-chạy-test-tay/)).not.toBeInTheDocument()
+    expect(screen.getByText("Bạn chỉ có quyền xem case này.")).toBeInTheDocument()
+  })
+
+  it("người chỉ chạy được thấy khung chạy và dòng nhắc", () => {
+    mocks.testCase = makeCase({ can_edit: false, can_run: true })
+    renderPage()
+    expect(screen.getByText(/khung-chạy-test-tay/)).toBeInTheDocument()
+    expect(
+      screen.getByText("Case do người khác viết, cần sửa hãy báo người viết hoặc QA Lead"),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "form-sửa-case" })).not.toBeInTheDocument()
   })
 
   it("dự án đã lưu trữ thì không có khung", () => {

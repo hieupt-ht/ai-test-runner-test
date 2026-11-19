@@ -86,6 +86,9 @@ def _check_steps(body: ManualResultRequest, case: TestCase) -> None:
             raise _unprocessable("Kết quả Không đạt cần mô tả lỗi")
         if body.failed_step is None or body.failed_step > step_count:
             raise _unprocessable(f"Cần chọn bước lỗi (từ 1 đến {step_count})")
+        # Fail tay phải có ít nhất một ảnh/video (kể cả ảnh của từng bước)
+        if not _all_media(body):
+            raise _unprocessable("Kết quả Fail cần ít nhất một ảnh hoặc video bằng chứng")
 
 
 def _all_media(body: ManualResultRequest) -> list[Media]:
