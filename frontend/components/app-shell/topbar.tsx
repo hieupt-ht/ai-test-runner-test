@@ -1,7 +1,7 @@
 "use client"
 
 import { useQueryClient } from "@tanstack/react-query"
-import { KeyRound, LogOut, Monitor, Moon, Sun } from "lucide-react"
+import { Candy, KeyRound, LogOut, Monitor, Moon, Sun } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
@@ -75,6 +75,9 @@ export function Topbar({ user, title }: { user: User; title: string }) {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("dark")}>
                 <Moon /> {t("topbar.themeDark")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("candy")}>
+                <Candy /> {t("topbar.themeCandy")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("system")}>
                 <Monitor /> {t("topbar.themeSystem")}
