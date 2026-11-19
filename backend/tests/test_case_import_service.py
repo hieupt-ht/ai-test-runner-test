@@ -35,7 +35,7 @@ from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.schema import SYSTEM_TABS
 from app.core.time import today_in_vietnam
 from tests.conftest import SYSTEM_SHEET_ID, make_project, make_user
-from tests.fakes import FakeSheetsGateway
+from tests.fakes import FakeSheetsGateway, make_http_error
 from tests.xlsx_helpers import HEADERS, make_xlsx
 
 LEAD = make_user("lead@x.com", role=Role.QA_LEAD)
@@ -86,13 +86,14 @@ class Env:
         )
         self.audit_log = AuditLogRepository(self.gateway, sheet)
         self.store = NotificationStore(self.redis)
+        self.status_updater = AssignmentStatusUpdater(self.assignments, self.test_cases)
         self.service = TestCaseService(
             project_id=pid,
             test_cases=self.test_cases,
             screens=self.screens,
             assignments=self.assignments,
             members=members,
-            status_updater=AssignmentStatusUpdater(self.assignments, self.test_cases),
+            status_updater=self.status_updater,
             audit_log=self.audit_log,
             notifier=Notifier(self.store),
         )
@@ -277,6 +278,30 @@ def test_audit_failure_after_write_is_logged_only(
 
     assert len(outcome.created) == 1
     assert len(env.test_cases.list_all()) == 1
+
+
+def test_google_error_in_status_refresh_does_not_fail_import(
+    env: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Google lỗi 429/5xx lúc tính lại trạng thái của MỘT màn hình: case đã ghi vẫn trả về,
+    màn hình còn lại vẫn được tính lại, thông báo vẫn gửi (để người dùng không nhập lại)."""
+    env.assign("SC-0002", AN.email)
+    refreshed: list[str] = []
+
+    def flaky(screen_id: str) -> None:
+        if screen_id == "SC-0001":
+            raise make_http_error(429)
+        refreshed.append(screen_id)
+
+    monkeypatch.setattr(env.status_updater, "refresh_screen", flaky)
+    data = make_xlsx([row("A1", "SC-0001"), row("A2", "SC-0002")])
+
+    outcome = env.service.import_cases(LEAD, data)
+
+    assert len(outcome.created) == 2
+    assert refreshed == ["SC-0002"]
+    (notification,) = env.store.list(AN.email)
+    assert notification.title == "Có 2 case mới cần chạy ở: Đăng nhập, Giỏ hàng"
 
 
 # --- check_import (hàm thuần) ---

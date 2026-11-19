@@ -733,11 +733,11 @@ class TestCaseService:
         """Tính lại trạng thái việc, cố gắng hết sức: case đã ghi rồi thì không được báo lỗi.
 
         Nếu báo lỗi ở đây, người dùng tưởng chưa lưu và bấm lại, thế là sinh ra case trùng.
-        Lần ghi sau của màn hình này sẽ tính lại cho đúng.
+        Google bận (HttpError 429/5xx) cũng chỉ ghi log. Lần ghi sau của màn hình sẽ tính lại.
         """
         try:
             self._status_updater.refresh_screen(screen_id)
-        except (LockTimeout, SheetAccessDeniedError, MissingColumnsError):
+        except (LockTimeout, SheetAccessDeniedError, MissingColumnsError, HttpError):
             logger.warning("Không tính lại được trạng thái việc của %s", screen_id, exc_info=True)
 
     def _audit(self, user: User, action: str, case_id: str, diff: dict[str, Any]) -> None:
