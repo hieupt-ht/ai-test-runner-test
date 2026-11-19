@@ -102,6 +102,13 @@ def results_for_project(
     case_list = scope.test_cases.list_all() if cases is None else cases
     cases_by_id = {case.id: case for case in case_list}
     screen_names = {screen.id: screen.name for screen in scope.screens.list_all()}
+    me = normalize_email(user.email)
+    # Tester xem kết quả case mình tạo, và mọi case thuộc màn hình được giao cho mình
+    assigned_screens = (
+        {a.screen_id for a in scope.assignments.list_all() if a.assignee_email == me}
+        if user.role == Role.TESTER
+        else set()
+    )
     latest: dict[str, ResultItem] = {}
     for run in sorted(
         runs, key=lambda item: (item.finished_at or item.started_at, item.id), reverse=True
@@ -116,7 +123,11 @@ def results_for_project(
                 continue
             if regression_only and not case.regression:
                 continue
-            if user.role == Role.TESTER and case.created_by != normalize_email(user.email):
+            if (
+                user.role == Role.TESTER
+                and case.created_by != me
+                and case.screen_id not in assigned_screens
+            ):
                 continue
             # Lọc sau khi tìm mới nhất; kết quả cũ khớp lọc không được hiện thay.
             latest[case.id] = ResultItem(
