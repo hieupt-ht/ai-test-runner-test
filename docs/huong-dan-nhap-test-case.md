@@ -12,7 +12,7 @@ Nút "Nhập từ Excel" chỉ hiện khi bạn tạo được case và dự án
 
 File mẫu có hai sheet:
 
-- `Test case`: điền dữ liệu vào đây. Dòng 1 là tiêu đề cột, dữ liệu bắt đầu từ dòng 2. Đã có một case ví dụ 3 bước.
+- `Test case`: điền dữ liệu vào đây. Dòng 1 là tiêu đề cột, dữ liệu bắt đầu từ dòng 2. Đã có một case ví dụ 3 bước (dòng 2-4): **xoá nó trước khi nhập**, nếu không nó sẽ được nhập như case thật.
 - `Hướng dẫn`: tóm tắt luật ngay trong file. App không đọc sheet này.
 
 Bạn có thể soạn trong Google Sheets rồi tải về dạng `.xlsx`.

@@ -408,6 +408,8 @@ _EXAMPLE_SCREEN = "Đăng nhập"
 # Nội dung sheet "Hướng dẫn": mỗi chuỗi là một dòng
 _GUIDE_LINES = (
     "HƯỚNG DẪN NHẬP TEST CASE TỪ FILE EXCEL",
+    "LƯU Ý: Xoá case ví dụ (dòng 2-4 ở sheet 'Test case') trước khi nhập, nếu không nó"
+    " sẽ được nhập như case thật.",
     "",
     "Cách làm: điền sheet 'Test case', lưu file .xlsx, rồi chọn file ở nút Nhập từ Excel.",
     "Giữ nguyên dòng 1 (tiêu đề cột): không đổi chữ, không đổi thứ tự, không xoá cột.",

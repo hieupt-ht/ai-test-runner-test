@@ -72,6 +72,16 @@ def test_template_has_validation_and_guide(lead: TestClient, project: Project) -
     assert ws.freeze_panes == "A2"
 
 
+def test_template_guide_warns_to_delete_example(lead: TestClient, project: Project) -> None:  # noqa: F811
+    content = lead.get(url(project, "/import/template")).content
+
+    guide = load_workbook(BytesIO(content))["Hướng dẫn"]
+    lines = [str(row[0].value or "") for row in guide.iter_rows()]
+    # Cảnh báo nằm ngay đầu sheet, để người mở file thấy trước khi điền
+    warning_rows = [i for i, line in enumerate(lines) if "Xoá case ví dụ" in line]
+    assert warning_rows and warning_rows[0] <= 3
+
+
 def test_preview_writes_nothing(lead: TestClient, project: Project) -> None:  # noqa: F811
     response = lead.post(url(project, "/import/preview"), files=_files(make_xlsx([_row()])))
 
