@@ -128,6 +128,8 @@
 
 ## Đợt 2 — Đọc file, ghi hàng loạt, API
 
+> **Tiến độ: XONG (2026-11-19)** — Task 4–7, commit `bfd4b2c`…`c78d01c`; mỗi task đã qua kiểm tra (Task 4 và 6 có 1 vòng sửa). Backend 798 test. Còn Đợt 3.
+
 ### Task 4: Bộ đọc file mẫu (hàm thuần)
 
 **Files:**
