@@ -6,7 +6,7 @@ Dành cho QA Lead, Admin và tester. Thay vì tạo từng case bằng form, b�
 
 1. Vào dự án, mở trang **Test case**.
 2. Bấm nút **Nhập từ Excel** (cạnh nút Tạo case).
-3. Trong hộp thoại, bấm **Tải file mẫu**. Bạn nhận file `mau-test-case.xlsx`.
+3. Trong hộp thoại, bấm link **Tải file mẫu**. Bạn nhận file `mau-test-case.xlsx`.
 
 Nút "Nhập từ Excel" chỉ hiện khi bạn tạo được case và dự án chưa lưu trữ.
 
@@ -71,7 +71,7 @@ Một case "Đăng nhập" 3 bước và một case khác 1 bước:
 
 1. Bấm **Nhập từ Excel**, chọn file `.xlsx`.
 2. App **xem trước** ngay: số case, số bước, danh sách case, cảnh báo và lỗi theo từng dòng.
-3. Còn lỗi thì nút nhập bị mờ. Sửa file rồi bấm **Chọn file khác**.
+3. Còn lỗi thì nút nhập bị mờ. Sửa file xong, chọn lại file ở ô **File Excel** (hộp thoại tự xem trước lại).
 4. Hết lỗi thì bấm **Nhập N case**. App tạo tất cả case cùng lúc. File còn lỗi thì **không nhập case nào**, nên không sợ nhập được một nửa.
 
 Cảnh báo (ví dụ "Màn hình Đăng nhập đã có case cùng tiêu đề") không chặn việc nhập. Nó nhắc bạn có thể đang nhập lại file cũ. Nhập lại file đã nhập sẽ tạo case trùng, vì lần nhập nào cũng chỉ tạo case mới, không sửa case cũ.
@@ -109,7 +109,7 @@ Ngoài ra, app có thể báo: "Có người đang tạo case, hãy thử lại"
 
 ## 9. Sau khi nhập, tester làm gì
 
-Case nhập vào có đặc điểm: test tay (Manual), trạng thái **Nháp**, phiên bản 1, không cần duyệt, chưa có ảnh/video (người có quyền sửa vào app gắn thêm).
+Case nhập vào có đặc điểm: test tay (Manual), trạng thái **Nháp**, phiên bản 1, không cần duyệt, chưa có ảnh/video (QA Lead/Admin hoặc người tạo case vào app gắn thêm).
 
 - Khi QA Lead/Admin nhập, mỗi tester được giao màn hình có case mới nhận một thông báo "Có N case mới cần chạy ở: ...". Tester tự nhập thì không có thông báo.
 - Tester mở case và dùng khung **Chạy test tay**: tick từng bước, chọn **Pass** hoặc **Fail**, ghi lý do nếu lỗi, rồi gửi kết quả.
