@@ -2798,6 +2798,7 @@
           "MANAGE_MEMBERS",
           "MANAGE_SCREENS",
           "EDIT_TEST_CASE",
+          "RUN_TEST_CASE",
           "REVIEW_TEST_CASE",
           "TRIGGER_RUN",
           "REVIEW_RESULTS",
@@ -5004,6 +5005,10 @@
             "type": "boolean",
             "title": "Can Edit"
           },
+          "can_run": {
+            "type": "boolean",
+            "title": "Can Run"
+          },
           "can_review": {
             "type": "boolean",
             "title": "Can Review"
@@ -5039,6 +5044,7 @@
           "updated_at",
           "version",
           "can_edit",
+          "can_run",
           "can_review",
           "can_archive"
         ],

@@ -129,7 +129,7 @@ def submit_manual_result(
     user: CurrentUser,
     services: ServicesDep,
 ) -> ManualResultResponse:
-    project = load_project(services, user, project_id, Action.EDIT_TEST_CASE, allow_archived=True)
+    project = load_project(services, user, project_id, Action.RUN_TEST_CASE, allow_archived=True)
     if project.archived:
         raise HTTPException(status.HTTP_409_CONFLICT, "Dự án đã lưu trữ")
     service = service_for(services, project)
@@ -137,8 +137,8 @@ def submit_manual_result(
         case = service.get_case(case_id)
     except TestCaseNotFoundError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy test case") from None
-    if not service.can_edit(user, case):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Bạn không có quyền sửa test case này")
+    if not service.can_run(user, case):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Bạn không có quyền chạy test case này")
     _check_case_state(case, body.version)
     _check_steps(body, case)
     _check_media(services, project, body)

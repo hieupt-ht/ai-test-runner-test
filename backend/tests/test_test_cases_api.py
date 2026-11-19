@@ -141,8 +141,12 @@ def test_review_succeeds_when_notification_fails(
     [("approve", "case_approved"), ("return", "case_returned")],
 )
 def test_review_notifies_case_creator_only(
-    an: TestClient, lead: TestClient, project: Project, redis: fakeredis.FakeRedis,
-    action: str, expected_type: str,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    redis: fakeredis.FakeRedis,
+    action: str,
+    expected_type: str,
 ) -> None:
     case = create(an, project).json()
     an.post(url(project, f"/{case['id']}/submit"), json={"version": 1})
@@ -372,14 +376,15 @@ def test_archive_rejects_wrong_status(an: TestClient, project: Project) -> None:
 
 
 def test_two_people_save_same_version_second_gets_409(
-    an: TestClient, binh: TestClient, project: Project
+    an: TestClient, lead: TestClient, project: Project
 ) -> None:
+    # Người sửa thứ hai là QA Lead: tester được giao không sửa được case người khác (spec mục 4).
     create(an, project)
     edit = {k: v for k, v in BODY.items() if k != "screen_id"}
 
     first = an.put(url(project, "/TC-000001"), json={**edit, "title": "Bản của An", "version": 1})
-    second = binh.put(
-        url(project, "/TC-000001"), json={**edit, "title": "Bản của Bình", "version": 1}
+    second = lead.put(
+        url(project, "/TC-000001"), json={**edit, "title": "Bản của Lead", "version": 1}
     )
 
     assert first.status_code == 200
@@ -459,9 +464,7 @@ def test_viewer_can_read_but_not_create(
     assert forbidden.json() == {"detail": "Bạn không có quyền thực hiện thao tác này"}
 
 
-def test_non_member_gets_404(
-    app: FastAPI, users: UserRepository, project: Project
-) -> None:
+def test_non_member_gets_404(app: FastAPI, users: UserRepository, project: Project) -> None:
     stranger = client_for(app, users, "la@x.com", Role.TESTER)
 
     assert stranger.get(url(project)).status_code == 404
@@ -533,6 +536,25 @@ def test_archived_project_case_cannot_be_edited_or_reviewed(
 
     assert detail["can_edit"] is False
     assert detail["can_review"] is False
+
+
+def test_detail_exposes_can_run(
+    app: FastAPI,
+    users: UserRepository,
+    an: TestClient,
+    lead: TestClient,
+    project: Project,
+    projects: ProjectRepository,
+) -> None:
+    create(lead, project)
+
+    detail = an.get(url(project, "/TC-000001")).json()
+    assert detail["can_edit"] is False  # spec mục 4: được giao chỉ chạy, không sửa
+    assert detail["can_run"] is True
+
+    projects.update(project.model_copy(update={"archived": True}))
+    admin = client_for(app, users, "admin@x.com", Role.ADMIN)
+    assert admin.get(url(project, "/TC-000001")).json()["can_run"] is False
 
 
 def test_batch_approve_reports_approved_and_skipped(
@@ -667,8 +689,12 @@ def review_off(projects: ProjectRepository, project: Project) -> Project:
 
 
 def test_submit_goes_straight_to_approved_when_review_off(
-    app: FastAPI, an: TestClient, project: Project, review_off: Project,
-    redis: fakeredis.FakeRedis, gateway: FakeSheetsGateway,
+    app: FastAPI,
+    an: TestClient,
+    project: Project,
+    review_off: Project,
+    redis: fakeredis.FakeRedis,
+    gateway: FakeSheetsGateway,
 ) -> None:
     sink = RecordingIssueSink()
     app.state.services.issue_sync = sink
@@ -689,9 +715,7 @@ def test_review_endpoints_409_when_off(
     an: TestClient, lead: TestClient, project: Project, review_off: Project, path: str
 ) -> None:
     case = create(an, project).json()
-    response = lead.post(
-        url(project, f"/{case['id']}/{path}"), json={"version": 1, "comment": "x"}
-    )
+    response = lead.post(url(project, f"/{case['id']}/{path}"), json={"version": 1, "comment": "x"})
 
     assert response.status_code == 409
     assert response.json()["detail"] == "Dự án đang tắt bước duyệt"
@@ -716,7 +740,10 @@ def test_review_on_keeps_old_flow(an: TestClient, project: Project) -> None:
 
 
 def test_edit_approved_case_with_results_requests_rerun_through_api(
-    app: FastAPI, an: TestClient, project: Project, review_off: Project,
+    app: FastAPI,
+    an: TestClient,
+    project: Project,
+    review_off: Project,
     gateway: FakeSheetsGateway,
 ) -> None:
     sink = RecordingIssueSink()
@@ -729,13 +756,24 @@ def test_edit_approved_case_with_results_requests_rerun_through_api(
     from app.core.models.run import Result, ResultStatus
     from app.core.repositories.runs import ResultRepository
 
-    ResultRepository(gateway, project.spreadsheet_id).append_batch([
-        Result(id="RUN-1-" + case["id"], run_id="RUN-1", test_case_id=case["id"],
-               status=ResultStatus.PASS, reason="", failed_step=None,
-               created_at=datetime.now(UTC))
-    ])
-    body = {**BODY, "version": approved["version"], "steps": [
-        {"action": "Bước mới", "expected": ""}]}
+    ResultRepository(gateway, project.spreadsheet_id).append_batch(
+        [
+            Result(
+                id="RUN-1-" + case["id"],
+                run_id="RUN-1",
+                test_case_id=case["id"],
+                status=ResultStatus.PASS,
+                reason="",
+                failed_step=None,
+                created_at=datetime.now(UTC),
+            )
+        ]
+    )
+    body = {
+        **BODY,
+        "version": approved["version"],
+        "steps": [{"action": "Bước mới", "expected": ""}],
+    }
 
     response = an.put(url(project, f"/{case['id']}"), json=body)
 

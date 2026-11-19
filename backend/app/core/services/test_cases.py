@@ -212,12 +212,21 @@ class TestCaseService:
         )
 
     def can_edit(self, user: User, case: TestCase) -> bool:
+        # Khoá theo người tạo (spec mục 4): được giao màn hình thì chỉ chạy, không sửa.
+        return can(
+            user,
+            Action.EDIT_TEST_CASE,
+            is_member=self._is_member(user),
+            owns_or_assigned=case.created_by == normalize_email(user.email),
+        )
+
+    def can_run(self, user: User, case: TestCase) -> bool:
         owns_or_assigned = case.created_by == normalize_email(user.email) or self._is_assigned(
             user, case.screen_id
         )
         return can(
             user,
-            Action.EDIT_TEST_CASE,
+            Action.RUN_TEST_CASE,
             is_member=self._is_member(user),
             owns_or_assigned=owns_or_assigned,
         )
@@ -317,7 +326,8 @@ class TestCaseService:
     def mark_tested(self, user: User, case_id: str, *, version: int) -> TestCase:
         """Case test tay đã có kết quả: DRAFT -> TESTED (đang TESTED thì giữ nguyên, không ghi)."""
         case = self.get_case(case_id)
-        self._require_edit(user, case)
+        if not self.can_run(user, case):
+            raise TestCasePermissionError("Bạn không có quyền chạy test case này")
         if case.execution_mode != ExecutionMode.MANUAL:
             raise InvalidTransitionError("Chỉ case test tay mới ghi nhận kết quả như vậy")
         if case.status == TestCaseStatus.TESTED:
@@ -459,8 +469,10 @@ class TestCaseService:
         if self._notifier is not None and case.created_by != normalize_email(user.email):
             if action == CaseAction.RETURN:
                 self._notifier.case_returned(
-                    email=case.created_by, project_id=self._project_id,
-                    case_id=case.id, comment=comment,
+                    email=case.created_by,
+                    project_id=self._project_id,
+                    case_id=case.id,
+                    comment=comment,
                 )
             elif action == CaseAction.APPROVE:
                 self._notifier.case_approved(

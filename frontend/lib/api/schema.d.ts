@@ -859,7 +859,7 @@ export interface components {
          * Action
          * @enum {string}
          */
-        Action: "MANAGE_USERS" | "MANAGE_PROJECTS" | "MANAGE_PROJECT_SETTINGS" | "MANAGE_MEMBERS" | "MANAGE_SCREENS" | "EDIT_TEST_CASE" | "REVIEW_TEST_CASE" | "TRIGGER_RUN" | "REVIEW_RESULTS" | "VIEW_PROJECT";
+        Action: "MANAGE_USERS" | "MANAGE_PROJECTS" | "MANAGE_PROJECT_SETTINGS" | "MANAGE_MEMBERS" | "MANAGE_SCREENS" | "EDIT_TEST_CASE" | "RUN_TEST_CASE" | "REVIEW_TEST_CASE" | "TRIGGER_RUN" | "REVIEW_RESULTS" | "VIEW_PROJECT";
         /** AddMemberRequest */
         AddMemberRequest: {
             /** Email */
@@ -1887,6 +1887,8 @@ export interface components {
             version: number;
             /** Can Edit */
             can_edit: boolean;
+            /** Can Run */
+            can_run: boolean;
             /** Can Review */
             can_review: boolean;
             /** Can Archive */

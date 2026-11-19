@@ -241,6 +241,26 @@ def test_other_tester_without_assignment_is_403(
     assert submit(binh, project, case["id"], result_body()).status_code == 403
 
 
+def test_assigned_tester_submits_result_for_lead_case(
+    an: TestClient, lead: TestClient, project: Project
+) -> None:
+    case = new_case(lead, project, screen_id="SC-0001")
+
+    response = submit(an, project, case["id"], result_body())
+
+    assert response.status_code == 201
+    assert an.get(cases_url(project, f"/{case['id']}")).json()["status"] == "TESTED"
+
+
+def test_unassigned_tester_cannot_submit(
+    app: FastAPI, users: UserRepository, lead: TestClient, project: Project
+) -> None:
+    case = new_case(lead, project, screen_id="SC-0001")
+    binh = client_for(app, users, "binh@x.com", Role.TESTER)
+
+    assert submit(binh, project, case["id"], result_body()).status_code == 403
+
+
 def test_manual_blocked_keeps_draft_and_no_issue(
     an: TestClient, project: Project, github: FakeGitHub, gateway: FakeSheetsGateway
 ) -> None:
