@@ -168,6 +168,13 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     await waitFor(() => expect(mocks.preview).toHaveBeenCalledWith(expect.any(File)))
   })
 
+  it("hiện tên file đã chọn dưới ô chọn file", async () => {
+    mocks.preview.mockResolvedValue(okResult())
+    renderDialog()
+    await pickFile()
+    expect(await screen.findByText("cases.xlsx")).toBeInTheDocument()
+  })
+
   it("trước khi chọn file nút Nhập không ghi số case", () => {
     renderDialog()
     expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()
@@ -210,5 +217,6 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     )
     expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()
     expect(screen.queryByText(/Xem trước:/)).not.toBeInTheDocument()
+    expect(screen.queryByText("cases.xlsx")).not.toBeInTheDocument()
   })
 })

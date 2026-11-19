@@ -137,6 +137,8 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
                   void onPickFile(picked)
                 }}
               />
+              {/* Ô chọn file bị xoá giá trị sau khi chọn, nên tự hiện tên file đang xem trước */}
+              {file && <span className="text-muted-foreground">{file.name}</span>}
             </label>
             <a href={templateUrl(projectId)} download className="text-sm underline underline-offset-2">
               {t("template")}
