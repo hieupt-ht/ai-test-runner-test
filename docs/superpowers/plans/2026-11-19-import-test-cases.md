@@ -292,6 +292,8 @@
 
 ## Đợt 3 — Giao diện và tài liệu
 
+> **Tiến độ: XONG (2026-11-19)** — Task 8–10: hook `use-case-import`, hộp thoại "Nhập từ Excel" (commit `25d12ae`, `3082672`, `62044d6`), hướng dẫn `docs/huong-dan-nhap-test-case.md`. Còn: chạy thử bằng trình duyệt thật (1366×768, cần dữ liệu Google thật), review cả nhánh.
+
 ### Task 8: Hook gọi API nhập file
 
 **Files:**
