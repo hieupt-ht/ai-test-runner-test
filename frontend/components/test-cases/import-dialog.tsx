@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { FileSpreadsheet } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -126,19 +127,21 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="flex flex-col gap-1 text-sm">
-              {t("fileLabel")}
+            <label className="flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed px-4 py-5 text-center text-sm hover:bg-muted focus-within:ring-2 focus-within:ring-ring">
+              <FileSpreadsheet className="size-6 text-muted-foreground" />
+              <span className="font-medium">{file ? file.name : t("pickFile")}</span>
+              <span className="text-xs text-muted-foreground">{file ? t("pickAnother") : t("fileLabel")}</span>
               <input
                 type="file"
                 accept=".xlsx"
+                className="sr-only"
                 onChange={(event) => {
                   const picked = event.target.files?.[0] // lấy file TRƯỚC khi xoá giá trị ô
                   event.target.value = "" // để chọn lại đúng file đó vẫn bắn sự kiện change
                   void onPickFile(picked)
                 }}
               />
-              {/* Ô chọn file bị xoá giá trị sau khi chọn, nên tự hiện tên file đang xem trước */}
-              {file && <span className="text-muted-foreground">{file.name}</span>}
+              {/* Ô chọn file bị xoá giá trị sau khi chọn, nên tên file đang xem trước hiện ở trên */}
             </label>
             <a href={templateUrl(projectId)} download className="text-sm underline underline-offset-2">
               {t("template")}
