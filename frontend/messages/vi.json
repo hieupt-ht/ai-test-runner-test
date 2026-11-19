@@ -514,7 +514,7 @@
   },
   "statuses": {
     "TODO": "Chưa bắt đầu",
-    "WRITING": "Đang viết",
+    "WRITING": "Đang làm",
     "IN_REVIEW": "Chờ duyệt",
     "APPROVED": "Đã duyệt",
     "TESTED": "Đã test"
