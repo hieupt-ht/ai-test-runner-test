@@ -15,7 +15,8 @@ Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026
 Thiết kế `docs/superpowers/specs/2026-11-19-import-test-cases-design.md`, kế hoạch `docs/superpowers/plans/2026-11-19-import-test-cases.md` (10 task / 3 đợt, làm kiểu subagent: mỗi task một người làm + một người kiểm tra).
 
 - **Đợt 1 xong** (Task 1–3, commit `22cd6ba`, `13b1410`, `6f3aedb`): trạng thái việc đếm mọi case của màn hình (nhãn WRITING = "Đang làm"); tách `can_edit` (người tạo / lead) và `can_run` (thêm tester được giao màn hình; `Action.RUN_TEST_CASE`); kết quả test tay FAIL bắt buộc có ít nhất một ảnh/video (422); trang case hiện khung chạy cho người chỉ được chạy. Backend **743 test**, frontend **272 test**, mypy/ruff/tsc/eslint sạch.
-- **Việc còn lại:** Đợt 2 (Task 4–7: đọc file, ghi hàng loạt, API), Đợt 3 (Task 8–10: giao diện, tài liệu).
+- **Đợt 2 xong** (Task 4–7, backend; commit `bfd4b2c`+`192fdcb`, `2759e9f`, `b3e9448`+`6d45ff1`, `c78d01c`): `case_import.py` đọc file .xlsx theo 16 cột (chặn file >2 MB, >2000 dòng, >300 case, dừng đọc sớm); `next_ids`/`create_many`/`record_many` ghi một lô; `TestCaseService.preview_import`/`import_cases` (kiểm tra trong khoá assignments→test-cases, có lỗi thì không ghi gì, audit/trạng thái/thông báo sau khi ghi chỉ log nếu lỗi); API `GET .../test-cases/import/template`, `POST .../import/preview`, `POST .../import` (422 `{detail, errors}`, 409 khoá bận, 503 lỗi Sheet; file rỗng báo "File không có test case nào"). Backend **798 test**, mypy/ruff sạch; API types đã sinh lại. Việc nhỏ chưa sửa (ghi ở sổ SDD): chuẩn hoá NFC chữ có dấu, `_refresh_status` chưa bắt lỗi mạng ngoài HttpError.
+- **Việc còn lại:** Đợt 3 (Task 8–10: giao diện, tài liệu).
 - **Cần xem lại:** `backend/app/api/routers/me.py` `case_counts` vẫn lọc theo `created_by`, lệch luật trạng thái mới (thẻ "Việc của tôi" có thể đếm ít hơn trạng thái).
 
 ## Đang làm (2026-11-16)
