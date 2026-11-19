@@ -29,4 +29,16 @@ describe("CreateProjectDialog", () => {
     expect(screen.getByLabelText("Link hoặc ID Google Sheet")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Lưu" })).toBeEnabled()
   })
+
+  it("không bị thanh cuộn ngang: cột duy nhất của hộp thoại được phép co lại", () => {
+    render(
+      <NextIntlClientProvider locale="vi" messages={messages} timeZone="Asia/Ho_Chi_Minh">
+        <CreateProjectDialog />
+      </NextIntlClientProvider>,
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Tạo dự án" }))
+
+    // Hộp thoại là grid; cột "auto" nở theo nội dung dài (email, link) nên phải ép cột co được
+    expect(screen.getByRole("dialog")).toHaveClass("grid-cols-[minmax(0,1fr)]", "overflow-x-hidden")
+  })
 })
