@@ -138,13 +138,14 @@ export function CreateProjectDialog() {
       <DialogTrigger render={<Button />}>
         <FolderPlus /> {t("create")}
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+      {/* Hộp thoại là grid: cột "auto" nở theo email/link dài nên ép cột co được (minmax(0,1fr)) */}
+      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-cols-[minmax(0,1fr)] overflow-x-hidden overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("formTitle")}</DialogTitle>
           <DialogDescription>{t("formDescription")}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+        <form onSubmit={submit} className="flex min-w-0 flex-col gap-4" noValidate>
           <Field label={t("fieldName")} htmlFor="project-name" error={submitted ? errors.name : null}>
             <Input id="project-name" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
@@ -155,7 +156,7 @@ export function CreateProjectDialog() {
               {t("githubMissing")}
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <Field label={t("fieldRepo")} error={submitted ? errors.repo : null}>
                 <Select items={repoItems} value={repo} onValueChange={chooseRepo}>
                   <SelectTrigger className="w-full">
