@@ -106,19 +106,37 @@ def _cell_text(value: Any) -> str:
     return str(value).strip()
 
 
+class _TooManyRows(Exception):
+    """Sheet có quá nhiều dòng: dừng đọc sớm để không tốn bộ nhớ."""
+
+
+# Tổng số dòng được quét tối đa (kể cả dòng trống), chặn sheet phình bằng hàng triệu dòng trống
+_MAX_SCANNED_ROWS = MAX_DATA_ROWS * 5 + 1
+
+
 def _read_rows(data: bytes) -> list[list[str]] | None:
-    """Đọc sheet dữ liệu thành các dòng 16 ô (dòng 1 là tiêu đề). None nếu không mở được."""
+    """Đọc sheet dữ liệu thành các dòng 16 ô (dòng 1 là tiêu đề). None nếu không mở được.
+
+    Dòng trống hoàn toàn không được giữ lại nhưng vẫn được đếm vào số dòng quét.
+    Raise _TooManyRows nếu vượt giới hạn dòng.
+    """
     try:
         wb = load_workbook(BytesIO(data), read_only=True, data_only=True)
         ws = wb[SHEET_NAME] if SHEET_NAME in wb.sheetnames else wb.worksheets[0]
         ws.reset_dimensions()  # file xuất từ công cụ khác đôi khi khai báo kích thước sai
         rows: list[list[str]] = []
-        for raw in ws.iter_rows(values_only=True):
+        for scanned, raw in enumerate(ws.iter_rows(values_only=True), start=1):
             cells = [_cell_text(v) for v in raw[: len(COLUMNS)]]
             cells += [""] * (len(COLUMNS) - len(cells))
-            rows.append(cells)
+            # Giữ dòng 1 (tiêu đề), còn lại chỉ giữ dòng có dữ liệu, kèm số dòng thật
+            if scanned == 1 or any(cells):
+                rows.append([str(scanned), *cells])
+            if scanned > _MAX_SCANNED_ROWS or len(rows) > MAX_DATA_ROWS + 1:
+                raise _TooManyRows
         wb.close()
         return rows
+    except _TooManyRows:
+        raise
     except Exception:
         return None
 
@@ -283,19 +301,20 @@ def parse_workbook(data: bytes, screens: list[Screen]) -> ParseResult:
     """Đọc file .xlsx theo mẫu. Lỗi xếp theo số dòng (lỗi chung của file đứng đầu)."""
     if len(data) > MAX_FILE_BYTES:
         return _file_error("File quá lớn, tối đa 2 MB")
-    all_rows = _read_rows(data)
+    try:
+        all_rows = _read_rows(data)
+    except _TooManyRows:
+        return _file_error(f"File có quá {MAX_DATA_ROWS} dòng dữ liệu")
     if all_rows is None:
         return _file_error("Không đọc được file .xlsx")
 
-    header = all_rows[0] if all_rows else [""] * len(COLUMNS)
+    header = all_rows[0][1:] if all_rows else [""] * len(COLUMNS)
     header_error = _check_header(header)
     if header_error:
         return ParseResult(errors=[header_error])
 
-    # Bỏ dòng trống hoàn toàn, giữ số dòng thật trong file
-    rows = [(i, cells) for i, cells in enumerate(all_rows[1:], start=2) if any(cells)]
-    if len(rows) > MAX_DATA_ROWS:
-        return _file_error(f"File có quá {MAX_DATA_ROWS} dòng dữ liệu")
+    # Mỗi dòng đã kèm số dòng thật trong file ở ô đầu; dòng trống đã được bỏ
+    rows = [(int(line[0]), line[1:]) for line in all_rows[1:]]
 
     errors: list[ImportIssue] = []
     groups = _group_rows(rows, errors)

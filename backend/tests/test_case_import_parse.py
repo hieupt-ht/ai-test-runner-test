@@ -1,7 +1,10 @@
 """Test bộ đọc file Excel test case (hàm thuần, không đụng Google Sheets)."""
 
 from datetime import UTC, date, datetime
+from io import BytesIO
 from typing import Any
+
+from openpyxl import Workbook
 
 from app.core.models.screen import Screen
 from app.core.models.test_case import ExecutionMode, Platform, Priority, Severity, TestType
@@ -268,3 +271,19 @@ def test_errors_sorted_by_row() -> None:
     rows = [_with(_row(), "Ưu tiên", "P9"), _with(_with(_row(), "Mã nhóm", "B"), "Mức độ", "x")]
     result = parse_workbook(make_xlsx(rows), SCREENS)
     assert [e.row for e in result.errors] == [2, 3]
+
+
+def test_sparse_sheet_with_huge_blank_range_is_stopped_early() -> None:
+    # Sheet "phình" bằng hàng triệu dòng trống: phải dừng sớm và báo lỗi chung, không đọc hết
+    wb = Workbook()
+    ws = wb.active
+    assert ws is not None
+    ws.title = "Test case"
+    ws.append(HEADERS)
+    ws.cell(row=200_000, column=1, value="A1")
+    buffer = BytesIO()
+    wb.save(buffer)
+    result = parse_workbook(buffer.getvalue(), SCREENS)
+    assert len(result.errors) == 1
+    assert result.errors[0].row is None
+    assert result.cases == []
