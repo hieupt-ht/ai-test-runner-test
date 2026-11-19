@@ -11,11 +11,13 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 
 from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.locks.redis_lock import LockTimeout
 from app.core.media.cloudinary import MediaJanitor
+from app.core.models.assignment import Assignment
 from app.core.models.media import ForeignMediaError, ensure_own_media
 from app.core.models.project import Project
 from app.core.models.screen import Screen
@@ -31,7 +33,7 @@ from app.core.models.test_case import (
 from app.core.models.user import Role, User, normalize_email
 from app.core.permissions import Action, can
 from app.core.repositories.assignments import AssignmentRepository
-from app.core.repositories.audit_log import AuditEntry, AuditLogRepository
+from app.core.repositories.audit_log import AuditEntry, AuditLogRepository, AuditRecord
 from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.screens import ScreenRepository
 from app.core.repositories.test_cases import (
@@ -40,6 +42,12 @@ from app.core.repositories.test_cases import (
     VersionConflictError,
 )
 from app.core.repositories.users import UserRepository
+from app.core.services.case_import import (
+    ImportIssue,
+    ParseResult,
+    check_import,
+    parse_workbook,
+)
 from app.core.services.issue_sync import IssueSink, IssueSyncer
 from app.core.services.notify import Notifier
 from app.core.sheets.gateway import SheetAccessDeniedError
@@ -76,6 +84,13 @@ class TestCasePermissionError(Exception):
 
 class InvalidTransitionError(Exception):
     """Thao tác không hợp lệ ở trạng thái hiện tại (trả 409). `str(error)` là câu tiếng Việt."""
+
+
+class ImportWriteError(Exception):
+    """Google Sheets lỗi khi đang cấp mã/ghi case nhập từ file (router trả 503).
+
+    Lỗi xảy ra trước khi có dòng nào được ghi, nên chưa có case nào được tạo.
+    """
 
 
 # Thao tác -> (trạng thái được phép đi từ đó, trạng thái đích). DEPRECATE xử lý riêng.
@@ -117,6 +132,14 @@ class SkippedCase:
 class BatchApproveResult:
     approved: list[TestCase] = field(default_factory=list)
     skipped: list[SkippedCase] = field(default_factory=list)
+
+
+@dataclass
+class ImportOutcome:
+    """Kết quả nhập file: còn lỗi thì `created` rỗng và không có gì được ghi."""
+
+    created: list[TestCase] = field(default_factory=list)
+    errors: list[ImportIssue] = field(default_factory=list)
 
 
 class SyncIssuesResult(BaseModel):
@@ -417,6 +440,117 @@ class TestCaseService:
                 if "giới hạn" in str(error):
                     break
         return result
+
+    # --- Nhập từ file Excel ---
+
+    def preview_import(self, user: User, data: bytes) -> ParseResult:
+        """Đọc và kiểm tra file, không ghi gì (bước xem trước)."""
+        self._require_import(user)
+        return self._check_file(user, data, self._assignments.list_all())
+
+    def import_cases(self, user: User, data: bytes) -> ImportOutcome:
+        """Nhập cả file một lượt: hoặc tạo hết các case, hoặc không tạo case nào.
+
+        Số lượt gọi Google không tăng theo số case: một lần ghi case, một lần ghi AuditLog,
+        mỗi màn hình tính lại trạng thái việc một lần. File được đọc và kiểm tra lại từ đầu
+        BÊN TRONG khoá (assignments trước, test-cases sau), nên màn hình bị xoá hay việc bị
+        bỏ giao sau bước xem trước đều bị phát hiện. `LockTimeout` để router trả 409.
+        """
+        self._require_import(user)
+        with self._assignments.lock(), self._test_cases.lock():
+            assignments = self._assignments.list_all()
+            result = self._check_file(user, data, assignments)
+            if result.errors:
+                return ImportOutcome(errors=result.errors)
+            items = [(case.screen_id, case.content) for case in result.cases]
+            try:
+                created = self._test_cases.create_many(items, actor=normalize_email(user.email))
+            except (SheetAccessDeniedError, MissingColumnsError, HttpError) as error:
+                raise ImportWriteError("Google Sheets đang bận, chưa nhập case nào") from error
+
+        # Case đã nằm trên Sheet: các bước sau lỗi thì chỉ ghi log, không báo lỗi request,
+        # để người dùng không bấm nhập lại và sinh case trùng.
+        self._audit_import(user, created)
+        screen_names = {case.screen_id: case.screen_name for case in result.cases}
+        touched = list(dict.fromkeys(case.screen_id for case in created))
+        for screen_id in touched:
+            self._refresh_status(screen_id)
+        self._notify_imported(user, created, assignments, screen_names)
+        return ImportOutcome(created=created)
+
+    def _require_import(self, user: User) -> None:
+        # Quyền chung: QA Lead/Admin, hoặc tester là thành viên. Tester được nhập vào màn hình
+        # nào thì `check_import` xét theo từng nhóm dòng.
+        allowed = can(
+            user, Action.EDIT_TEST_CASE, is_member=self._is_member(user), owns_or_assigned=True
+        )
+        if not allowed:
+            raise TestCasePermissionError("Bạn không có quyền tạo test case")
+
+    def _check_file(self, user: User, data: bytes, assignments: list[Assignment]) -> ParseResult:
+        """Đọc file theo màn hình hiện có, rồi xét quyền theo màn hình và trùng tiêu đề."""
+        result = parse_workbook(data, self._screens.list_all())
+        allowed: set[str] | None = None  # QA Lead/Admin nhập được mọi màn hình
+        if user.role == Role.TESTER:
+            email = normalize_email(user.email)
+            allowed = {a.screen_id for a in assignments if a.assignee_email == email}
+        # Đọc case sau cùng, sát lúc ghi (đang giữ khoá thì đọc thẳng Sheet)
+        return check_import(
+            result, existing=self._test_cases.list_all(), allowed_screen_ids=allowed
+        )
+
+    def _audit_import(self, user: User, created: list[TestCase]) -> None:
+        """Mỗi case một dòng `IMPORT` (diff như `CREATE`), ghi bằng một lời gọi Google."""
+        entries = [
+            AuditRecord(
+                actor=user.email,
+                action="IMPORT",
+                entity=AUDIT_ENTITY,
+                entity_id=case.id,
+                diff=_strip_media(case.model_dump(mode="json")),
+            )
+            for case in created
+        ]
+        if not entries:
+            return
+        try:
+            self._audit_log.record_many(entries)
+        except Exception:
+            logger.warning(
+                "Không ghi được lịch sử cho %d case vừa nhập", len(entries), exc_info=True
+            )
+
+    def _notify_imported(
+        self,
+        user: User,
+        created: list[TestCase],
+        assignments: list[Assignment],
+        screen_names: dict[str, str],
+    ) -> None:
+        """QA Lead/Admin nhập xong thì mỗi tester được giao nhận MỘT thông báo gộp."""
+        if self._notifier is None or user.role not in (Role.ADMIN, Role.QA_LEAD):
+            return
+        count_by_screen: dict[str, int] = {}
+        for case in created:
+            count_by_screen[case.screen_id] = count_by_screen.get(case.screen_id, 0) + 1
+        actor_email = normalize_email(user.email)
+        # Gom theo tester: các màn hình (giữ thứ tự xuất hiện trong file) tester đó được giao
+        screens_by_tester: dict[str, list[str]] = {}
+        for screen_id in count_by_screen:
+            for assignment in assignments:
+                email = assignment.assignee_email
+                if assignment.screen_id != screen_id or email == actor_email:
+                    continue
+                tester_screens = screens_by_tester.setdefault(email, [])
+                if screen_id not in tester_screens:
+                    tester_screens.append(screen_id)
+        for email, screen_ids in screens_by_tester.items():
+            self._notifier.cases_imported(
+                email=email,
+                project_id=self._project_id,
+                count=sum(count_by_screen[screen_id] for screen_id in screen_ids),
+                screen_names=[screen_names[screen_id] for screen_id in screen_ids],
+            )
 
     # --- Nội bộ ---
 

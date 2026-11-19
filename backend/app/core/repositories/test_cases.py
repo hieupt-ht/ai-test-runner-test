@@ -200,6 +200,7 @@ class TestCaseRepository:
                 )
                 for case_id, (screen_id, content) in zip(case_ids, items, strict=True)
             ]
+            # Ghi lỗi sau khi đã cấp mã thì các mã này bỏ trống (mã nhảy cóc, không sao).
             self._table.append_many([_to_record(case) for case in cases])
             self._cache.invalidate()
         return cases

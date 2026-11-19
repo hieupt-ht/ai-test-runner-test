@@ -1,7 +1,7 @@
 """Đọc file Excel (.xlsx) theo mẫu thành danh sách test case.
 
 Đây là hàm thuần: nhận bytes của file và danh sách màn hình, trả kết quả đọc. Không đụng
-Google Sheets, không xét quyền, không xét trùng tiêu đề (bước sau làm).
+Google Sheets. `parse_workbook` không xét quyền và trùng tiêu đề, việc đó do `check_import`.
 """
 
 from dataclasses import dataclass
@@ -17,7 +17,9 @@ from app.core.models.test_case import (
     Platform,
     Priority,
     Severity,
+    TestCase,
     TestCaseContent,
+    TestCaseStatus,
     TestType,
 )
 
@@ -28,6 +30,7 @@ MAX_CASES = 300
 
 _WRONG_TEMPLATE = "File không đúng mẫu, hãy tải file mẫu mới"
 _REQUIRED = "Không được để trống"
+_NOT_ASSIGNED = "Bạn chưa được giao màn hình này"
 
 # Giá trị ô Regression: chữ (đã hạ chữ thường) nào là Có, chữ nào là Không
 _YES = {"có", "co", "x", "yes", "true"}
@@ -328,3 +331,40 @@ def parse_workbook(data: bytes, screens: list[Screen]) -> ParseResult:
             cases.append(case)
     errors.sort(key=lambda e: e.row or 0)
     return ParseResult(cases=cases, errors=errors)
+
+
+# Case ở hai trạng thái này coi như không còn dùng: trùng tiêu đề với chúng thì không cảnh báo
+_INACTIVE = {TestCaseStatus.ARCHIVED, TestCaseStatus.DEPRECATED}
+
+
+def _title_key(title: str) -> str:
+    """Khoá so tiêu đề: bỏ khoảng trắng hai đầu, không phân biệt hoa thường."""
+    return title.strip().casefold()
+
+
+def check_import(
+    result: ParseResult, *, existing: list[TestCase], allowed_screen_ids: set[str] | None
+) -> ParseResult:
+    """Kiểm tra thêm sau khi đọc file: quyền theo màn hình và trùng tiêu đề (hàm thuần).
+
+    `allowed_screen_ids` là các màn hình người nhập được ghi; None nghĩa là mọi màn hình
+    (QA Lead/Admin). Trùng tiêu đề chỉ là cảnh báo, không chặn việc nhập.
+    """
+    errors = list(result.errors)
+    warnings = list(result.warnings)
+    used_titles = {
+        (case.screen_id, _title_key(case.title))
+        for case in existing
+        if case.status not in _INACTIVE
+    }
+    for case in result.cases:
+        if allowed_screen_ids is not None and case.screen_id not in allowed_screen_ids:
+            errors.append(ImportIssue(row=case.row, column="Màn hình", message=_NOT_ASSIGNED))
+        elif (case.screen_id, _title_key(case.title)) in used_titles:
+            warnings.append(
+                ImportIssue(
+                    row=case.row, message=f"Màn hình {case.screen_name} đã có case cùng tiêu đề"
+                )
+            )
+    errors.sort(key=lambda e: e.row or 0)
+    return ParseResult(cases=result.cases, errors=errors, warnings=warnings)
