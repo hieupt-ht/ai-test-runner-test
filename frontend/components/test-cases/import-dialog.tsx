@@ -131,7 +131,11 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
               <input
                 type="file"
                 accept=".xlsx"
-                onChange={(event) => void onPickFile(event.target.files?.[0])}
+                onChange={(event) => {
+                  const picked = event.target.files?.[0] // lấy file TRƯỚC khi xoá giá trị ô
+                  event.target.value = "" // để chọn lại đúng file đó vẫn bắn sự kiện change
+                  void onPickFile(picked)
+                }}
               />
             </label>
             <a href={templateUrl(projectId)} download className="text-sm underline underline-offset-2">

@@ -47,6 +47,8 @@ export function useImportCases(projectId: string) {
     mutationFn: (file) => postFile<ImportCreated>(importUrl(projectId), file),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId] })
+      // Số case trên "Việc của tôi" cũng đổi theo
+      void queryClient.invalidateQueries({ queryKey: ["me", "assignments"] })
     },
   })
 }

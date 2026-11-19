@@ -157,6 +157,17 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     await waitFor(() => expect(mocks.preview).toHaveBeenCalledTimes(2))
   })
 
+  it("chọn xong thì xoá giá trị ô chọn file để chọn lại đúng file đó vẫn nhận", async () => {
+    mocks.preview.mockResolvedValue(okResult())
+    renderDialog()
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const resetValue = vi.fn()
+    Object.defineProperty(input, "value", { set: resetValue, get: () => "" })
+    await pickFile()
+    expect(resetValue).toHaveBeenCalledWith("")
+    await waitFor(() => expect(mocks.preview).toHaveBeenCalledWith(expect.any(File)))
+  })
+
   it("trước khi chọn file nút Nhập không ghi số case", () => {
     renderDialog()
     expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()

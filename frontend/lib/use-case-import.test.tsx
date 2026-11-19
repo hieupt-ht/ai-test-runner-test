@@ -67,6 +67,7 @@ describe("useImportCases", () => {
 
     expect(created).toEqual({ created: ["TC-1"] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "P1"] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["me", "assignments"] })
   })
 
   it("503 thì ApiError.message là câu của backend", async () => {
