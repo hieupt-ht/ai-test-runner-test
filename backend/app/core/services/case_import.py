@@ -9,7 +9,10 @@ from datetime import date, datetime
 from io import BytesIO
 from typing import Any, Literal
 
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 from pydantic import BaseModel, ValidationError
 
 from app.core.models.screen import Screen
@@ -368,3 +371,102 @@ def check_import(
             )
     errors.sort(key=lambda e: e.row or 0)
     return ParseResult(cases=result.cases, errors=errors, warnings=warnings)
+
+
+# Màn hình dùng trong case ví dụ của file mẫu
+_EXAMPLE_SCREEN = "Đăng nhập"
+
+# Nội dung sheet "Hướng dẫn": mỗi chuỗi là một dòng
+_GUIDE_LINES = (
+    "HƯỚNG DẪN NHẬP TEST CASE TỪ FILE EXCEL",
+    "",
+    "Cách làm: điền sheet 'Test case', lưu file .xlsx, rồi chọn file trong màn hình Nhập từ file.",
+    "Giữ nguyên dòng 1 (tiêu đề cột): không đổi chữ, không đổi thứ tự, không xoá cột.",
+    "Dữ liệu bắt đầu từ dòng 2. Dòng trống hoàn toàn sẽ được bỏ qua.",
+    "",
+    "Gom dòng thành một case",
+    "- Các dòng cùng 'Mã nhóm' là một test case; mỗi dòng là một bước theo thứ tự từ trên xuống.",
+    "- Các ô của case (màn hình, tiêu đề...) ghi ở dòng đầu của nhóm. Ở dòng sau để trống,"
+    " hoặc ghi giống hệt dòng đầu.",
+    "- Các dòng của một nhóm phải nằm liền nhau. Mỗi dòng có dữ liệu đều phải có 'Mã nhóm'.",
+    "",
+    "Cột Màn hình",
+    "- Ghi tên màn hình trong dự án (không phân biệt hoa thường).",
+    "- Nếu hai màn hình trùng tên thì ghi mã màn hình, ví dụ SC-0001.",
+    "- Tester chỉ nhập được vào màn hình mình đã được giao.",
+    "",
+    "Cột bắt buộc",
+    "- Mã nhóm, Màn hình, Tiêu đề, Bước làm (mỗi dòng), Kết quả mong đợi, Mức độ, Ưu tiên.",
+    "",
+    "Cột chọn giá trị (đã có danh sách chọn sẵn)",
+    "- Mức độ: LOW / MEDIUM / HIGH. Ưu tiên: P1 / P2 / P3.",
+    "- Nền tảng: WEB / ANDROID / IOS (để trống là WEB).",
+    "- Loại test: FUNCTIONAL / UI (để trống là FUNCTIONAL).",
+    "- Regression: Có / Không (để trống là Không).",
+    "",
+    "Giới hạn",
+    f"- File tối đa {MAX_FILE_BYTES // (1024 * 1024)} MB, {MAX_DATA_ROWS} dòng dữ liệu,"
+    f" {MAX_CASES} test case mỗi lần. Chỉ nhận file .xlsx.",
+    "- Tối đa 50 bước mỗi case.",
+    "",
+    "Khi nhập xong, case ở trạng thái Nháp và là case test tay. Ảnh/video gắn thêm trong app.",
+    "Nếu file còn lỗi, app báo lỗi theo từng dòng và không nhập case nào.",
+)
+
+
+def build_template() -> bytes:
+    """Dựng file mẫu .xlsx: tiêu đề, danh sách chọn, một case ví dụ 3 bước và sheet hướng dẫn."""
+    wb = Workbook()
+    ws = wb.active
+    assert ws is not None
+    ws.title = SHEET_NAME
+    ws.append([c.header for c in COLUMNS])
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    ws.freeze_panes = "A2"
+
+    # Danh sách chọn sẵn cho các cột có giá trị cố định, áp cho các dòng dữ liệu cho phép
+    last_row = MAX_DATA_ROWS + 1
+    for index, column in enumerate(COLUMNS, start=1):
+        letter = get_column_letter(index)
+        ws.column_dimensions[letter].width = max(14, len(column.header) + 4)
+        if not column.choices:
+            continue
+        validation = DataValidation(
+            type="list", formula1='"' + ",".join(column.choices) + '"', allow_blank=True
+        )
+        validation.add(f"{letter}2:{letter}{last_row}")
+        ws.add_data_validation(validation)
+
+    # Case ví dụ: 3 dòng cùng mã nhóm; ô mức case chỉ ghi ở dòng đầu
+    case_cells = {
+        "Mã nhóm": "A1",
+        "Màn hình": _EXAMPLE_SCREEN,
+        "Tiêu đề": "Đăng nhập thành công bằng email hợp lệ",
+        "Điều kiện trước": "Đã có tài khoản",
+        "Kết quả mong đợi": "Người dùng vào được trang chủ",
+        "Mức độ": "HIGH",
+        "Ưu tiên": "P1",
+        "Nền tảng": "WEB",
+        "Loại test": "FUNCTIONAL",
+        "Regression": "Có",
+    }
+    steps = (
+        ("Mở trang đăng nhập", "Thấy form đăng nhập"),
+        ("Nhập email và mật khẩu đúng", ""),
+        ("Bấm nút Đăng nhập", "Chuyển sang trang chủ"),
+    )
+    for number, (action, expected) in enumerate(steps):
+        row = case_cells if number == 0 else {"Mã nhóm": "A1"}
+        row = {**row, "Bước làm": action, "Mong đợi của bước": expected}
+        ws.append([row.get(c.header, "") for c in COLUMNS])
+
+    guide = wb.create_sheet("Hướng dẫn")
+    for line in _GUIDE_LINES:
+        guide.append([line])
+    guide["A1"].font = Font(bold=True, size=14)
+    guide.column_dimensions["A"].width = 100
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()

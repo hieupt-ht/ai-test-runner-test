@@ -1315,6 +1315,150 @@
         }
       }
     },
+    "/api/projects/{project_id}/test-cases/import/template": {
+      "get": {
+        "tags": [
+          "case-import"
+        ],
+        "summary": "Download Template",
+        "operationId": "download_template_api_projects__project_id__test_cases_import_template_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/import/preview": {
+      "post": {
+        "tags": [
+          "case-import"
+        ],
+        "summary": "Preview Import",
+        "operationId": "preview_import_api_projects__project_id__test_cases_import_preview_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_import_api_projects__project_id__test_cases_import_preview_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/import": {
+      "post": {
+        "tags": [
+          "case-import"
+        ],
+        "summary": "Import Cases",
+        "operationId": "import_cases_api_projects__project_id__test_cases_import_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_cases_api_projects__project_id__test_cases_import_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportRejected"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/test-cases": {
       "get": {
         "tags": [
@@ -3179,6 +3323,34 @@
         ],
         "title": "BatchApproveResponse"
       },
+      "Body_import_cases_api_projects__project_id__test_cases_import_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_cases_api_projects__project_id__test_cases_import_post"
+      },
+      "Body_preview_import_api_projects__project_id__test_cases_import_preview_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_import_api_projects__project_id__test_cases_import_preview_post"
+      },
       "Body_upload_agent_media_api_agent_projects__project_id__media_upload_post": {
         "properties": {
           "file": {
@@ -3607,6 +3779,80 @@
         ],
         "title": "IgnoredResult"
       },
+      "ImportCreated": {
+        "properties": {
+          "created": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created"
+        ],
+        "title": "ImportCreated"
+      },
+      "ImportIssue": {
+        "properties": {
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "message"
+        ],
+        "title": "ImportIssue"
+      },
+      "ImportRejected": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "errors"
+        ],
+        "title": "ImportRejected",
+        "description": "Phản hồi 422: file còn lỗi, không case nào được nhập."
+      },
       "LastResult": {
         "properties": {
           "status": {
@@ -3956,6 +4202,78 @@
         },
         "type": "object",
         "title": "OverviewSummary"
+      },
+      "ParseResult": {
+        "properties": {
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedCase"
+            },
+            "type": "array",
+            "title": "Cases",
+            "default": []
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ParseResult"
+      },
+      "ParsedCase": {
+        "properties": {
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "screen_name": {
+            "type": "string",
+            "title": "Screen Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "step_count": {
+            "type": "integer",
+            "title": "Step Count"
+          },
+          "content": {
+            "$ref": "#/components/schemas/TestCaseContent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "row",
+          "screen_id",
+          "screen_name",
+          "title",
+          "step_count",
+          "content"
+        ],
+        "title": "ParsedCase"
       },
       "Platform": {
         "type": "string",
@@ -4883,6 +5201,102 @@
         ],
         "title": "TestCase",
         "description": "Một test case đầy đủ, như lưu ở tab TestCases."
+      },
+      "TestCaseContent": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "precondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Precondition",
+            "default": ""
+          },
+          "test_data": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Test Data",
+            "default": ""
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TestStep"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Steps"
+          },
+          "expected_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expected Result"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "steps",
+          "expected_result",
+          "severity",
+          "priority"
+        ],
+        "title": "TestCaseContent",
+        "description": "Phần nội dung do người dùng nhập khi tạo hoặc sửa test case."
       },
       "TestCaseDetail": {
         "properties": {

@@ -424,6 +424,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Template */
+        get: operations["download_template_api_projects__project_id__test_cases_import_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/test-cases/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Import */
+        post: operations["preview_import_api_projects__project_id__test_cases_import_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/test-cases/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Cases */
+        post: operations["import_cases_api_projects__project_id__test_cases_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases": {
         parameters: {
             query?: never;
@@ -1016,6 +1067,16 @@ export interface components {
             /** Skipped */
             skipped: components["schemas"]["SkippedItem"][];
         };
+        /** Body_import_cases_api_projects__project_id__test_cases_import_post */
+        Body_import_cases_api_projects__project_id__test_cases_import_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_preview_import_api_projects__project_id__test_cases_import_preview_post */
+        Body_preview_import_api_projects__project_id__test_cases_import_preview_post: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_agent_media_api_agent_projects__project_id__media_upload_post */
         Body_upload_agent_media_api_agent_projects__project_id__media_upload_post: {
             /** File */
@@ -1206,6 +1267,30 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** ImportCreated */
+        ImportCreated: {
+            /** Created */
+            created: string[];
+        };
+        /** ImportIssue */
+        ImportIssue: {
+            /** Row */
+            row: number | null;
+            /** Column */
+            column?: string | null;
+            /** Message */
+            message: string;
+        };
+        /**
+         * ImportRejected
+         * @description Phản hồi 422: file còn lỗi, không case nào được nhập.
+         */
+        ImportRejected: {
+            /** Detail */
+            detail: string;
+            /** Errors */
+            errors: components["schemas"]["ImportIssue"][];
+        };
         /**
          * LastResult
          * @description Kết quả chạy gần nhất của một case test tay.
@@ -1364,6 +1449,40 @@ export interface components {
              */
             pending_review: number;
             latest_result?: components["schemas"]["ResultItem"] | null;
+        };
+        /** ParseResult */
+        ParseResult: {
+            /**
+             * Cases
+             * @default []
+             */
+            cases: components["schemas"]["ParsedCase"][];
+            /**
+             * Errors
+             * @default []
+             */
+            errors: components["schemas"]["ImportIssue"][];
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: components["schemas"]["ImportIssue"][];
+        };
+        /** ParsedCase */
+        ParsedCase: {
+            /** Group */
+            group: string;
+            /** Row */
+            row: number;
+            /** Screen Id */
+            screen_id: string;
+            /** Screen Name */
+            screen_name: string;
+            /** Title */
+            title: string;
+            /** Step Count */
+            step_count: number;
+            content: components["schemas"]["TestCaseContent"];
         };
         /**
          * Platform
@@ -1812,6 +1931,58 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+        };
+        /**
+         * TestCaseContent
+         * @description Phần nội dung do người dùng nhập khi tạo hoặc sửa test case.
+         */
+        TestCaseContent: {
+            /** Title */
+            title: string;
+            /**
+             * Precondition
+             * @default
+             */
+            precondition: string;
+            /**
+             * Test Data
+             * @default
+             */
+            test_data: string;
+            /** Steps */
+            steps: components["schemas"]["TestStep"][];
+            /** Expected Result */
+            expected_result: string;
+            severity: components["schemas"]["Severity"];
+            priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
         };
         /**
          * TestCaseDetail
@@ -2999,6 +3170,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_template_api_projects__project_id__test_cases_import_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_import_api_projects__project_id__test_cases_import_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_import_api_projects__project_id__test_cases_import_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParseResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_cases_api_projects__project_id__test_cases_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_cases_api_projects__project_id__test_cases_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCreated"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRejected"];
                 };
             };
         };
