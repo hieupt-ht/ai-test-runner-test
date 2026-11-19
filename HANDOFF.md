@@ -21,6 +21,13 @@ Thiết kế `docs/superpowers/specs/2026-11-19-import-test-cases-design.md`, k�
 - **Việc còn lại:** review cả nhánh (các việc nhỏ hoãn lại ghi ở sổ SDD `.superpowers/sdd/2026-11-19-import-test-cases/progress.md`); chạy thử app bằng trình duyệt thật, chụp màn hình ở 1366×768 (cần dữ liệu Google thật, chưa làm).
 - **Cần xem lại:** `backend/app/api/routers/me.py` `case_counts` vẫn lọc theo `created_by`, lệch luật trạng thái mới (thẻ "Việc của tôi" có thể đếm ít hơn trạng thái).
 
+## Đang làm (2026-11-19): giao diện vui + nhím bug
+
+Nhánh `feature/fun-ui` (tách từ `feature/ai-agent-runner`). Spec `docs/superpowers/specs/2026-11-19-giao-dien-vui-nhim-bug-design.md`, kế hoạch `docs/superpowers/plans/2026-11-19-giao-dien-vui-nhim-bug.md` (6 đợt, làm từng đợt).
+
+- **Đợt 1 xong** (Task 1–2): giao diện thứ 3 "Kẹo ngọt" (lớp `.candy` trong `globals.css`, mục menu trong Topbar) và 3 màu đồ thị `--chart-pass/fail/other` cho cả 3 giao diện. Việc chủ dự án cần làm: bật Kẹo ngọt rồi xem các màn hình xem có chỗ chìm màu không.
+- Frontend có sẵn 4 test hay quá hạn 5 giây khi máy chậm (create-project, reset-password, change-password, case-form); chạy lẻ từng file thì qua.
+
 ## Đang làm (2026-11-16)
 
 Bằng chứng ảnh/video (Cloudinary), test Android/iOS, giao bug cho dev. Thiết kế: `docs/superpowers/specs/2026-11-16-evidence-mobile-and-bug-assignment-design.md`. Kế hoạch 27 task, 8 đợt: `docs/superpowers/plans/2026-11-16-evidence-mobile-and-bug-assignment.md`. **Làm từng đợt một**: xong đợt thì đánh dấu `[x]` trong kế hoạch, ghi tiến độ ở đây, dừng cho chủ dự án `/compact`.
