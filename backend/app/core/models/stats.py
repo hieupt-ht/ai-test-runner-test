@@ -113,3 +113,17 @@ class Leaderboard(BaseModel):
     period: Period
     cases: Board  # xếp hạng viết case
     bugs: Board  # xếp hạng bắt bug
+
+
+class ProjectProgress(BaseModel):
+    """Tiến độ case của một project (cho biểu đồ ở Tổng quan chung)."""
+
+    project_id: str
+    project_name: str
+    done: int
+    total: int
+
+
+class MyDashboard(BaseModel):
+    projects: list[ProjectProgress]
+    daily: list[DayCount]  # số lần chạy 14 ngày qua, cộng dồn mọi project của tôi

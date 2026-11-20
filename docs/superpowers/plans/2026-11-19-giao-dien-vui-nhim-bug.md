@@ -13,7 +13,7 @@
 ## Tiến độ
 
 - [x] Đợt 1: giao diện Kẹo ngọt (Task 1–2)
-- [ ] Đợt 2: backend số liệu + API + cache (Task 3–8)
+- [x] Đợt 2: backend số liệu + API + cache (Task 3–8)
 - [ ] Đợt 3: Tổng quan project + đồ thị Tổng quan chung (Task 9–11)
 - [ ] Đợt 4: nhím + chuỗi ngày (Task 12–13)
 - [ ] Đợt 5: bảng xếp hạng (Task 14)

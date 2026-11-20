@@ -26,6 +26,7 @@ Thiết kế `docs/superpowers/specs/2026-11-19-import-test-cases-design.md`, k�
 Nhánh `feature/fun-ui` (tách từ `feature/ai-agent-runner`). Spec `docs/superpowers/specs/2026-11-19-giao-dien-vui-nhim-bug-design.md`, kế hoạch `docs/superpowers/plans/2026-11-19-giao-dien-vui-nhim-bug.md` (6 đợt, làm từng đợt).
 
 - **Đợt 1 xong** (Task 1–2): giao diện thứ 3 "Kẹo ngọt" (lớp `.candy` trong `globals.css`, mục menu trong Topbar) và 3 màu đồ thị `--chart-pass/fail/other` cho cả 3 giao diện. Việc chủ dự án cần làm: bật Kẹo ngọt rồi xem các màn hình xem có chỗ chìm màu không.
+- **Đợt 2 xong** (Task 3–8; 2026-11-20): backend số liệu. Hàm thuần trong `app/core/services/stats.py` (bug bắt được, chuỗi ngày, cấp/biểu cảm nhím, thẻ số, đồ thị 14 ngày, xếp hạng); cache `ProjectFacts` ở `app/core/stats_cache.py` (10 phút, xoá ngay khi ghi case/kết quả qua `TestCaseRepository._after_write()` và `ResultRepository.append_batch`); 4 API: `GET /api/projects/{id}/stats`, `/leaderboard?period=`, `GET /api/me/pet`, `/api/me/dashboard`. `ResultRepository` giờ **bắt buộc** `redis=` và `project_id=`. Kiểu frontend đã sinh lại (`npm run gen:api`). Backend 848 test qua. Khi gộp nhánh nhập Excel: `create_many` của nhánh đó phải gọi `_after_write()`.
 - Frontend có sẵn 4 test hay quá hạn 5 giây khi máy chậm (create-project, reset-password, change-password, case-form); chạy lẻ từng file thì qua.
 
 ## Đang làm (2026-11-16)
