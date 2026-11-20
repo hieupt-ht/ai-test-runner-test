@@ -21,6 +21,7 @@ from app.api.routers import (
     regression,
     results,
     screens,
+    stats,
     test_cases,
     users,
 )
@@ -88,5 +89,6 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(members.router)
     app.include_router(notifications.router)
     app.include_router(results.router)
+    app.include_router(stats.router)
     app.include_router(regression.router)
     return app
