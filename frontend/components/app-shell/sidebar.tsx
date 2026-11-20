@@ -16,7 +16,8 @@ export function Sidebar({ role }: { role: Role }) {
   const t = useTranslations()
   const pathname = usePathname()
   const { data: projects = [] } = useProjects()
-  const [expanded, setExpanded] = useState<string[]>([])
+  // Lựa chọn mở/thu do người dùng bấm. Chưa bấm thì tự mở project đang xem.
+  const [choices, setChoices] = useState<Record<string, boolean>>({})
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
   const nav = (
@@ -55,12 +56,8 @@ export function Sidebar({ role }: { role: Role }) {
             key={project.id}
             project={project}
             pathname={pathname}
-            isExpanded={expanded.includes(project.id)}
-            onToggle={() => setExpanded((items) =>
-              items.includes(project.id)
-                ? items.filter((id) => id !== project.id)
-                : [...items, project.id],
-            )}
+            choice={choices[project.id]}
+            onToggle={(open) => setChoices((current) => ({ ...current, [project.id]: open }))}
           />
         ))}
       </nav>
@@ -85,18 +82,20 @@ export function Sidebar({ role }: { role: Role }) {
 function ProjectTreeItem({
   project,
   pathname,
-  isExpanded,
+  choice,
   onToggle,
 }: {
   project: { id: string; name: string; archived: boolean }
   pathname: string
-  isExpanded: boolean
-  onToggle: () => void
+  choice: boolean | undefined
+  onToggle: (open: boolean) => void
 }) {
   const t = useTranslations()
   const root = `/projects/${project.id}`
   const isProjectActive = pathname === root || pathname.startsWith(`${root}/`)
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
+  // Một nguồn duy nhất cho cả mũi tên, aria-expanded và danh sách tab
+  const isOpen = choice ?? isProjectActive
   const { data } = useProject(project.id)
   const tabs = visibleProjectTabs(data?.permissions ?? [])
 
@@ -104,29 +103,17 @@ function ProjectTreeItem({
     <div>
               <button
                 type="button"
-                aria-expanded={isProjectActive || isExpanded}
+                aria-expanded={isOpen}
                 aria-label={project.name}
-                onClick={onToggle}
+                onClick={() => onToggle(!isOpen)}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-foreground"
               >
-                {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                 {project.archived ? <Archive className="size-4" /> : <FolderKanban className="size-4" />}
                 <span className="truncate">{project.name}</span>
               </button>
-              {(isProjectActive || isExpanded) && (
+              {isOpen && (
                 <div className="ml-5 flex flex-col gap-1 border-l pl-2">
-                  <Link
-                    href={root}
-                    aria-current={pathname === root ? "page" : undefined}
-                    className={cn(
-                      "rounded-md px-3 py-2 text-sm transition-colors",
-                      pathname === root
-                        ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                        : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
-                    )}
-                  >
-                    {t("nav.overview")}
-                  </Link>
                   {tabs.map((tab) => {
                     const href = `${root}/${tab.segment}`
                     return (

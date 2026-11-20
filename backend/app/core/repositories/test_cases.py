@@ -30,6 +30,7 @@ from app.core.models.test_case import (
 from app.core.sheets.gateway import SheetsGateway
 from app.core.sheets.schema import TEST_CASE_COLUMNS, TEST_CASES_TAB
 from app.core.sheets.table import Record, SheetTable
+from app.core.stats_cache import invalidate_project_stats
 from app.core.time import from_iso, to_iso, utc_now
 
 
@@ -144,6 +145,15 @@ class TestCaseRepository:
         self._lock_wait_seconds = lock_wait_seconds
         self._holding_lock = False
 
+    def _after_write(self) -> None:
+        """Xoá mọi cache bị cũ sau khi ghi: danh sách case và số liệu của project.
+
+        Mọi hàm ghi mới của repository này phải gọi `_after_write()` (đừng gọi riêng
+        `self._cache.invalidate()`), nếu không số liệu sẽ cũ tới 10 phút.
+        """
+        self._cache.invalidate()
+        invalidate_project_stats(self._redis, self._project_id)
+
     def list_all(self) -> list[TestCase]:
         # Đang giữ khoá tab (để kiểm tra rồi tạo) thì phải đọc thẳng Sheet, không qua cache.
         return self._cache.read(self._read_sheet, bypass=self._holding_lock)
@@ -174,7 +184,7 @@ class TestCaseRepository:
         )
         with self.lock():
             self._table.append(_to_record(case))
-            self._cache.invalidate()
+            self._after_write()
         return case
 
     def create_many(
@@ -202,7 +212,7 @@ class TestCaseRepository:
             ]
             # Ghi lỗi sau khi đã cấp mã thì các mã này bỏ trống (mã nhảy cóc, không sao).
             self._table.append_many([_to_record(case) for case in cases])
-            self._cache.invalidate()
+            self._after_write()
         return cases
 
     def save(self, case: TestCase, *, expected_version: int, actor: str) -> TestCase:
@@ -227,7 +237,7 @@ class TestCaseRepository:
                 }
             )
             self._table.update_found(found, _to_record(saved))
-            self._cache.invalidate()
+            self._after_write()
         return saved
 
     def approve_all_in_review(self, actor: str) -> list[TestCase]:
@@ -256,7 +266,7 @@ class TestCaseRepository:
             if not changed:
                 return []
             self._table.update_many([(row, _to_record(case)) for row, case in changed])
-            self._cache.invalidate()
+            self._after_write()
         return [case for _, case in changed]
 
     @contextmanager

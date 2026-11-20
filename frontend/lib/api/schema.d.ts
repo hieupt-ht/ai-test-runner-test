@@ -741,6 +741,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/pet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Pet
+         * @description Con nhím của tôi. Project đã lưu trữ vẫn tính để nhím không bị nhỏ lại.
+         */
+        get: operations["my_pet_api_me_pet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Dashboard
+         * @description Tiến độ từng project đang hoạt động và số lần chạy 14 ngày qua của tôi.
+         */
+        get: operations["my_dashboard_api_me_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/assignments": {
         parameters: {
             query?: never;
@@ -856,6 +896,40 @@ export interface paths {
         };
         /** List Results */
         get: operations["list_results_api_projects__project_id__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Stats */
+        get: operations["get_stats_api_projects__project_id__stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/leaderboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Leaderboard */
+        get: operations["get_leaderboard_api_projects__project_id__leaderboard_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1067,6 +1141,12 @@ export interface components {
             /** Skipped */
             skipped: components["schemas"]["SkippedItem"][];
         };
+        /** Board */
+        Board: {
+            /** Top */
+            top: components["schemas"]["LeaderboardRow"][];
+            me: components["schemas"]["LeaderboardRow"] | null;
+        };
         /** Body_import_cases_api_projects__project_id__test_cases_import_post */
         Body_import_cases_api_projects__project_id__test_cases_import_post: {
             /** File */
@@ -1229,6 +1309,23 @@ export interface components {
             /** Password */
             password: string;
         };
+        /**
+         * DayCount
+         * @description Số lần chạy trong một ngày (giờ VN) cho đồ thị cột.
+         */
+        DayCount: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Passed */
+            passed: number;
+            /** Failed */
+            failed: number;
+            /** Other */
+            other: number;
+        };
         /** DeleteProjectRequest */
         DeleteProjectRequest: {
             /** Name */
@@ -1304,6 +1401,23 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** Leaderboard */
+        Leaderboard: {
+            period: components["schemas"]["Period"];
+            cases: components["schemas"]["Board"];
+            bugs: components["schemas"]["Board"];
+        };
+        /** LeaderboardRow */
+        LeaderboardRow: {
+            /** Rank */
+            rank: number | null;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /** Count */
+            count: number;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -1416,6 +1530,30 @@ export interface components {
             /** Returned Cases */
             returned_cases?: components["schemas"]["ReturnedCase"][];
         };
+        /** MyDashboard */
+        MyDashboard: {
+            /** Projects */
+            projects: components["schemas"]["ProjectProgress"][];
+            /** Daily */
+            daily: components["schemas"]["DayCount"][];
+        };
+        /**
+         * MyPet
+         * @description Con nhím của một người: cấp theo số bug, biểu cảm theo chuỗi ngày.
+         */
+        MyPet: {
+            /** Level */
+            level: number;
+            /** Bugs */
+            bugs: number;
+            /** Bugs To Next */
+            bugs_to_next: number | null;
+            /** Streak */
+            streak: number;
+            /** Missed Days */
+            missed_days: number;
+            mood: components["schemas"]["PetMood"];
+        };
         /** Notification */
         Notification: {
             /** Id */
@@ -1484,6 +1622,16 @@ export interface components {
             step_count: number;
             content: components["schemas"]["TestCaseContent"];
         };
+        /**
+         * Period
+         * @enum {string}
+         */
+        Period: "week" | "month" | "all";
+        /**
+         * PetMood
+         * @enum {string}
+         */
+        PetMood: "HAPPY" | "NORMAL" | "HUNGRY" | "CRY";
         /**
          * Platform
          * @enum {string}
@@ -1581,6 +1729,40 @@ export interface components {
             storage: "cloudinary" | "drive";
             /** Permissions */
             permissions: components["schemas"]["Action"][];
+        };
+        /**
+         * ProjectProgress
+         * @description Tiến độ case của một project (cho biểu đồ ở Tổng quan chung).
+         */
+        ProjectProgress: {
+            /** Project Id */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * ProjectStats
+         * @description Các con số của trang Tổng quan project.
+         */
+        ProjectStats: {
+            /** Total Cases */
+            total_cases: number;
+            /** Pass Rate */
+            pass_rate: number | null;
+            /** Open Bugs */
+            open_bugs: number;
+            /** Daily */
+            daily: components["schemas"]["DayCount"][];
+            /** Case Status */
+            case_status: {
+                [key: string]: number;
+            };
+            /** Screens */
+            screens: components["schemas"]["ScreenProgress"][];
         };
         /** RepoInfo */
         RepoInfo: {
@@ -1744,6 +1926,17 @@ export interface components {
             dev_owner: string;
             /** Media */
             media?: components["schemas"]["Media"][];
+        };
+        /** ScreenProgress */
+        ScreenProgress: {
+            /** Screen Id */
+            screen_id: string;
+            /** Screen Name */
+            screen_name: string;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
         };
         /** ServiceAccount */
         ServiceAccount: {
@@ -3897,6 +4090,46 @@ export interface operations {
             };
         };
     };
+    my_pet_api_me_pet_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPet"];
+                };
+            };
+        };
+    };
+    my_dashboard_api_me_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyDashboard"];
+                };
+            };
+        };
+    };
     my_assignments_api_me_assignments_get: {
         parameters: {
             query?: never;
@@ -4104,6 +4337,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_stats_api_projects__project_id__stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_leaderboard_api_projects__project_id__leaderboard_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["Period"];
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Leaderboard"];
                 };
             };
             /** @description Validation Error */

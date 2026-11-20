@@ -58,5 +58,7 @@ def scope_for(services: Services, project: Project) -> ProjectScope:
             project.id,
             lock_wait_seconds=services.lock_wait_seconds,
         ),
-        results=ResultRepository(services.gateway, sheet),
+        results=ResultRepository(
+            services.gateway, sheet, redis=services.redis, project_id=project.id
+        ),
     )
