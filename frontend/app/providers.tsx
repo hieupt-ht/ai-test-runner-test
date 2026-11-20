@@ -18,7 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <NextIntlClientProvider locale={LOCALE} messages={messages} timeZone={TIME_ZONE}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem themes={["light", "dark", "candy"]} disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             {children}

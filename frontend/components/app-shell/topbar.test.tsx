@@ -7,7 +7,8 @@ import { Topbar } from "@/components/app-shell/topbar"
 import messages from "@/messages/vi.json"
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }))
-vi.mock("next-themes", () => ({ useTheme: () => ({ setTheme: vi.fn() }) }))
+const { setTheme } = vi.hoisted(() => ({ setTheme: vi.fn() }))
+vi.mock("next-themes", () => ({ useTheme: () => ({ setTheme }) }))
 vi.mock("@/components/notifications/notification-bell", () => ({ NotificationBell: () => null }))
 
 describe("Topbar", () => {
@@ -30,5 +31,23 @@ describe("Topbar", () => {
 
     expect(await screen.findByLabelText("Mật khẩu hiện tại")).toBeInTheDocument()
     // Menu + hộp thoại nặng nên khi chạy song song với test khác có thể chậm hơn 5 giây.
+  }, 20000)
+
+  it("menu Giao diện có mục Kẹo ngọt và bấm thì đổi sang candy", async () => {
+    render(
+      <NextIntlClientProvider locale="vi" messages={messages}>
+        <QueryClientProvider client={new QueryClient()}>
+          <Topbar
+            user={{ email: "an@x.com", name: "An", role: "TESTER", active: true, created_at: "2026-11-12T00:00:00Z" }}
+            title="Trang"
+          />
+        </QueryClientProvider>
+      </NextIntlClientProvider>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /An/ }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Kẹo ngọt/ }))
+
+    expect(setTheme).toHaveBeenCalledWith("candy")
   }, 20000)
 })

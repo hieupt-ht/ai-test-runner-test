@@ -228,3 +228,36 @@ def test_round_trip_new_fields(repo: TestCaseRepository) -> None:
 def test_step_media_limit() -> None:
     with pytest.raises(ValidationError):
         TestStep(action="a", guide_media=[IMG] * 6)
+
+
+def test_create_many_appends_once(repo: TestCaseRepository, gateway: FakeSheetsGateway) -> None:
+    before = gateway.calls.count("append:TestCases")
+
+    created = repo.create_many(
+        [
+            ("SC-0001", make_content("Một")),
+            ("SC-0002", make_content("Hai")),
+            ("SC-0001", make_content("Ba")),
+        ],
+        actor=AN,
+    )
+
+    assert gateway.calls.count("append:TestCases") == before + 1
+    assert [case.id for case in created] == ["TC-000001", "TC-000002", "TC-000003"]
+    assert all(case.status == TestCaseStatus.DRAFT and case.version == 1 for case in created)
+    assert all(case.created_by == AN and case.updated_by == AN for case in created)
+    stored = repo.list_all()
+    assert [(case.screen_id, case.title) for case in stored] == [
+        ("SC-0001", "Một"),
+        ("SC-0002", "Hai"),
+        ("SC-0001", "Ba"),
+    ]
+
+
+def test_create_many_empty_does_nothing(
+    repo: TestCaseRepository, gateway: FakeSheetsGateway
+) -> None:
+    before = len(gateway.calls)
+
+    assert repo.create_many([], actor=AN) == []
+    assert len(gateway.calls) == before

@@ -28,14 +28,20 @@ class IdGenerator:
         self._lock_wait_seconds = lock_wait_seconds
 
     def next_id(self, entity: str, prefix: str, *, digits: int = 4) -> str:
+        return self.next_ids(entity, prefix, 1, digits=digits)[0]
+
+    def next_ids(self, entity: str, prefix: str, count: int, *, digits: int = 4) -> list[str]:
+        """Cấp `count` mã liên tiếp bằng một lượt đọc/ghi bộ đếm (dùng khi nhập hàng loạt)."""
+        if count <= 0:
+            return []
         key = f"next_{entity}_id"
         lock_key = f"lock:id:{self._project_id}:{entity}"
         with redis_lock(self._redis, lock_key, wait_seconds=self._lock_wait_seconds):
             row_number = self._meta.find_row_number("key", key)
             if row_number is None:
-                number = 1
-                self._meta.append({"key": key, "value": str(number + 1)})
+                first = 1
+                self._meta.append({"key": key, "value": str(first + count)})
             else:
-                number = int(self._meta.read_row(row_number)["value"] or "1")
-                self._meta.update(row_number, {"key": key, "value": str(number + 1)})
-        return f"{prefix}-{number:0{digits}d}"
+                first = int(self._meta.read_row(row_number)["value"] or "1")
+                self._meta.update(row_number, {"key": key, "value": str(first + count)})
+        return [f"{prefix}-{number:0{digits}d}" for number in range(first, first + count)]

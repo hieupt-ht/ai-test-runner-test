@@ -9,6 +9,7 @@ from app.api.routers import (
     agent,
     assignments,
     auth,
+    case_import,
     github,
     health,
     manual_results,
@@ -20,6 +21,7 @@ from app.api.routers import (
     regression,
     results,
     screens,
+    stats,
     test_cases,
     users,
 )
@@ -80,11 +82,13 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(assignments.router)
     app.include_router(agent.router)
     app.include_router(media.router)
+    app.include_router(case_import.router)  # trước test_cases: tránh /{case_id} bắt /import
     app.include_router(test_cases.router)
     app.include_router(manual_results.router)
     app.include_router(me.router)
     app.include_router(members.router)
     app.include_router(notifications.router)
     app.include_router(results.router)
+    app.include_router(stats.router)
     app.include_router(regression.router)
     return app

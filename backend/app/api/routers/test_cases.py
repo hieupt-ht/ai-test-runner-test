@@ -54,6 +54,7 @@ class TestCaseDetail(TestCase):
     __test__ = False  # pytest đừng tưởng đây là lớp test
 
     can_edit: bool
+    can_run: bool
     can_review: bool
     can_archive: bool
     last_result: LastResult | None = None  # chỉ có với case test tay đã có kết quả
@@ -219,6 +220,7 @@ def get_test_case(
         **case.model_dump(),
         # Dự án đã lưu trữ chỉ để xem, nên không ai được sửa hay duyệt
         can_edit=not project.archived and service.can_edit(user, case),
+        can_run=not project.archived and service.can_run(user, case),
         can_review=not project.archived and service.can_review(user),
         can_archive=not project.archived and service.can_archive(user, case),
         last_result=_last_result(services, project, case),
@@ -365,11 +367,7 @@ def request_rerun(
     """Báo lên GitHub issue rằng case FAIL/BLOCKED cần được chạy lại (Codex chạy ngoài app)."""
     project = load_project(services, user, project_id, Action.REVIEW_TEST_CASE)
     latest = next(
-        (
-            item
-            for item in results_for_project(services, project, user)
-            if item.case_id == case_id
-        ),
+        (item for item in results_for_project(services, project, user) if item.case_id == case_id),
         None,
     )
     if latest is None or latest.status not in (ResultStatus.FAIL, ResultStatus.BLOCKED):

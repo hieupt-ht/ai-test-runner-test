@@ -311,7 +311,6 @@ def test_my_assignments_include_case_counts(
     add_case(gateway, redis, project)
     add_case(gateway, redis, project)
     add_case(gateway, redis, project, status=TestCaseStatus.IN_REVIEW)
-    add_case(gateway, redis, project, created_by="tester2@x.com")  # của người khác, không tính
 
     AssignmentStatusUpdater(
         AssignmentRepository(
@@ -333,6 +332,24 @@ def test_my_assignments_include_case_counts(
         "TESTED": 0,
         "DEPRECATED": 0,
     }
+
+
+def test_my_assignments_count_cases_created_by_others(
+    app: FastAPI,
+    users: UserRepository,
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    """Case do QA tạo/nhập hộ trên màn hình được giao vẫn phải hiện trong số đếm của tester."""
+    assign(lead, project, ["tester@x.com"])
+    add_case(gateway, redis, project, created_by="qa@x.com")
+
+    tester = client_for(app, users, "tester@x.com", Role.TESTER)
+    mine = tester.get("/api/me/assignments").json()
+
+    assert mine[0]["case_counts"]["DRAFT"] == 1
 
 
 def test_my_assignments_list_returned_cases_with_reason(

@@ -19,10 +19,18 @@
     "password": "Mật khẩu",
     "button": "Đăng nhập"
   },
+  "music": {
+    "play": "Phát nhạc",
+    "pause": "Dừng nhạc",
+    "options": "Tùy chọn nhạc",
+    "next": "Bài tiếp",
+    "volume": "Âm lượng"
+  },
   "topbar": {
     "theme": "Giao diện",
     "themeLight": "Sáng",
     "themeDark": "Tối",
+    "themeCandy": "Kẹo ngọt",
     "themeSystem": "Theo hệ thống",
     "logout": "Đăng xuất"
   },
@@ -117,7 +125,9 @@
     "latestResult": "Kết quả gần nhất",
     "noProjects": "Chưa có dự án nào.",
     "noResults": "Chưa có kết quả test.",
-    "viewerEmpty": "Bạn chưa có công việc cần xử lý."
+    "viewerEmpty": "Bạn chưa có công việc cần xử lý.",
+    "projectProgress": "Tiến độ dự án",
+    "recentResults": "Kết quả 14 ngày gần đây"
   },
   "roles": {
     "ADMIN": "Admin",
@@ -177,7 +187,8 @@
     "results": "Kết quả",
     "assignments": "Chia việc",
     "members": "Thành viên",
-    "settings": "Cài đặt"
+    "settings": "Cài đặt",
+    "overview": "Tổng quan"
   },
   "projects": {
     "title": "Quản lý dự án",
@@ -266,12 +277,12 @@
     "fieldName": "Tên màn hình",
     "fieldDescription": "Mô tả",
     "fieldMedia": "Ảnh/video màn hình",
-    "mediaHint": "Để tester hình dung màn hình khi viết test case. Có thể dán ảnh (Ctrl+V).",
     "back": "Màn hình",
     "notFound": "Không tìm thấy màn hình",
     "createCase": "Tạo case",
     "casesTitle": "Test case ({count})",
     "noCases": "Màn hình này chưa có test case nào.",
+    "mediaHint": "Để tester hình dung màn hình khi viết test case.",
     "fieldRoute": "Route trong app",
     "fieldDevOwner": "Dev phụ trách (tên GitHub)",
     "devOwnerHint": "Khi test FAIL, issue sẽ được giao cho người này. Có thể gõ @tên, để trống nếu chưa có.",
@@ -424,6 +435,8 @@
         "stepExpectedTooLong": "Kết quả bước tối đa 500 ký tự",
         "expectedResultRequired": "Nhập kết quả mong đợi"
       },
+      "invalid": "Chưa gửi được: còn ô nhập thiếu hoặc sai. Xem các dòng chữ đỏ.",
+      "invalidFields": "Cần sửa: {fields}.",
       "savedNotSubmitted": "Đã lưu case nhưng chưa gửi duyệt được.",
       "platform": "Nền tảng",
       "testType": "Loại test",
@@ -452,6 +465,7 @@
       "returnedBanner": "QA Lead trả lại case này",
       "returnedBy": "{actor} · nhận xét:",
       "readOnlyHint": "Bạn chỉ có quyền xem case này.",
+      "runOnlyHint": "Case do người khác viết, cần sửa hãy báo người viết hoặc QA Lead",
       "deprecatedHint": "Case đã ngừng dùng. Khôi phục để sửa lại.",
       "lastRun": "Lần chạy gần nhất: {result} · {runId} · {time}",
       "viewResults": "Xem trang Kết quả",
@@ -497,6 +511,29 @@
       },
       "fields": "Đã đổi: {fields}"
     },
+    "import": {
+      "action": "Nhập từ Excel",
+      "title": "Nhập test case từ Excel",
+      "description": "Chọn file .xlsx theo mẫu. Hệ thống kiểm tra trước, chưa tạo gì cho đến khi bạn bấm Nhập.",
+      "template": "Tải file mẫu",
+      "fileLabel": "File Excel (.xlsx)",
+      "pickFile": "Bấm vào đây để chọn file Excel",
+      "pickAnother": "Bấm để chọn file khác",
+      "checking": "Đang kiểm tra file...",
+      "summary": "Xem trước: {cases} case · {steps} bước · {screens} màn hình",
+      "colGroup": "Mã nhóm",
+      "colScreen": "Màn hình",
+      "colTitle": "Tiêu đề",
+      "colSteps": "Số bước",
+      "errorsTitle": "Lỗi cần sửa trong file",
+      "warningsTitle": "Cảnh báo",
+      "row": "Dòng {row}",
+      "submit": "Nhập {count} case",
+      "submitIdle": "Nhập",
+      "importing": "Đang nhập...",
+      "success": "Đã nhập {count} case",
+      "close": "Đóng"
+    },
     "conflict": {
       "title": "Case đã bị thay đổi",
       "reload": "Tải lại",
@@ -514,7 +551,7 @@
   },
   "statuses": {
     "TODO": "Chưa bắt đầu",
-    "WRITING": "Đang viết",
+    "WRITING": "Đang làm",
     "IN_REVIEW": "Chờ duyệt",
     "APPROVED": "Đã duyệt",
     "TESTED": "Đã test"
@@ -563,6 +600,7 @@
     "actualResult": "Kết quả thực tế",
     "evidence": "Bằng chứng (video/ảnh)",
     "evidenceLimit": "Chỉ giữ 1 video và tối đa 20 ảnh.",
+    "failNeedsEvidence": "Kết quả Fail cần ít nhất một ảnh hoặc video bằng chứng.",
     "result": "Kết quả cả case",
     "resultPass": "Pass",
     "resultFail": "Fail",
@@ -580,6 +618,9 @@
   },
   "media": {
     "add": "Thêm ảnh/video",
+    "groupLabel": "Ảnh/video hướng dẫn",
+    "pasteHint": "Hoặc bấm vào khung này rồi dán ảnh bằng Ctrl+V.",
+    "pasteHintPage": "Hoặc chụp màn hình rồi bấm Ctrl+V ở bất kỳ đâu trong hộp thoại này để dán ảnh.",
     "remove": "Xoá ảnh/video",
     "viewLarge": "Xem ảnh lớn",
     "imageAlt": "Ảnh hướng dẫn",
@@ -591,6 +632,70 @@
       "tooLong": "Video dài quá 3 phút",
       "uploadFailed": "Tải lên không được, hãy thử lại",
       "aborted": "Đã huỷ tải lên"
+    }
+  },
+  "charts": {
+    "empty": "Chưa có dữ liệu",
+    "passFailLabel": "Kết quả theo ngày",
+    "passFailSummary": "{days} ngày: {passed} Pass, {failed} Fail, {other} Khác",
+    "pass": "Pass",
+    "fail": "Fail",
+    "other": "Khác",
+    "statusLabel": "Trạng thái case",
+    "statusSummary": "Nháp: {DRAFT}, Chờ duyệt: {IN_REVIEW}, Đã duyệt: {APPROVED}, Đã test: {TESTED}",
+    "draft": "Nháp",
+    "inReview": "Chờ duyệt",
+    "approved": "Đã duyệt",
+    "tested": "Đã test"
+  },
+  "projectOverview": {
+    "numbers": "Các con số chính",
+    "totalCases": "Tổng số case",
+    "passRate": "Tỉ lệ Pass",
+    "openBugs": "Bug đang mở",
+    "daily": "Kết quả 14 ngày gần đây",
+    "caseStatus": "Trạng thái case",
+    "screens": "Tiến độ theo màn hình",
+    "error": "Không tải được số liệu của project. Bạn thử tải lại trang nhé."
+  },
+  "pet": {
+    "title": "Nhím của tôi",
+    "alt": "Nhím {level}, {mood}",
+    "level": {
+      "1": "Nhím con",
+      "2": "Nhím nhỡ",
+      "3": "Nhím trưởng thành",
+      "4": "Vua nhím"
+    },
+    "mood": {
+      "HAPPY": "Cười",
+      "NORMAL": "Bình thường",
+      "HUNGRY": "Đói",
+      "CRY": "Khóc"
+    },
+    "moodText": {
+      "HAPPY": "Hôm nay bắt được bug, nhím vui lắm!",
+      "NORMAL": "Nhím đang chờ bạn bắt bug.",
+      "HUNGRY": "Nhím đói rồi, bắt bug cho nhím ăn nhé!",
+      "CRY": "Lâu quá chưa gặp, nhím khóc mất rồi…"
+    },
+    "streak": "🔥 {count} ngày",
+    "streakLabel": "Chuỗi ngày liên tiếp",
+    "bugs": "{count} bug đã bắt",
+    "toNext": "Còn {count} bug nữa lên cấp",
+    "maxLevel": "Cấp cao nhất rồi!"
+  },
+  "leaderboard": {
+    "section": "Bảng xếp hạng",
+    "cases": "Viết case nhiều nhất",
+    "bugs": "Bắt bug nhiều nhất",
+    "you": "(bạn)",
+    "noScore": "Chưa có điểm",
+    "empty": "Chưa ai có điểm — bạn là người đầu tiên nhé!",
+    "period": {
+      "week": "Tuần này",
+      "month": "Tháng này",
+      "all": "Tất cả"
     }
   }
 }

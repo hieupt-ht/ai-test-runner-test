@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, RefreshCw } from "lucide-react"
+import { FileUp, Plus, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useFormatter, useTranslations } from "next-intl"
@@ -9,6 +9,7 @@ import { toast } from "sonner"
 
 import { BulkApproveBar } from "@/components/test-cases/bulk-approve-bar"
 import { FiltersBar } from "@/components/test-cases/filters-bar"
+import { ImportDialog } from "@/components/test-cases/import-dialog"
 import { CaseStatusBadge } from "@/components/test-cases/status-badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -22,8 +23,10 @@ import {
 } from "@/components/ui/table"
 import { filterTestCases, paginate, type CaseFilters } from "@/lib/test-cases/filter"
 import { approvableIds, batchItems, toggleAll, toggleId } from "@/lib/test-cases/selection"
+import { selectableScreens } from "@/lib/test-cases/selectable-screens"
+import { useMe } from "@/lib/use-me"
 import { useResults } from "@/lib/use-results"
-import { useScreens } from "@/lib/use-project-data"
+import { useAssignments, useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
 import { useSyncIssues, useTestCases } from "@/lib/use-test-cases"
@@ -50,6 +53,9 @@ function TestCaseList() {
   const casesQuery = useTestCases(projectId, includeArchived)
   const syncIssues = useSyncIssues(projectId)
   const screensQuery = useScreens(projectId)
+  const assignmentsQuery = useAssignments(projectId)
+  const { user: me } = useMe()
+  const [importOpen, setImportOpen] = useState(false)
   // Kết quả gần nhất của từng case: một request cho cả danh sách (không gọi mỗi dòng)
   const resultsQuery = useResults(projectId)
 
@@ -87,6 +93,9 @@ function TestCaseList() {
   const columnCount = canReview ? 10 : 9
 
   const canCreate = Boolean(project?.permissions.includes("EDIT_TEST_CASE")) && !project?.archived
+  // Nhập từ Excel cũng là tạo case: tester chỉ nhập được khi có ít nhất một màn hình được giao.
+  const canImport =
+    canCreate && selectableScreens(screens, assignmentsQuery.data ?? [], me).length > 0
 
   if (casesQuery.isLoading) return <Skeleton className="h-48 w-full" />
   if (casesQuery.isError) {
@@ -146,6 +155,11 @@ function TestCaseList() {
               {t("sync.action")}
             </Button>
           )}
+          {canImport && (
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <FileUp /> {t("import.action")}
+            </Button>
+          )}
           {canCreate && (
             <Link
               href={`/projects/${projectId}/test-cases/new${
@@ -158,6 +172,8 @@ function TestCaseList() {
           )}
         </div>
       </div>
+
+      <ImportDialog projectId={projectId} open={importOpen} onOpenChange={setImportOpen} />
 
       {canReview && (
         <BulkApproveBar

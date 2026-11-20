@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { Suspense } from "react"
 
+import { AssignDialog } from "@/components/assignments/assign-dialog"
 import { ScreenFormDialog } from "@/components/screens/screen-form-dialog"
 import { ScreenMediaStrip } from "@/components/screens/screen-media-strip"
 import { CaseStatusBadge } from "@/components/test-cases/status-badge"
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/table"
 import { selectableScreens } from "@/lib/test-cases/selectable-screens"
 import { useMe } from "@/lib/use-me"
-import { useAssignments, useScreens } from "@/lib/use-project-data"
+import { useAssignments, useMembers, useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
 import { useTestCases } from "@/lib/use-test-cases"
@@ -45,6 +46,7 @@ function ScreenDetailView() {
   const screensQuery = useScreens(projectId)
   const assignmentsQuery = useAssignments(projectId)
   const casesQuery = useTestCases(projectId)
+  const membersQuery = useMembers(projectId)
 
   if (screensQuery.isLoading) return <Skeleton className="h-96 w-full" />
 
@@ -76,6 +78,15 @@ function ScreenDetailView() {
     selectableScreens(screens, assignmentsQuery.data ?? [], user).some(
       (item) => item.id === current.id,
     )
+  // Tester đang hoạt động mà chưa được giao màn hình này
+  const assignedEmails = new Set(
+    (assignmentsQuery.data ?? [])
+      .filter((item) => item.screen_id === current.id)
+      .map((item) => item.assignee_email),
+  )
+  const availableTesters = (membersQuery.data ?? []).filter(
+    (member) => member.role === "TESTER" && member.active && !assignedEmails.has(member.email),
+  )
   const cases = (casesQuery.data ?? [])
     .filter((item) => item.screen_id === current.id)
     .sort((a, b) => a.id.localeCompare(b.id))
@@ -102,6 +113,13 @@ function ScreenDetailView() {
                   <Pencil /> {t("common.edit")}
                 </>
               }
+            />
+          )}
+          {canManage && (
+            <AssignDialog
+              projectId={projectId}
+              screen={current}
+              availableTesters={availableTesters}
             />
           )}
           {canCreateHere && (

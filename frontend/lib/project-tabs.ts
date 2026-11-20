@@ -10,6 +10,7 @@ export type ProjectTab = {
 }
 
 export const PROJECT_TABS: ProjectTab[] = [
+  { segment: "overview", labelKey: "overview", permission: "VIEW_PROJECT" },
   { segment: "screens", labelKey: "screens", permission: "VIEW_PROJECT" },
   { segment: "test-cases", labelKey: "testCases", permission: "VIEW_PROJECT" },
   { segment: "results", labelKey: "results", permission: "VIEW_PROJECT" },

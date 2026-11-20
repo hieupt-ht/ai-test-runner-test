@@ -12,7 +12,9 @@ def to_iso(moment: datetime) -> str:
 
 
 def from_iso(text: str) -> datetime:
-    return datetime.fromisoformat(text)
+    parsed = datetime.fromisoformat(text)
+    # Sheet bị sửa tay có thể mất chữ Z: coi là UTC để so sánh với giờ khác không bị lỗi
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
 
 VIETNAM = ZoneInfo("Asia/Ho_Chi_Minh")

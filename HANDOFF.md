@@ -1,6 +1,6 @@
 # HANDOFF — đọc file này đầu tiên
 
-Cập nhật: 2026-11-15. Nhánh hiện tại: `feature/ai-agent-runner` (từ `develop`). **Không push, không tạo PR khi chưa được chủ dự án đồng ý.**
+Cập nhật: 2026-11-19. Nhánh hiện tại: `feature/ai-agent-runner` (từ `develop`). **Không push, không tạo PR khi chưa được chủ dự án đồng ý.**
 
 ## Dự án đang ở đâu
 
@@ -9,6 +9,29 @@ AI Test Runner là web app nội bộ cho QA: Tester viết case, QA Lead duyệ
 M1–M3 đã nằm ở `develop`. Kế hoạch mới ở `docs/superpowers/plans/2026-11-14-case-to-issue-and-codex-agent.md`, thiết kế ở `docs/superpowers/specs/2026-11-14-case-to-issue-and-codex-agent-design.md`. Hướng worker Playwright cũ được giữ ở nhánh `feature/m4-playwright-worker` và tag `m4-playwright-v1`; **không** có worker hay tab Chạy test trên nhánh hiện tại. Chỉ mô hình và repository `Runs`/`Results` được lấy lại từ tag để phục vụ API agent.
 
 Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026-11-14-notifications-results-dashboard.md` đã hoàn thành đủ 10 task. Ứng dụng hiện có chuông thông báo, trang Kết quả, hai tab "Đang làm"/"Đã xong", trang Tổng quan theo vai trò và hộp thoại dùng tốt hơn trên màn hình hẹp. Thông báo lưu trong Redis 30 ngày, tối đa 100 cái mỗi người; mất thông báo không làm mất dữ liệu chính. Cách cấu hình Codex và prompt mẫu ở `docs/codex-agent.md`. Tính năng **Chạy lại** đã xong: nút ở trang Kết quả (QA Lead/Admin) gọi `POST /api/projects/{project_id}/test-cases/{case_id}/request-rerun`, app comment + mở lại issue + gắn nhãn `needs-rerun`; khi có kết quả mới app tự bỏ nhãn này. Đã chạy thử trên repo thật `hieupt-ht/ShopHub` (RUN-0005). Codex **không** tự comment lên issue, app làm việc đó bằng GitHub App. Kiểm tra cuối: backend **388 test**, frontend **105 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
+
+## Đã xong (2026-11-19): nhập test case từ Excel
+
+Thiết kế `docs/superpowers/specs/2026-11-19-import-test-cases-design.md`, kế hoạch `docs/superpowers/plans/2026-11-19-import-test-cases.md` (10 task / 3 đợt, làm kiểu subagent: mỗi task một người làm + một người kiểm tra).
+
+- **Đợt 1 xong** (Task 1–3, commit `22cd6ba`, `13b1410`, `6f3aedb`): trạng thái việc đếm mọi case của màn hình (nhãn WRITING = "Đang làm"); tách `can_edit` (người tạo / lead) và `can_run` (thêm tester được giao màn hình; `Action.RUN_TEST_CASE`); kết quả test tay FAIL bắt buộc có ít nhất một ảnh/video (422); trang case hiện khung chạy cho người chỉ được chạy. Backend **743 test**, frontend **272 test**, mypy/ruff/tsc/eslint sạch.
+- **Đợt 2 xong** (Task 4–7, backend; commit `bfd4b2c`+`192fdcb`, `2759e9f`, `b3e9448`+`6d45ff1`, `c78d01c`): `case_import.py` đọc file .xlsx theo 16 cột (chặn file >2 MB, >2000 dòng, >300 case, dừng đọc sớm); `next_ids`/`create_many`/`record_many` ghi một lô; `TestCaseService.preview_import`/`import_cases` (kiểm tra trong khoá assignments→test-cases, có lỗi thì không ghi gì, audit/trạng thái/thông báo sau khi ghi chỉ log nếu lỗi); API `GET .../test-cases/import/template`, `POST .../import/preview`, `POST .../import` (422 `{detail, errors}`, 409 khoá bận, 503 lỗi Sheet; file rỗng báo "File không có test case nào"). Backend **798 test**, mypy/ruff sạch; API types đã sinh lại. Việc nhỏ chưa sửa (ghi ở sổ SDD): chuẩn hoá NFC chữ có dấu, `_refresh_status` chưa bắt lỗi mạng ngoài HttpError.
+- **Đợt 3 xong** (Task 8–10, frontend + tài liệu; commit `25d12ae`, `3082672`, `62044d6`, docs): hook `use-case-import`, nút "Nhập từ Excel" ở trang danh sách case mở hộp thoại (tải file mẫu, chọn file, xem trước lỗi/cảnh báo, "Nhập N case"). Hướng dẫn cho QA/tester: `docs/huong-dan-nhap-test-case.md`.
+- **Thay đổi hành vi cần biết:** (1) khoá case: tester chỉ **sửa** case mình tạo, case người khác viết chỉ **chạy** được (tester B được giao màn hình không còn sửa được case của tester A); (2) trạng thái việc của màn hình đếm mọi case chưa ngừng dùng, ai tạo cũng tính; (3) nhãn `WRITING` hiển thị là "Đang làm" (giá trị trong Sheet/API giữ nguyên); (4) FAIL ở test tay bắt buộc có ảnh/video.
+- **Việc còn lại:** review cả nhánh (các việc nhỏ hoãn lại ghi ở sổ SDD `.superpowers/sdd/2026-11-19-import-test-cases/progress.md`); chạy thử app bằng trình duyệt thật, chụp màn hình ở 1366×768 (cần dữ liệu Google thật, chưa làm).
+- **Cần xem lại:** `backend/app/api/routers/me.py` `case_counts` vẫn lọc theo `created_by`, lệch luật trạng thái mới (thẻ "Việc của tôi" có thể đếm ít hơn trạng thái).
+
+## Đang làm (2026-11-19): giao diện vui + nhím bug
+
+Nhánh `feature/fun-ui` (tách từ `feature/ai-agent-runner`). Spec `docs/superpowers/specs/2026-11-19-giao-dien-vui-nhim-bug-design.md`, kế hoạch `docs/superpowers/plans/2026-11-19-giao-dien-vui-nhim-bug.md` (6 đợt, làm từng đợt).
+
+- **Đợt 1 xong** (Task 1–2): giao diện thứ 3 "Kẹo ngọt" (lớp `.candy` trong `globals.css`, mục menu trong Topbar) và 3 màu đồ thị `--chart-pass/fail/other` cho cả 3 giao diện. Việc chủ dự án cần làm: bật Kẹo ngọt rồi xem các màn hình xem có chỗ chìm màu không.
+- **Đợt 2 xong** (Task 3–8; 2026-11-20): backend số liệu. Hàm thuần trong `app/core/services/stats.py` (bug bắt được, chuỗi ngày, cấp/biểu cảm nhím, thẻ số, đồ thị 14 ngày, xếp hạng); cache `ProjectFacts` ở `app/core/stats_cache.py` (10 phút, xoá ngay khi ghi case/kết quả qua `TestCaseRepository._after_write()` và `ResultRepository.append_batch`); 4 API: `GET /api/projects/{id}/stats`, `/leaderboard?period=`, `GET /api/me/pet`, `/api/me/dashboard`. `ResultRepository` giờ **bắt buộc** `redis=` và `project_id=`. Kiểu frontend đã sinh lại (`npm run gen:api`). Backend 848 test qua. Khi gộp nhánh nhập Excel: `create_many` của nhánh đó phải gọi `_after_write()`.
+- **Đợt 3 xong** (Task 9–11; 2026-11-20): frontend có Recharts `^3.11.0` (tải động qua `components/charts/lazy.tsx`), 3 component đồ thị (`pass-fail-chart`, `case-status-donut`, `progress-list`), hook `lib/use-stats.ts` (`useProjectStats`, `useLeaderboard`, `useMyDashboard`, `useMyPet`), trang `projects/[projectId]/overview` (tab Tổng quan đứng đầu, mở project là vào trang này), và mục "Tiến độ dự án" + "Kết quả 14 ngày" ở Tổng quan chung cho mọi vai trò. Ghi case/kết quả làm mới thêm `["me","pet"]` và `["me","dashboard"]`. Backend 848 test, frontend 315 test qua (`case-form.test` đôi khi quá hạn 5 giây khi máy chậm, chạy lại là qua), tsc/eslint sạch. Chưa xem bằng trình duyệt thật ở 3 giao diện.
+- **Đợt 4 xong** (Task 12–13; 2026-11-20): `components/pet/hedgehog.tsx` (nhím SVG, 4 cấp to dần, vương miện cấp 4, 4 biểu cảm, nhún nhảy + chớp mắt, tắt khi giảm chuyển động) và `pet-card.tsx` (cấp, 🔥 chuỗi ngày, số bug, thanh lên cấp, câu theo tâm trạng) đặt đầu Tổng quan chung cho mọi vai trò. Frontend 323 test, backend 848 test qua (lần chạy đầu có 4 test quá hạn do máy chậm, chạy lại qua hết). Chưa xem bằng trình duyệt thật.
+- **Đợt 5 xong** (Task 14; 2026-11-20): `components/leaderboard/` có `LeaderboardCard` (top 5, 🥇🥈🥉, dòng của mình in đậm + "(bạn)", ngoài top thì hiện thêm sau "…") và `ProjectLeaderboards` (Tuần này/Tháng này/Tất cả) gắn cuối Tổng quan project. Frontend 330 test, backend 848 test qua (1 test case-form quá hạn do máy chậm lần chạy cả bộ, chạy riêng thì qua). Chưa xem bằng trình duyệt thật.
+- **Đợt 6 xong** (Task 15–16; 2026-11-20): `MusicProvider` (một thẻ `<audio preload="none">` bọc ngoài AppShell nên chuyển trang nhạc không ngắt, không tự phát, nhớ âm lượng/bài trong localStorage) và `MusicButton` trên topbar (▶/⏸ + menu nhỏ: tên bài, Bài tiếp, âm lượng). Hai bài CC0 từ OpenGameArt trong `frontend/public/music/` (ghi nguồn ở `LICENSE.md`). Frontend 340 test, backend 848 test qua. **Cả 6 đợt xong.** Chưa xem bằng trình duyệt thật (3 giao diện, 375px, giảm chuyển động); còn review cả nhánh và quyết định gộp nhánh.
+- Frontend có sẵn 4 test hay quá hạn 5 giây khi máy chậm (create-project, reset-password, change-password, case-form); chạy lẻ từng file thì qua.
 
 ## Đang làm (2026-11-16)
 
@@ -84,3 +107,13 @@ Thay hẳn Google OAuth. Thiết kế `docs/superpowers/specs/2026-11-17-passwor
 - Chỉ backend ghi Sheet, qua repository; chỉ `gateway.py` gọi Google. Lỗi API có `{"detail": "<câu tiếng Việt>"}`. Chuỗi giao diện đặt ở `frontend/messages/vi.json`.
 - Mã case `TC-000001` có thể trùng giữa các dự án: mọi khoá dùng chung và mọi tìm kiếm issue phải kèm dự án hoặc repo.
 - Google Sheets có hạn mức đọc khoảng 60 lần/phút; tránh thêm lượt đọc dày. Issue của repo công khai không được chứa `test_data` hay email người tạo/sửa.
+
+## Sửa theo review cả nhánh `feature/fun-ui`
+Reviewer: không có lỗi nghiêm trọng. Đã sửa (đều viết test đỏ trước):
+- Màu nút chính Kẹo ngọt `--primary` / `--sidebar-primary` đổi `#B15CFF` → `#8F3FE0` (chữ trắng đạt ~5.3:1). `#B15CFF` còn dùng cho `--ring`, `--accent`, đồ thị.
+- Bảng xếp hạng trống hiện câu mời thay vì dòng "Chưa có điểm".
+- Trang Tổng quan project báo lỗi khi API lỗi (không hiện khung chờ mãi).
+- Nút nhạc theo sự kiện `play`/`pause` của thẻ audio (nhạc dừng từ bên ngoài).
+- Chuỗi ngày của nhím dùng chữ `sr-only` thay `aria-label` trên thẻ `p`.
+- `from_iso` coi giờ thiếu múi giờ là UTC (tránh lỗi 500 khi Sheet bị sửa tay).
+Chưa sửa (nhỏ, để sau): thanh lên cấp tính từ 0 bug; chữ phụ trên nền `--muted` hơi nhạt; `/me/pet` và `/me/dashboard` đọc Sheet 2 lần ở lần đầu; mã màu riêng của nhím ngoài danh sách ngoại lệ; thiếu test 404 cho `/leaderboard`.

@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
-import { Controller, useForm, useWatch } from "react-hook-form"
+import { Controller, useForm, useWatch, type FieldErrors } from "react-hook-form"
 import { toast } from "sonner"
 
 import { EnumSelect } from "@/components/test-cases/enum-select"
@@ -47,6 +47,25 @@ const SEVERITIES: Severity[] = ["LOW", "MEDIUM", "HIGH"]
 const PRIORITIES: Priority[] = ["P1", "P2", "P3"]
 const PLATFORMS: Platform[] = ["WEB", "ANDROID", "IOS"]
 const TEST_TYPES: TestType[] = ["FUNCTIONAL", "UI"]
+
+// Tên trường trong form -> khoá nhãn trong messages (testCases.form.*), dùng để báo ô nào sai
+const FIELD_LABELS: Record<string, string> = {
+  title: "title",
+  precondition: "precondition",
+  test_data: "testData",
+  expected_result: "expectedResult",
+  start_point: "startPoint",
+  guide_media: "guideMedia",
+  postcondition: "postcondition",
+  requirement_ref: "requirementRef",
+  platform: "platform",
+  test_type: "testType",
+  severity: "severity",
+  priority: "priority",
+  steps: "steps",
+}
+// Các ô nằm trong mục thu gọn "Điều kiện, dữ liệu, ..."
+const MORE_FIELDS = new Set(["precondition", "test_data", "postcondition", "requirement_ref"])
 
 const EMPTY: TestCaseContent = {
   title: "",
@@ -127,6 +146,7 @@ export function CaseForm({
 
   const [screenId, setScreenId] = useState(defaultScreenId ?? "")
   const [screenMissing, setScreenMissing] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   // Version đang có: gửi kèm khi lưu, khác bản trên server thì bị 409.
   const [version, setVersion] = useState(testCase?.version ?? 0)
   const [conflict, setConflict] = useState<{ message: string; latest: TestCase } | null>(null)
@@ -167,6 +187,7 @@ export function CaseForm({
   async function save(values: TestCaseContent, thenSubmit: boolean) {
     if (!isEdit && !screenId) {
       setScreenMissing(true)
+      toast.error(t("form.errors.screenRequired"))
       return
     }
     let saved: TestCase
@@ -211,6 +232,31 @@ export function CaseForm({
     router.push(`/projects/${projectId}/test-cases/${saved.id}`)
   }
 
+  // Form chưa hợp lệ: ô lỗi có thể nằm ngoài vùng đang nhìn thấy, nên báo nổi và cuộn tới ô lỗi đầu tiên.
+  function onInvalid(invalid: FieldErrors<TestCaseContent>) {
+    // Nói rõ ô nào sai (có ô nằm trong mục thu gọn hoặc cột cuộn nên khó thấy chữ đỏ)
+    const names: string[] = []
+    for (const key of Object.keys(invalid)) {
+      if (key === "steps" && Array.isArray(invalid.steps)) {
+        invalid.steps.forEach((error, index) => {
+          if (error) names.push(`${t("form.steps")} ${index + 1}`)
+        })
+      } else {
+        const label = FIELD_LABELS[key]
+        names.push(label ? t(`form.${label}`) : key)
+      }
+    }
+    // Lỗi nằm trong mục "Điều kiện, dữ liệu, ..." thì mở mục đó ra cho thấy chữ đỏ
+    if (Object.keys(invalid).some((key) => MORE_FIELDS.has(key))) setMoreOpen(true)
+    toast.error(`${t("form.invalid")} ${t("form.invalidFields", { fields: names.join(", ") })}`)
+    // Chờ React vẽ xong thông báo lỗi dưới ô rồi mới tìm
+    setTimeout(() => {
+      document
+        .querySelector<HTMLElement>('[aria-invalid="true"], .text-destructive')
+        ?.scrollIntoView?.({ block: "center", behavior: "smooth" })
+    }, 0)
+  }
+
   const stepErrors = Array.isArray(errors.steps)
     ? errors.steps.map((e) => ({ action: e?.action?.message, expected: e?.expected?.message }))
     : []
@@ -222,7 +268,7 @@ export function CaseForm({
 
   return (
     <form
-      onSubmit={handleSubmit((values) => save(values, false))}
+      onSubmit={handleSubmit((values) => save(values, false), onInvalid)}
       className="flex flex-col gap-3"
       noValidate
     >
@@ -236,7 +282,7 @@ export function CaseForm({
           <Button
             type="button"
             disabled={busy}
-            onClick={handleSubmit((values) => save(values, true))}
+            onClick={handleSubmit((values) => save(values, true), onInvalid)}
           >
             {reviewEnabled ? t("form.saveAndSubmit") : t("form.saveAndSend")}
           </Button>
@@ -249,7 +295,7 @@ export function CaseForm({
       </div>
 
       {/* Hai cột trên màn hình rộng; chỉ phần bên trong cột cuộn, cả trang không cuộn */}
-      <div className="grid gap-5 lg:h-[calc(100dvh-15rem)] lg:min-h-96 lg:grid-cols-2">
+      <div className="grid gap-5 lg:h-[calc(100dvh-21rem)] lg:min-h-96 lg:grid-cols-2">
         <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-2">
           <div className="flex flex-col gap-1.5">
             <Label>{t("form.executionMode")}</Label>
@@ -387,7 +433,11 @@ export function CaseForm({
             {fieldError(errors.expected_result?.message)}
           </div>
 
-          <details className="rounded-lg border p-3">
+          <details
+            className="rounded-lg border p-3"
+            open={moreOpen}
+            onToggle={(event) => setMoreOpen(event.currentTarget.open)}
+          >
             <summary className="cursor-pointer text-sm font-medium">{t("form.more")}</summary>
             <div className="mt-3 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">

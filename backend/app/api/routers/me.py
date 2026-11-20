@@ -4,15 +4,19 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, ServicesDep
+from app.api.project_facts import load_facts
 from app.api.project_scope import ProjectScope, scope_for
 from app.api.routers.results import ResultItem, results_for_project
 from app.api.services import Services
 from app.core.models.assignment import MyAssignment, ReturnedCase
 from app.core.models.project import Project
+from app.core.models.stats import MyDashboard, MyPet, ProjectFacts, ProjectProgress
 from app.core.models.test_case import TestCase, TestCaseStatus
-from app.core.models.user import Role
+from app.core.models.user import Role, User
+from app.core.services.stats import build_pet, daily_counts, progress
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
+from app.core.time import today_in_vietnam
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +51,7 @@ def my_overview(user: CurrentUser, services: ServicesDep) -> OverviewSummary:
             scope = scope_for(services, project)
             cases = scope.test_cases.list_all()
             if not project.archived:
-                pending_review += sum(
-                    case.status == TestCaseStatus.IN_REVIEW for case in cases
-                )
+                pending_review += sum(case.status == TestCaseStatus.IN_REVIEW for case in cases)
             project_results = results_for_project(services, project, user, cases=cases)
             if project_results:
                 candidate = max(project_results, key=lambda item: item.finished_at)
@@ -62,6 +64,51 @@ def my_overview(user: CurrentUser, services: ServicesDep) -> OverviewSummary:
                 exc_info=True,
             )
     return OverviewSummary(pending_review=pending_review, latest_result=latest_result)
+
+
+def _facts_of_projects(
+    services: Services, wanted: list[Project]
+) -> list[tuple[Project, ProjectFacts]]:
+    """Bản tóm tắt của từng project; project có Sheet hỏng thì bỏ qua (giống `my_overview`)."""
+    found: list[tuple[Project, ProjectFacts]] = []
+    for project in wanted:
+        try:
+            found.append((project, load_facts(services, scope_for(services, project))))
+        except (SheetAccessDeniedError, MissingColumnsError):
+            logger.warning("Bỏ qua project %s: không đọc được Sheet", project.id, exc_info=True)
+    return found
+
+
+def _my_projects(services: Services, user: User, *, include_archived: bool) -> list[Project]:
+    """Admin thấy mọi project; người khác chỉ thấy project mình là thành viên."""
+    all_projects = services.projects.list_all()
+    if user.role != Role.ADMIN:
+        mine = set(services.members.projects_of(user.email))
+        all_projects = [project for project in all_projects if project.id in mine]
+    return [project for project in all_projects if include_archived or not project.archived]
+
+
+@router.get("/pet")
+def my_pet(user: CurrentUser, services: ServicesDep) -> MyPet:
+    """Con nhím của tôi. Project đã lưu trữ vẫn tính để nhím không bị nhỏ lại."""
+    found = _facts_of_projects(services, _my_projects(services, user, include_archived=True))
+    return build_pet([facts for _, facts in found], user.email, today_in_vietnam())
+
+
+@router.get("/dashboard")
+def my_dashboard(user: CurrentUser, services: ServicesDep) -> MyDashboard:
+    """Tiến độ từng project đang hoạt động và số lần chạy 14 ngày qua của tôi."""
+    found = _facts_of_projects(services, _my_projects(services, user, include_archived=False))
+    items: list[ProjectProgress] = []
+    for project, facts in found:
+        done, total = progress(facts)
+        items.append(
+            ProjectProgress(
+                project_id=project.id, project_name=project.name, done=done, total=total
+            )
+        )
+    daily = daily_counts([facts for _, facts in found], today_in_vietnam())
+    return MyDashboard(projects=items, daily=daily)
 
 
 @router.get("/assignments")
@@ -102,26 +149,23 @@ def _assignments_in(services: Services, project: Project, email: str) -> list[My
             screen_name=screen_names.get(a.screen_id, a.screen_id),
             deadline=a.deadline,
             status=a.status,
-            case_counts=_count_by_status(cases, a.screen_id, email),
+            case_counts=_count_by_status(cases, a.screen_id),
             returned_cases=returned.get(a.screen_id, []),
         )
         for a in mine
     ]
 
 
-def _count_by_status(
-    cases: list[TestCase], screen_id: str, email: str
-) -> dict[TestCaseStatus, int]:
-    """Đếm case do `email` tạo trên màn hình, đủ 4 trạng thái (không có thì 0)."""
+def _count_by_status(cases: list[TestCase], screen_id: str) -> dict[TestCaseStatus, int]:
+    """Đếm mọi case (không tính Lưu trữ) trên màn hình, kể cả case do người khác tạo hoặc nhập hộ.
+
+    Đủ các trạng thái còn lại (không có thì 0).
+    """
     counts: dict[TestCaseStatus, int] = {
         status: 0 for status in TestCaseStatus if status != TestCaseStatus.ARCHIVED
     }
     for case in cases:
-        if (
-            case.status != TestCaseStatus.ARCHIVED
-            and case.screen_id == screen_id
-            and case.created_by == email
-        ):
+        if case.status != TestCaseStatus.ARCHIVED and case.screen_id == screen_id:
             counts[case.status] += 1
     return counts
 

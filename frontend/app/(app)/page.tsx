@@ -3,12 +3,16 @@
 import { ClipboardCheck, Clock3, FolderKanban, RotateCcw, TestTube2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 
+import { LazyPassFailChart } from "@/components/charts/lazy"
+import { ProgressList } from "@/components/charts/progress-list"
+import { PetCard } from "@/components/pet/pet-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { ResultItem } from "@/lib/api/types"
 import { useMe } from "@/lib/use-me"
 import { useOverview } from "@/lib/use-overview"
 import { useMyAssignments } from "@/lib/use-project-data"
 import { useProjects } from "@/lib/use-projects"
+import { useMyDashboard } from "@/lib/use-stats"
 
 const ACTIVE_STATUSES = new Set(["TODO", "WRITING", "IN_REVIEW"])
 const DAY_IN_MS = 24 * 60 * 60 * 1000
@@ -76,6 +80,9 @@ export default function OverviewPage() {
 
   const canSeeResults = user?.role === "QA_LEAD" || user?.role === "ADMIN"
   const { data: overview } = useOverview(canSeeResults)
+  // Đồ thị tiến độ dành cho mọi vai trò (backend chỉ trả các dự án mình được xem)
+  const { data: dashboard } = useMyDashboard()
+  const hasDashboard = (dashboard?.projects.length ?? 0) > 0
 
   const activeAssignments = assignments.filter((assignment) => ACTIVE_STATUSES.has(assignment.status))
   const dueSoon = activeAssignments.filter((assignment) => {
@@ -93,6 +100,8 @@ export default function OverviewPage() {
         <h1 className="text-2xl font-semibold">{t("greeting", { name: user?.name ?? "" })}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
       </div>
+
+      <PetCard />
 
       {user?.role === "TESTER" && (
         <section aria-label={t("testerSection")} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -141,7 +150,35 @@ export default function OverviewPage() {
         </section>
       )}
 
-      {user?.role === "VIEWER" && (
+      {hasDashboard && dashboard && (
+        <section className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("projectProgress")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProgressList
+                items={dashboard.projects.map((project) => ({
+                  id: project.project_id,
+                  label: project.project_name,
+                  done: project.done,
+                  total: project.total,
+                }))}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("recentResults")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LazyPassFailChart days={dashboard.daily} />
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {user?.role === "VIEWER" && !hasDashboard && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
             {t("viewerEmpty")}

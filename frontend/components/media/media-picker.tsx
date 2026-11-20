@@ -23,6 +23,8 @@ type Props = {
   /** Ảnh hướng dẫn (mặc định) hay bằng chứng chạy test. */
   purpose?: "guide" | "evidence"
   disabled?: boolean
+  /** "page": dán ảnh được ở bất kỳ đâu trên trang/hộp thoại (chỉ dùng khi có đúng một ô). */
+  pasteScope?: "group" | "page"
   /** Báo cho form biết đang tải lên (để khoá nút Lưu/Gửi). */
   onBusyChange?: (busy: boolean) => void
 }
@@ -38,6 +40,7 @@ export function MediaPicker({
   storage = "cloudinary",
   purpose,
   disabled,
+  pasteScope = "group",
   onBusyChange,
 }: Props) {
   const t = useTranslations("media")
@@ -85,8 +88,38 @@ export function MediaPicker({
     if (inputRef.current) inputRef.current.value = "" // cho phép chọn lại đúng file đó
   }
 
+  // Dán ảnh (Ctrl+V) khi đang đứng trong ô này: chỉ lấy file ảnh, dán chữ thì để yên.
+  function onPaste(event: { clipboardData: DataTransfer | null; preventDefault: () => void }) {
+    if (disabled || full) return
+    const images = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+      file.type.startsWith("image/"),
+    )
+    if (images.length === 0) return
+    event.preventDefault()
+    const room = max - value.length - pending.length
+    for (const file of images.slice(0, Math.max(room, 0))) void upload(file)
+  }
+
+  // Chế độ "page": nghe sự kiện dán trên cả trang, khỏi phải bấm vào đúng khung này trước.
+  const pasteRef = useRef(onPaste)
+  useEffect(() => {
+    pasteRef.current = onPaste
+  })
+  useEffect(() => {
+    if (pasteScope !== "page") return
+    const handler = (event: ClipboardEvent) => pasteRef.current(event)
+    document.addEventListener("paste", handler)
+    return () => document.removeEventListener("paste", handler)
+  }, [pasteScope])
+
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      role="group"
+      aria-label={t("groupLabel")}
+      tabIndex={0}
+      onPaste={pasteScope === "group" ? onPaste : undefined}
+      className="flex flex-col gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       {value.map((item, index) => (
         <div key={item.public_id} className="flex gap-2 rounded-lg border p-2">
           {item.kind === "image" ? (
@@ -165,6 +198,7 @@ export function MediaPicker({
           >
             <ImagePlus /> {t("add")}
           </Button>
+          <p className="text-xs text-muted-foreground">{t(pasteScope === "page" ? "pasteHintPage" : "pasteHint")}</p>
         </>
       )}
 

@@ -153,10 +153,12 @@ def test_list_all_is_newest_first_and_active_finds_queued(repo: RunRepository) -
     assert active.id == second.id
 
 
-def test_results_append_batch_and_list_for_run(gateway: FakeSheetsGateway) -> None:
+def test_results_append_batch_and_list_for_run(
+    gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis
+) -> None:
     gateway.data.setdefault(SHEET, {})
     bootstrap_project_spreadsheet(gateway, SHEET)
-    results = ResultRepository(gateway, SHEET)
+    results = ResultRepository(gateway, SHEET, redis=redis, project_id="PRJ-0001")
     moment = datetime(2026, 11, 14, 9, 0, 0, tzinfo=UTC)
 
     def make(run_id: str, case_id: str, status: ResultStatus, step: int | None = None) -> Result:
@@ -171,11 +173,13 @@ def test_results_append_batch_and_list_for_run(gateway: FakeSheetsGateway) -> No
             created_at=moment,
         )
 
-    results.append_batch([
-        make("RUN-0001", "TC-000001", ResultStatus.FAIL, 2),
-        make("RUN-0001", "TC-000002", ResultStatus.PASS),
-        make("RUN-0002", "TC-000001", ResultStatus.BLOCKED),
-    ])
+    results.append_batch(
+        [
+            make("RUN-0001", "TC-000001", ResultStatus.FAIL, 2),
+            make("RUN-0001", "TC-000002", ResultStatus.PASS),
+            make("RUN-0002", "TC-000001", ResultStatus.BLOCKED),
+        ]
+    )
 
     assert gateway.calls.count("append:Results") == 1
     first_run = results.list_for_run("RUN-0001")
@@ -199,10 +203,10 @@ def test_get_uses_a_single_sheet_read(repo: RunRepository, gateway: FakeSheetsGa
     assert len(reads) == 1
 
 
-def _results_repo(gateway: FakeSheetsGateway) -> ResultRepository:
+def _results_repo(gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis) -> ResultRepository:
     gateway.data.setdefault(SHEET, {})
     bootstrap_project_spreadsheet(gateway, SHEET)
-    return ResultRepository(gateway, SHEET)
+    return ResultRepository(gateway, SHEET, redis=redis, project_id="PRJ-0001")
 
 
 def _add_row_with_evidence(gateway: FakeSheetsGateway, evidence_json: str) -> None:
@@ -221,15 +225,17 @@ def _add_row_with_evidence(gateway: FakeSheetsGateway, evidence_json: str) -> No
     gateway.data[SHEET]["Results"].append(row)
 
 
-def test_legacy_evidence_still_reads(gateway: FakeSheetsGateway) -> None:
-    results = _results_repo(gateway)
+def test_legacy_evidence_still_reads(
+    gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis
+) -> None:
+    results = _results_repo(gateway, redis)
     _add_row_with_evidence(gateway, '{"screenshot": "https://x/a.png"}')
 
     assert results.list_all()[0].evidence == Evidence(legacy_url="https://x/a.png")
 
 
-def test_empty_new_cells_default(gateway: FakeSheetsGateway) -> None:
-    results = _results_repo(gateway)
+def test_empty_new_cells_default(gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis) -> None:
+    results = _results_repo(gateway, redis)
     _add_row_with_evidence(gateway, "")
 
     result = results.list_all()[0]
@@ -240,8 +246,10 @@ def test_empty_new_cells_default(gateway: FakeSheetsGateway) -> None:
     assert (result.actual_result, result.defect_url) == ("", "")
 
 
-def test_round_trip_step_results_video_and_environment(gateway: FakeSheetsGateway) -> None:
-    results = _results_repo(gateway)
+def test_round_trip_step_results_video_and_environment(
+    gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis
+) -> None:
+    results = _results_repo(gateway, redis)
     shot = Media(
         kind=MediaKind.IMAGE, url="https://res.cloudinary.com/c/image/upload/s.png", public_id="s"
     )
@@ -347,7 +355,7 @@ def test_active_ignores_regression_run(repo: RunRepository) -> None:
 
 
 def test_add_results_accumulates_and_completes_when_all_cases_done(
-    repo: RunRepository, gateway: FakeSheetsGateway
+    repo: RunRepository, gateway: FakeSheetsGateway, redis: fakeredis.FakeRedis
 ) -> None:
     run = new_regression(repo)
 
@@ -359,7 +367,7 @@ def test_add_results_accumulates_and_completes_when_all_cases_done(
     assert second.status == RunStatus.COMPLETED
     assert (second.passed, second.failed) == (1, 1)
     assert second.finished_at is not None
-    assert len(ResultRepository(gateway, SHEET).list_for_run(run.id)) == 2
+    assert len(_results_repo(gateway, redis).list_for_run(run.id)) == 2
 
 
 def test_add_results_same_case_twice_is_not_counted_twice(repo: RunRepository) -> None:

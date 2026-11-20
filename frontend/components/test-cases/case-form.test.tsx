@@ -2,10 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { NextIntlClientProvider } from "next-intl"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { toast } from "sonner"
 
 import { CaseForm } from "@/components/test-cases/case-form"
 import messages from "@/messages/vi.json"
 
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }))
 const createMock = vi.hoisted(() => vi.fn())
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock("@/lib/use-test-cases", () => ({
@@ -140,6 +142,31 @@ describe("CaseForm", () => {
 
     expect(screen.getByRole("button", { name: "Lưu nháp" })).toBeDisabled()
     expect(screen.getByRole("button", { name: "Lưu và gửi duyệt" })).toBeDisabled()
+  })
+
+  it("bấm Gửi khi form chưa hợp lệ thì báo lỗi bằng thông báo nổi, không im lặng", async () => {
+    renderForm()
+    chooseAutomation()
+    // Tiêu đề, bước, kết quả mong đợi đều đang trống
+    fireEvent.click(screen.getByRole("button", { name: "Lưu và gửi duyệt" }))
+    // Thông báo phải nói rõ ô nào sai, không chỉ bảo "xem chữ đỏ"
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("Tiêu đề, Các bước 1, Kết quả mong đợi"),
+      ),
+    )
+  })
+
+  it("lỗi nằm trong mục thu gọn thì tự mở mục đó ra để thấy chữ đỏ", async () => {
+    renderForm()
+    chooseAutomation()
+    fireEvent.change(screen.getByLabelText("Điều kiện tiên quyết"), {
+      target: { value: "x".repeat(2001) },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Lưu và gửi duyệt" }))
+    await vi.waitFor(() =>
+      expect(screen.getByText("Điều kiện, dữ liệu, ...").closest("details")).toHaveAttribute("open"),
+    )
   })
 })
 

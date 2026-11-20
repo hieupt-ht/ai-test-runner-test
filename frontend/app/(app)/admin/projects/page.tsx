@@ -144,8 +144,8 @@ export default function AdminProjectsPage() {
       {projectsQuery.isLoading ? (
         <Skeleton className="h-48 w-full" />
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <Table>
+        <div className="overflow-hidden rounded-lg border">
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("colName")}</TableHead>
@@ -166,14 +166,19 @@ export default function AdminProjectsPage() {
               )}
               {projects.map((project) => (
                 <TableRow key={project.id}>
-                  <TableCell className="font-medium">
+                  {/* Cho phép xuống dòng để bảng không rộng hơn khung (không cuộn ngang) */}
+                  <TableCell className="font-medium whitespace-normal break-words">
                     <Link href={`/projects/${project.id}`} className="hover:underline">
                       {project.name}
                     </Link>
                     <span className="ml-2 text-xs text-muted-foreground">{project.id}</span>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{project.repo_full_name}</TableCell>
-                  <TableCell className="font-mono text-xs">{project.branch}</TableCell>
+                  <TableCell className="font-mono text-xs whitespace-normal break-all">
+                    {project.repo_full_name}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs whitespace-normal break-all">
+                    {project.branch}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={project.archived ? "secondary" : "outline"}>
                       {project.archived ? t("archived") : t("active")}

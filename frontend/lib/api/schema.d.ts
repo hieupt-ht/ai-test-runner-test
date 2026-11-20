@@ -424,6 +424,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/test-cases/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Template */
+        get: operations["download_template_api_projects__project_id__test_cases_import_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/test-cases/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Import */
+        post: operations["preview_import_api_projects__project_id__test_cases_import_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/test-cases/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Cases */
+        post: operations["import_cases_api_projects__project_id__test_cases_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/test-cases": {
         parameters: {
             query?: never;
@@ -690,6 +741,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/pet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Pet
+         * @description Con nhím của tôi. Project đã lưu trữ vẫn tính để nhím không bị nhỏ lại.
+         */
+        get: operations["my_pet_api_me_pet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Dashboard
+         * @description Tiến độ từng project đang hoạt động và số lần chạy 14 ngày qua của tôi.
+         */
+        get: operations["my_dashboard_api_me_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/assignments": {
         parameters: {
             query?: never;
@@ -813,6 +904,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Stats */
+        get: operations["get_stats_api_projects__project_id__stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/leaderboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Leaderboard */
+        get: operations["get_leaderboard_api_projects__project_id__leaderboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/regression-runs": {
         parameters: {
             query?: never;
@@ -859,7 +984,7 @@ export interface components {
          * Action
          * @enum {string}
          */
-        Action: "MANAGE_USERS" | "MANAGE_PROJECTS" | "MANAGE_PROJECT_SETTINGS" | "MANAGE_MEMBERS" | "MANAGE_SCREENS" | "EDIT_TEST_CASE" | "REVIEW_TEST_CASE" | "TRIGGER_RUN" | "REVIEW_RESULTS" | "VIEW_PROJECT";
+        Action: "MANAGE_USERS" | "MANAGE_PROJECTS" | "MANAGE_PROJECT_SETTINGS" | "MANAGE_MEMBERS" | "MANAGE_SCREENS" | "EDIT_TEST_CASE" | "RUN_TEST_CASE" | "REVIEW_TEST_CASE" | "TRIGGER_RUN" | "REVIEW_RESULTS" | "VIEW_PROJECT";
         /** AddMemberRequest */
         AddMemberRequest: {
             /** Email */
@@ -1016,6 +1141,22 @@ export interface components {
             /** Skipped */
             skipped: components["schemas"]["SkippedItem"][];
         };
+        /** Board */
+        Board: {
+            /** Top */
+            top: components["schemas"]["LeaderboardRow"][];
+            me: components["schemas"]["LeaderboardRow"] | null;
+        };
+        /** Body_import_cases_api_projects__project_id__test_cases_import_post */
+        Body_import_cases_api_projects__project_id__test_cases_import_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_preview_import_api_projects__project_id__test_cases_import_preview_post */
+        Body_preview_import_api_projects__project_id__test_cases_import_preview_post: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_agent_media_api_agent_projects__project_id__media_upload_post */
         Body_upload_agent_media_api_agent_projects__project_id__media_upload_post: {
             /** File */
@@ -1168,6 +1309,23 @@ export interface components {
             /** Password */
             password: string;
         };
+        /**
+         * DayCount
+         * @description Số lần chạy trong một ngày (giờ VN) cho đồ thị cột.
+         */
+        DayCount: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Passed */
+            passed: number;
+            /** Failed */
+            failed: number;
+            /** Other */
+            other: number;
+        };
         /** DeleteProjectRequest */
         DeleteProjectRequest: {
             /** Name */
@@ -1206,6 +1364,30 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** ImportCreated */
+        ImportCreated: {
+            /** Created */
+            created: string[];
+        };
+        /** ImportIssue */
+        ImportIssue: {
+            /** Row */
+            row: number | null;
+            /** Column */
+            column?: string | null;
+            /** Message */
+            message: string;
+        };
+        /**
+         * ImportRejected
+         * @description Phản hồi 422: file còn lỗi, không case nào được nhập.
+         */
+        ImportRejected: {
+            /** Detail */
+            detail: string;
+            /** Errors */
+            errors: components["schemas"]["ImportIssue"][];
+        };
         /**
          * LastResult
          * @description Kết quả chạy gần nhất của một case test tay.
@@ -1219,6 +1401,23 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** Leaderboard */
+        Leaderboard: {
+            period: components["schemas"]["Period"];
+            cases: components["schemas"]["Board"];
+            bugs: components["schemas"]["Board"];
+        };
+        /** LeaderboardRow */
+        LeaderboardRow: {
+            /** Rank */
+            rank: number | null;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /** Count */
+            count: number;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -1331,6 +1530,30 @@ export interface components {
             /** Returned Cases */
             returned_cases?: components["schemas"]["ReturnedCase"][];
         };
+        /** MyDashboard */
+        MyDashboard: {
+            /** Projects */
+            projects: components["schemas"]["ProjectProgress"][];
+            /** Daily */
+            daily: components["schemas"]["DayCount"][];
+        };
+        /**
+         * MyPet
+         * @description Con nhím của một người: cấp theo số bug, biểu cảm theo chuỗi ngày.
+         */
+        MyPet: {
+            /** Level */
+            level: number;
+            /** Bugs */
+            bugs: number;
+            /** Bugs To Next */
+            bugs_to_next: number | null;
+            /** Streak */
+            streak: number;
+            /** Missed Days */
+            missed_days: number;
+            mood: components["schemas"]["PetMood"];
+        };
         /** Notification */
         Notification: {
             /** Id */
@@ -1365,6 +1588,50 @@ export interface components {
             pending_review: number;
             latest_result?: components["schemas"]["ResultItem"] | null;
         };
+        /** ParseResult */
+        ParseResult: {
+            /**
+             * Cases
+             * @default []
+             */
+            cases: components["schemas"]["ParsedCase"][];
+            /**
+             * Errors
+             * @default []
+             */
+            errors: components["schemas"]["ImportIssue"][];
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: components["schemas"]["ImportIssue"][];
+        };
+        /** ParsedCase */
+        ParsedCase: {
+            /** Group */
+            group: string;
+            /** Row */
+            row: number;
+            /** Screen Id */
+            screen_id: string;
+            /** Screen Name */
+            screen_name: string;
+            /** Title */
+            title: string;
+            /** Step Count */
+            step_count: number;
+            content: components["schemas"]["TestCaseContent"];
+        };
+        /**
+         * Period
+         * @enum {string}
+         */
+        Period: "week" | "month" | "all";
+        /**
+         * PetMood
+         * @enum {string}
+         */
+        PetMood: "HAPPY" | "NORMAL" | "HUNGRY" | "CRY";
         /**
          * Platform
          * @enum {string}
@@ -1462,6 +1729,40 @@ export interface components {
             storage: "cloudinary" | "drive";
             /** Permissions */
             permissions: components["schemas"]["Action"][];
+        };
+        /**
+         * ProjectProgress
+         * @description Tiến độ case của một project (cho biểu đồ ở Tổng quan chung).
+         */
+        ProjectProgress: {
+            /** Project Id */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * ProjectStats
+         * @description Các con số của trang Tổng quan project.
+         */
+        ProjectStats: {
+            /** Total Cases */
+            total_cases: number;
+            /** Pass Rate */
+            pass_rate: number | null;
+            /** Open Bugs */
+            open_bugs: number;
+            /** Daily */
+            daily: components["schemas"]["DayCount"][];
+            /** Case Status */
+            case_status: {
+                [key: string]: number;
+            };
+            /** Screens */
+            screens: components["schemas"]["ScreenProgress"][];
         };
         /** RepoInfo */
         RepoInfo: {
@@ -1625,6 +1926,17 @@ export interface components {
             dev_owner: string;
             /** Media */
             media?: components["schemas"]["Media"][];
+        };
+        /** ScreenProgress */
+        ScreenProgress: {
+            /** Screen Id */
+            screen_id: string;
+            /** Screen Name */
+            screen_name: string;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
         };
         /** ServiceAccount */
         ServiceAccount: {
@@ -1814,6 +2126,58 @@ export interface components {
             version: number;
         };
         /**
+         * TestCaseContent
+         * @description Phần nội dung do người dùng nhập khi tạo hoặc sửa test case.
+         */
+        TestCaseContent: {
+            /** Title */
+            title: string;
+            /**
+             * Precondition
+             * @default
+             */
+            precondition: string;
+            /**
+             * Test Data
+             * @default
+             */
+            test_data: string;
+            /** Steps */
+            steps: components["schemas"]["TestStep"][];
+            /** Expected Result */
+            expected_result: string;
+            severity: components["schemas"]["Severity"];
+            priority: components["schemas"]["Priority"];
+            /** @default WEB */
+            platform: components["schemas"]["Platform"];
+            /** @default FUNCTIONAL */
+            test_type: components["schemas"]["TestType"];
+            /**
+             * Regression
+             * @default false
+             */
+            regression: boolean;
+            /**
+             * Start Point
+             * @default
+             */
+            start_point: string;
+            /** Guide Media */
+            guide_media?: components["schemas"]["Media"][];
+            /**
+             * Postcondition
+             * @default
+             */
+            postcondition: string;
+            /**
+             * Requirement Ref
+             * @default
+             */
+            requirement_ref: string;
+            /** @default MANUAL */
+            execution_mode: components["schemas"]["ExecutionMode"];
+        };
+        /**
          * TestCaseDetail
          * @description Test case kèm quyền của người đang xem, để giao diện ẩn/hiện nút.
          */
@@ -1887,6 +2251,8 @@ export interface components {
             version: number;
             /** Can Edit */
             can_edit: boolean;
+            /** Can Run */
+            can_run: boolean;
             /** Can Review */
             can_review: boolean;
             /** Can Archive */
@@ -3001,6 +3367,107 @@ export interface operations {
             };
         };
     };
+    download_template_api_projects__project_id__test_cases_import_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_import_api_projects__project_id__test_cases_import_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_import_api_projects__project_id__test_cases_import_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParseResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_cases_api_projects__project_id__test_cases_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_cases_api_projects__project_id__test_cases_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCreated"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRejected"];
+                };
+            };
+        };
+    };
     list_test_cases_api_projects__project_id__test_cases_get: {
         parameters: {
             query?: {
@@ -3623,6 +4090,46 @@ export interface operations {
             };
         };
     };
+    my_pet_api_me_pet_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPet"];
+                };
+            };
+        };
+    };
+    my_dashboard_api_me_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyDashboard"];
+                };
+            };
+        };
+    };
     my_assignments_api_me_assignments_get: {
         parameters: {
             query?: never;
@@ -3830,6 +4337,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_stats_api_projects__project_id__stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_leaderboard_api_projects__project_id__leaderboard_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["Period"];
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Leaderboard"];
                 };
             };
             /** @description Validation Error */

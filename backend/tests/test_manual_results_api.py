@@ -84,8 +84,10 @@ def result_body(**changes: Any) -> dict[str, Any]:
     return body
 
 
-def fail_body(**changes: Any) -> dict[str, Any]:
+def fail_body(project: Project, **changes: Any) -> dict[str, Any]:
+    # Mặc định có một ảnh bằng chứng, vì kết quả Fail bắt buộc có ảnh/video
     body = result_body(
+        evidence={"screenshots": [media("fail-proof", project=project)]},
         status="FAIL",
         step_results=[
             {"step_no": 1, "status": "PASS"},
@@ -148,9 +150,9 @@ def test_manual_fail_requires_reason_and_failed_step(
 ) -> None:
     case = new_case(an, project)
 
-    no_reason = submit(an, project, case["id"], fail_body(reason="  "))
-    no_step = submit(an, project, case["id"], fail_body(failed_step=None))
-    bad_step = submit(an, project, case["id"], fail_body(failed_step=3))
+    no_reason = submit(an, project, case["id"], fail_body(project, reason="  "))
+    no_step = submit(an, project, case["id"], fail_body(project, failed_step=None))
+    bad_step = submit(an, project, case["id"], fail_body(project, failed_step=3))
 
     assert [no_reason.status_code, no_step.status_code, bad_step.status_code] == [422] * 3
     assert rows(gateway, project, "Runs") == []
@@ -241,6 +243,26 @@ def test_other_tester_without_assignment_is_403(
     assert submit(binh, project, case["id"], result_body()).status_code == 403
 
 
+def test_assigned_tester_submits_result_for_lead_case(
+    an: TestClient, lead: TestClient, project: Project
+) -> None:
+    case = new_case(lead, project, screen_id="SC-0001")
+
+    response = submit(an, project, case["id"], result_body())
+
+    assert response.status_code == 201
+    assert an.get(cases_url(project, f"/{case['id']}")).json()["status"] == "TESTED"
+
+
+def test_unassigned_tester_cannot_submit(
+    app: FastAPI, users: UserRepository, lead: TestClient, project: Project
+) -> None:
+    case = new_case(lead, project, screen_id="SC-0001")
+    binh = client_for(app, users, "binh@x.com", Role.TESTER)
+
+    assert submit(binh, project, case["id"], result_body()).status_code == 403
+
+
 def test_manual_blocked_keeps_draft_and_no_issue(
     an: TestClient, project: Project, github: FakeGitHub, gateway: FakeSheetsGateway
 ) -> None:
@@ -261,7 +283,7 @@ def test_first_fail_creates_issue_assigns_and_labels(
 ) -> None:
     case = new_case(an, project)
 
-    response = submit(an, project, case["id"], fail_body(assignee="nguyenvana"))
+    response = submit(an, project, case["id"], fail_body(project, assignee="nguyenvana"))
 
     assert response.status_code == 201
     ((issue, body),) = github.issues[project.repo_full_name]
@@ -278,7 +300,7 @@ def test_manual_fail_then_pass_closes_issue(
     an: TestClient, project: Project, github: FakeGitHub, gateway: FakeSheetsGateway
 ) -> None:
     case = new_case(an, project)
-    first = submit(an, project, case["id"], fail_body(assignee="nguyenvana"))
+    first = submit(an, project, case["id"], fail_body(project, assignee="nguyenvana"))
     version = first.json()["case"]["version"]
 
     second = submit(an, project, case["id"], result_body(version=version))
@@ -320,7 +342,7 @@ def test_manual_fail_notifies_case_creator_and_leads(
 ) -> None:
     case = new_case(an, project)
 
-    submit(an, project, case["id"], fail_body())
+    submit(an, project, case["id"], fail_body(project))
 
     store: NotificationStore = app.state.services.notifications
     for email in ("lead@x.com", "an@x.com"):
@@ -334,7 +356,7 @@ def test_case_detail_has_last_result_for_manual_only(an: TestClient, project: Pr
     auto = new_case(an, project, execution_mode="AUTOMATION", title="Case tự động")
     assert an.get(cases_url(project, f"/{manual['id']}")).json()["last_result"] is None
 
-    submit(an, project, manual["id"], fail_body())
+    submit(an, project, manual["id"], fail_body(project))
 
     detail = an.get(cases_url(project, f"/{manual['id']}")).json()
     assert detail["last_result"]["status"] == "FAIL"
@@ -351,3 +373,31 @@ def test_dev_owner_defaults_to_screen_dev(
     submit(an, project, case["id"], result_body())
 
     assert rows(gateway, project, "Results")[0]["dev_owner"] == "nguyenvana"
+
+
+def test_fail_without_evidence_is_rejected(
+    an: TestClient, project: Project, gateway: FakeSheetsGateway
+) -> None:
+    case = new_case(an, project)
+
+    response = submit(an, project, case["id"], fail_body(project, evidence={}))
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Kết quả Fail cần ít nhất một ảnh hoặc video bằng chứng"
+    assert rows(gateway, project, "Runs") == []
+
+
+def test_fail_with_step_screenshot_only_is_accepted(an: TestClient, project: Project) -> None:
+    case = new_case(an, project)
+    body = fail_body(project, evidence={})
+    body["step_results"][1]["screenshot"] = media("step-2", project=project)
+
+    assert submit(an, project, case["id"], body).status_code == 201
+
+
+def test_blocked_without_evidence_is_accepted(an: TestClient, project: Project) -> None:
+    case = new_case(an, project)
+
+    response = submit(an, project, case["id"], result_body(status="BLOCKED"))
+
+    assert response.status_code == 201

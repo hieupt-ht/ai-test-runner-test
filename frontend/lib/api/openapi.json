@@ -1315,6 +1315,150 @@
         }
       }
     },
+    "/api/projects/{project_id}/test-cases/import/template": {
+      "get": {
+        "tags": [
+          "case-import"
+        ],
+        "summary": "Download Template",
+        "operationId": "download_template_api_projects__project_id__test_cases_import_template_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/import/preview": {
+      "post": {
+        "tags": [
+          "case-import"
+        ],
+        "summary": "Preview Import",
+        "operationId": "preview_import_api_projects__project_id__test_cases_import_preview_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_import_api_projects__project_id__test_cases_import_preview_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/test-cases/import": {
+      "post": {
+        "tags": [
+          "case-import"
+        ],
+        "summary": "Import Cases",
+        "operationId": "import_cases_api_projects__project_id__test_cases_import_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_cases_api_projects__project_id__test_cases_import_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportRejected"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/test-cases": {
       "get": {
         "tags": [
@@ -2282,6 +2426,50 @@
         }
       }
     },
+    "/api/me/pet": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "My Pet",
+        "description": "Con nhím của tôi. Project đã lưu trữ vẫn tính để nhím không bị nhỏ lại.",
+        "operationId": "my_pet_api_me_pet_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPet"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/dashboard": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "My Dashboard",
+        "description": "Tiến độ từng project đang hoạt động và số lần chạy 14 ngày qua của tôi.",
+        "operationId": "my_dashboard_api_me_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyDashboard"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/assignments": {
       "get": {
         "tags": [
@@ -2638,6 +2826,99 @@
         }
       }
     },
+    "/api/projects/{project_id}/stats": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Get Stats",
+        "operationId": "get_stats_api_projects__project_id__stats_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectStats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/leaderboard": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Get Leaderboard",
+        "operationId": "get_leaderboard_api_projects__project_id__leaderboard_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Period",
+              "default": "week"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaderboard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/regression-runs": {
       "get": {
         "tags": [
@@ -2798,6 +3079,7 @@
           "MANAGE_MEMBERS",
           "MANAGE_SCREENS",
           "EDIT_TEST_CASE",
+          "RUN_TEST_CASE",
           "REVIEW_TEST_CASE",
           "TRIGGER_RUN",
           "REVIEW_RESULTS",
@@ -3178,6 +3460,61 @@
         ],
         "title": "BatchApproveResponse"
       },
+      "Board": {
+        "properties": {
+          "top": {
+            "items": {
+              "$ref": "#/components/schemas/LeaderboardRow"
+            },
+            "type": "array",
+            "title": "Top"
+          },
+          "me": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeaderboardRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "top",
+          "me"
+        ],
+        "title": "Board"
+      },
+      "Body_import_cases_api_projects__project_id__test_cases_import_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_cases_api_projects__project_id__test_cases_import_post"
+      },
+      "Body_preview_import_api_projects__project_id__test_cases_import_preview_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_import_api_projects__project_id__test_cases_import_preview_post"
+      },
       "Body_upload_agent_media_api_agent_projects__project_id__media_upload_post": {
         "properties": {
           "file": {
@@ -3513,6 +3850,36 @@
         ],
         "title": "CreateUserRequest"
       },
+      "DayCount": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "other": {
+            "type": "integer",
+            "title": "Other"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "passed",
+          "failed",
+          "other"
+        ],
+        "title": "DayCount",
+        "description": "Số lần chạy trong một ngày (giờ VN) cho đồ thị cột."
+      },
       "DeleteProjectRequest": {
         "properties": {
           "name": {
@@ -3606,6 +3973,80 @@
         ],
         "title": "IgnoredResult"
       },
+      "ImportCreated": {
+        "properties": {
+          "created": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created"
+        ],
+        "title": "ImportCreated"
+      },
+      "ImportIssue": {
+        "properties": {
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "message"
+        ],
+        "title": "ImportIssue"
+      },
+      "ImportRejected": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "errors"
+        ],
+        "title": "ImportRejected",
+        "description": "Phản hồi 422: file còn lỗi, không case nào được nhập."
+      },
       "LastResult": {
         "properties": {
           "status": {
@@ -3629,6 +4070,61 @@
         ],
         "title": "LastResult",
         "description": "Kết quả chạy gần nhất của một case test tay."
+      },
+      "Leaderboard": {
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/Period"
+          },
+          "cases": {
+            "$ref": "#/components/schemas/Board"
+          },
+          "bugs": {
+            "$ref": "#/components/schemas/Board"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "cases",
+          "bugs"
+        ],
+        "title": "Leaderboard"
+      },
+      "LeaderboardRow": {
+        "properties": {
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "email",
+          "name",
+          "count"
+        ],
+        "title": "LeaderboardRow"
       },
       "LoginRequest": {
         "properties": {
@@ -3876,6 +4372,75 @@
         "title": "MyAssignment",
         "description": "Một dòng trong trang \"Việc của tôi\"."
       },
+      "MyDashboard": {
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectProgress"
+            },
+            "type": "array",
+            "title": "Projects"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/DayCount"
+            },
+            "type": "array",
+            "title": "Daily"
+          }
+        },
+        "type": "object",
+        "required": [
+          "projects",
+          "daily"
+        ],
+        "title": "MyDashboard"
+      },
+      "MyPet": {
+        "properties": {
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "bugs": {
+            "type": "integer",
+            "title": "Bugs"
+          },
+          "bugs_to_next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bugs To Next"
+          },
+          "streak": {
+            "type": "integer",
+            "title": "Streak"
+          },
+          "missed_days": {
+            "type": "integer",
+            "title": "Missed Days"
+          },
+          "mood": {
+            "$ref": "#/components/schemas/PetMood"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "bugs",
+          "bugs_to_next",
+          "streak",
+          "missed_days",
+          "mood"
+        ],
+        "title": "MyPet",
+        "description": "Con nhím của một người: cấp theo số bug, biểu cảm theo chuỗi ngày."
+      },
       "Notification": {
         "properties": {
           "id": {
@@ -3955,6 +4520,97 @@
         },
         "type": "object",
         "title": "OverviewSummary"
+      },
+      "ParseResult": {
+        "properties": {
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedCase"
+            },
+            "type": "array",
+            "title": "Cases",
+            "default": []
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ParseResult"
+      },
+      "ParsedCase": {
+        "properties": {
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "screen_name": {
+            "type": "string",
+            "title": "Screen Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "step_count": {
+            "type": "integer",
+            "title": "Step Count"
+          },
+          "content": {
+            "$ref": "#/components/schemas/TestCaseContent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "row",
+          "screen_id",
+          "screen_name",
+          "title",
+          "step_count",
+          "content"
+        ],
+        "title": "ParsedCase"
+      },
+      "Period": {
+        "type": "string",
+        "enum": [
+          "week",
+          "month",
+          "all"
+        ],
+        "title": "Period"
+      },
+      "PetMood": {
+        "type": "string",
+        "enum": [
+          "HAPPY",
+          "NORMAL",
+          "HUNGRY",
+          "CRY"
+        ],
+        "title": "PetMood"
       },
       "Platform": {
         "type": "string",
@@ -4127,6 +4783,93 @@
           "permissions"
         ],
         "title": "ProjectDetail"
+      },
+      "ProjectProgress": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "project_name": {
+            "type": "string",
+            "title": "Project Name"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "project_name",
+          "done",
+          "total"
+        ],
+        "title": "ProjectProgress",
+        "description": "Tiến độ case của một project (cho biểu đồ ở Tổng quan chung)."
+      },
+      "ProjectStats": {
+        "properties": {
+          "total_cases": {
+            "type": "integer",
+            "title": "Total Cases"
+          },
+          "pass_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pass Rate"
+          },
+          "open_bugs": {
+            "type": "integer",
+            "title": "Open Bugs"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/DayCount"
+            },
+            "type": "array",
+            "title": "Daily"
+          },
+          "case_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/TestCaseStatus"
+            },
+            "type": "object",
+            "title": "Case Status"
+          },
+          "screens": {
+            "items": {
+              "$ref": "#/components/schemas/ScreenProgress"
+            },
+            "type": "array",
+            "title": "Screens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_cases",
+          "pass_rate",
+          "open_bugs",
+          "daily",
+          "case_status",
+          "screens"
+        ],
+        "title": "ProjectStats",
+        "description": "Các con số của trang Tổng quan project."
       },
       "RepoInfo": {
         "properties": {
@@ -4524,6 +5267,34 @@
         ],
         "title": "Screen"
       },
+      "ScreenProgress": {
+        "properties": {
+          "screen_id": {
+            "type": "string",
+            "title": "Screen Id"
+          },
+          "screen_name": {
+            "type": "string",
+            "title": "Screen Name"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "screen_id",
+          "screen_name",
+          "done",
+          "total"
+        ],
+        "title": "ScreenProgress"
+      },
       "ServiceAccount": {
         "properties": {
           "email": {
@@ -4883,6 +5654,102 @@
         "title": "TestCase",
         "description": "Một test case đầy đủ, như lưu ở tab TestCases."
       },
+      "TestCaseContent": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "precondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Precondition",
+            "default": ""
+          },
+          "test_data": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Test Data",
+            "default": ""
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TestStep"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Steps"
+          },
+          "expected_result": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expected Result"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform",
+            "default": "WEB"
+          },
+          "test_type": {
+            "$ref": "#/components/schemas/TestType",
+            "default": "FUNCTIONAL"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression",
+            "default": false
+          },
+          "start_point": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Start Point",
+            "default": ""
+          },
+          "guide_media": {
+            "items": {
+              "$ref": "#/components/schemas/Media"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Guide Media"
+          },
+          "postcondition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Postcondition",
+            "default": ""
+          },
+          "requirement_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Requirement Ref",
+            "default": ""
+          },
+          "execution_mode": {
+            "$ref": "#/components/schemas/ExecutionMode",
+            "default": "MANUAL"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "steps",
+          "expected_result",
+          "severity",
+          "priority"
+        ],
+        "title": "TestCaseContent",
+        "description": "Phần nội dung do người dùng nhập khi tạo hoặc sửa test case."
+      },
       "TestCaseDetail": {
         "properties": {
           "title": {
@@ -5004,6 +5871,10 @@
             "type": "boolean",
             "title": "Can Edit"
           },
+          "can_run": {
+            "type": "boolean",
+            "title": "Can Run"
+          },
           "can_review": {
             "type": "boolean",
             "title": "Can Review"
@@ -5039,6 +5910,7 @@
           "updated_at",
           "version",
           "can_edit",
+          "can_run",
           "can_review",
           "can_archive"
         ],

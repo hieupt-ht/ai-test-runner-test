@@ -4,13 +4,17 @@ import { PROJECT_TABS, visibleProjectTabs } from "@/lib/project-tabs"
 import vi from "@/messages/vi.json"
 
 describe("visibleProjectTabs", () => {
+  it("tab Tổng quan đứng đầu", () => {
+    expect(PROJECT_TABS[0].segment).toBe("overview")
+  })
+
   it("tab Cài đặt hiện khi có quyền MANAGE_PROJECT_SETTINGS (Admin và QA Lead)", () => {
     const tester = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_SCREENS"]).map((tab) => tab.segment)
     const lead = visibleProjectTabs(["VIEW_PROJECT", "MANAGE_PROJECT_SETTINGS"]).map(
       (tab) => tab.segment,
     )
 
-    expect(tester).toEqual(["screens", "test-cases", "results", "assignments", "members"])
+    expect(tester).toEqual(["overview", "screens", "test-cases", "results", "assignments", "members"])
     expect(lead).toContain("settings")
   })
 

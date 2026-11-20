@@ -18,14 +18,26 @@ vi.mock("@/lib/use-manual-result", () => ({
 vi.mock("@/components/media/media-picker", () => ({
   MediaPicker: ({
     onBusyChange,
+    onChange,
     purpose,
   }: {
     onBusyChange?: (busy: boolean) => void
+    onChange?: (next: unknown[]) => void
     purpose?: string
   }) => (
-    <button type="button" data-purpose={purpose} onClick={() => onBusyChange?.(true)}>
-      giả-lập-tải-lên
-    </button>
+    <>
+      <button type="button" data-purpose={purpose} onClick={() => onBusyChange?.(true)}>
+        giả-lập-tải-lên
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onChange?.([{ kind: "image", url: "https://x/a.png", public_id: "ai-test-runner/p/evidence/a" }])
+        }
+      >
+        giả-lập-thêm-ảnh
+      </button>
+    </>
   ),
 }))
 
@@ -129,9 +141,24 @@ describe("ManualRunPanel", () => {
     typeEnvironment()
     fireEvent.click(stepRadio(1, "Đạt"))
     fireEvent.click(stepRadio(2, "Không đạt"))
+    fireEvent.click(screen.getAllByRole("button", { name: "giả-lập-thêm-ảnh" })[0])
     expect(submitButton()).toBeDisabled()
     fireEvent.change(screen.getByLabelText("Mô tả lỗi"), { target: { value: "Không báo lỗi" } })
     expect(submitButton()).toBeEnabled()
+  })
+
+  it("FAIL chưa có bằng chứng thì nút Gửi mờ và hiện nhắc", () => {
+    renderPanel()
+    typeEnvironment()
+    fireEvent.click(stepRadio(1, "Đạt"))
+    fireEvent.click(stepRadio(2, "Không đạt"))
+    fireEvent.change(screen.getByLabelText("Mô tả lỗi"), { target: { value: "Không báo lỗi" } })
+    expect(submitButton()).toBeDisabled()
+    expect(screen.getByText("Kết quả Fail cần ít nhất một ảnh hoặc video bằng chứng.")).toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole("button", { name: "giả-lập-thêm-ảnh" })[0])
+    expect(submitButton()).toBeEnabled()
+    expect(screen.queryByText("Kết quả Fail cần ít nhất một ảnh hoặc video bằng chứng.")).not.toBeInTheDocument()
   })
 
   it("Giao cho mặc định là dev phụ trách màn hình", () => {
@@ -199,6 +226,7 @@ describe("ManualRunPanel", () => {
     fireEvent.click(stepRadio(1, "Đạt"))
     fireEvent.click(stepRadio(2, "Không đạt"))
     fireEvent.change(screen.getByLabelText("Mô tả lỗi"), { target: { value: "Không báo lỗi" } })
+    fireEvent.click(screen.getAllByRole("button", { name: "giả-lập-thêm-ảnh" })[0])
     fireEvent.change(screen.getByLabelText("Giao cho (GitHub)"), { target: { value: "@tran-b" } })
     fireEvent.click(submitButton())
 

@@ -106,7 +106,10 @@ export function ManualRunPanel({
   const cleanAssignee = normalizeAssignee(assignee)
   const assigneeOk = isValidAssignee(cleanAssignee)
   const isUploading = Object.values(uploading).some(Boolean)
-  const failOk = result !== "FAIL" || (reason.trim() !== "" && failedStep !== null)
+  // Fail phải có ít nhất một ảnh/video: ở phần bằng chứng chung hoặc ảnh của từng bước
+  const hasMedia = evidence.length > 0 || Object.keys(stepShot).length > 0
+  const failOk =
+    result !== "FAIL" || (reason.trim() !== "" && failedStep !== null && hasMedia)
   const canSubmit =
     allAnswered &&
     environment.trim() !== "" &&
@@ -289,6 +292,9 @@ export function ManualRunPanel({
           purpose="evidence"
           onBusyChange={(busy) => reportUploading("evidence", busy)}
         />
+        {result === "FAIL" && !hasMedia && (
+          <p className="text-xs text-destructive">{t("failNeedsEvidence")}</p>
+        )}
       </div>
 
       <fieldset className="flex flex-wrap items-center gap-4">
