@@ -1,0 +1,39 @@
+/* Hoạt ảnh nhẹ cho nhím: chỉ dùng transform/opacity nên không làm giật trang */
+.hh-bounce {
+  animation: hh-bounce 2.4s ease-in-out infinite;
+  transform-origin: 100px 160px;
+}
+
+.hh-blink {
+  animation: hh-blink 4s infinite;
+  transform-origin: 100px 100px;
+}
+
+@keyframes hh-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes hh-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.1);
+  }
+}
+
+/* Người dùng bật "giảm chuyển động" thì đứng yên */
+@media (prefers-reduced-motion: reduce) {
+  .hh-bounce,
+  .hh-blink {
+    animation: none;
+  }
+}

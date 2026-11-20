@@ -649,5 +649,32 @@
     "daily": "Kết quả 14 ngày gần đây",
     "caseStatus": "Trạng thái case",
     "screens": "Tiến độ theo màn hình"
+  },
+  "pet": {
+    "title": "Nhím của tôi",
+    "alt": "Nhím {level}, {mood}",
+    "level": {
+      "1": "Nhím con",
+      "2": "Nhím nhỡ",
+      "3": "Nhím trưởng thành",
+      "4": "Vua nhím"
+    },
+    "mood": {
+      "HAPPY": "Cười",
+      "NORMAL": "Bình thường",
+      "HUNGRY": "Đói",
+      "CRY": "Khóc"
+    },
+    "moodText": {
+      "HAPPY": "Hôm nay bắt được bug, nhím vui lắm!",
+      "NORMAL": "Nhím đang chờ bạn bắt bug.",
+      "HUNGRY": "Nhím đói rồi, bắt bug cho nhím ăn nhé!",
+      "CRY": "Lâu quá chưa gặp, nhím khóc mất rồi…"
+    },
+    "streak": "🔥 {count} ngày",
+    "streakLabel": "Chuỗi ngày liên tiếp",
+    "bugs": "{count} bug đã bắt",
+    "toNext": "Còn {count} bug nữa lên cấp",
+    "maxLevel": "Cấp cao nhất rồi!"
   }
 }
