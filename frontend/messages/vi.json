@@ -623,5 +623,19 @@
       "uploadFailed": "Tải lên không được, hãy thử lại",
       "aborted": "Đã huỷ tải lên"
     }
+  },
+  "charts": {
+    "empty": "Chưa có dữ liệu",
+    "passFailLabel": "Kết quả theo ngày",
+    "passFailSummary": "{days} ngày: {passed} Pass, {failed} Fail, {other} Khác",
+    "pass": "Pass",
+    "fail": "Fail",
+    "other": "Khác",
+    "statusLabel": "Trạng thái case",
+    "statusSummary": "Nháp: {DRAFT}, Chờ duyệt: {IN_REVIEW}, Đã duyệt: {APPROVED}, Đã test: {TESTED}",
+    "draft": "Nháp",
+    "inReview": "Chờ duyệt",
+    "approved": "Đã duyệt",
+    "tested": "Đã test"
   }
 }
