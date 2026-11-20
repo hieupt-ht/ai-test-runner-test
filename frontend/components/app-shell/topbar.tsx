@@ -9,6 +9,7 @@ import { useState } from "react"
 
 import { ChangePasswordDialog } from "@/components/account/change-password-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { MusicButton } from "@/components/music/music-button"
 import { NotificationBell } from "@/components/notifications/notification-bell"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -47,6 +48,7 @@ export function Topbar({ user, title }: { user: User; title: string }) {
       <h1 className="min-w-0 truncate text-base font-semibold">{title}</h1>
 
       <div className="flex min-w-0 items-center gap-2">
+        <MusicButton />
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-2 py-1 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">

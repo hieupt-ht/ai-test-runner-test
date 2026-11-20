@@ -19,6 +19,13 @@
     "password": "Mật khẩu",
     "button": "Đăng nhập"
   },
+  "music": {
+    "play": "Phát nhạc",
+    "pause": "Dừng nhạc",
+    "options": "Tùy chọn nhạc",
+    "next": "Bài tiếp",
+    "volume": "Âm lượng"
+  },
   "topbar": {
     "theme": "Giao diện",
     "themeLight": "Sáng",
