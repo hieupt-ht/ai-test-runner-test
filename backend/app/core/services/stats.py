@@ -7,14 +7,21 @@ from datetime import date, datetime, timedelta
 
 from app.core.models.run import Result, ResultStatus
 from app.core.models.stats import (
+    Board,
     BugEvent,
     CaseFact,
+    DayCount,
+    Leaderboard,
+    LeaderboardRow,
     MyPet,
+    Period,
     PetMood,
     ProjectFacts,
+    ProjectStats,
     ResultFact,
+    ScreenProgress,
 )
-from app.core.models.test_case import TestCase
+from app.core.models.test_case import TestCase, TestCaseStatus
 from app.core.models.user import normalize_email
 from app.core.time import VIETNAM
 
@@ -166,4 +173,143 @@ def build_pet(facts_list: list[ProjectFacts], email: str, today: date) -> MyPet:
             worked_today=today in days,
             missed_days=missed,
         ),
+    )
+
+
+# ---- Số liệu project ----
+
+# Case đã lưu trữ hoặc ngừng dùng không tính vào số liệu
+_INACTIVE = {TestCaseStatus.ARCHIVED, TestCaseStatus.DEPRECATED}
+_DONE = {TestCaseStatus.APPROVED, TestCaseStatus.TESTED}
+_SHOWN_STATUSES = [
+    TestCaseStatus.DRAFT,
+    TestCaseStatus.IN_REVIEW,
+    TestCaseStatus.APPROVED,
+    TestCaseStatus.TESTED,
+]
+
+
+def daily_counts(facts_list: list[ProjectFacts], today: date, days: int = 14) -> list[DayCount]:
+    """Số lần chạy mỗi ngày trong `days` ngày kết thúc ở `today`; mỗi dòng kết quả đếm một lần."""
+    first = today - timedelta(days=days - 1)
+    counts = {first + timedelta(days=offset): [0, 0, 0] for offset in range(days)}
+    for facts in facts_list:
+        for item in facts.results:
+            bucket = counts.get(vn_day(item.created_at))
+            if bucket is None:
+                continue  # ngoài khoảng đồ thị
+            if item.status == ResultStatus.PASS:
+                bucket[0] += 1
+            elif item.status == ResultStatus.FAIL:
+                bucket[1] += 1
+            else:
+                bucket[2] += 1
+    return [DayCount(day=day, passed=p, failed=f, other=o) for day, (p, f, o) in counts.items()]
+
+
+def progress(facts: ProjectFacts) -> tuple[int, int]:
+    """(số case đã duyệt hoặc đã test, tổng số case còn dùng)."""
+    active = [case for case in facts.cases if case.status not in _INACTIVE]
+    return (sum(case.status in _DONE for case in active), len(active))
+
+
+def _latest_pass_fail(facts: ProjectFacts) -> dict[str, ResultStatus]:
+    """Kết quả PASS/FAIL mới nhất của mỗi case còn dùng (bỏ qua case lạ hoặc đã lưu trữ)."""
+    active = {case.id for case in facts.cases if case.status not in _INACTIVE}
+    latest: dict[str, ResultFact] = {}
+    for item in facts.results:
+        if item.case_id not in active or item.status not in {ResultStatus.PASS, ResultStatus.FAIL}:
+            continue
+        if item.case_id not in latest or item.created_at >= latest[item.case_id].created_at:
+            latest[item.case_id] = item
+    return {case_id: item.status for case_id, item in latest.items()}
+
+
+def project_stats(facts: ProjectFacts, screen_names: dict[str, str], today: date) -> ProjectStats:
+    latest = _latest_pass_fail(facts)
+    passed = sum(status == ResultStatus.PASS for status in latest.values())
+    _, total = progress(facts)
+    return ProjectStats(
+        total_cases=total,
+        pass_rate=passed / len(latest) if latest else None,
+        open_bugs=len(latest) - passed,
+        daily=daily_counts([facts], today),
+        case_status={
+            status: sum(case.status == status for case in facts.cases) for status in _SHOWN_STATUSES
+        },
+        screens=[
+            ScreenProgress(
+                screen_id=screen_id,
+                screen_name=name,
+                done=sum(
+                    case.screen_id == screen_id and case.status in _DONE for case in facts.cases
+                ),
+                total=sum(
+                    case.screen_id == screen_id and case.status not in _INACTIVE
+                    for case in facts.cases
+                ),
+            )
+            for screen_id, name in screen_names.items()
+        ],
+    )
+
+
+# ---- Bảng xếp hạng ----
+
+
+def period_start(period: Period, today: date) -> date | None:
+    """Ngày đầu của kỳ: tuần bắt đầu từ thứ 2, tháng từ ngày 1, "tất cả" thì không giới hạn."""
+    if period == Period.WEEK:
+        return today - timedelta(days=today.weekday())
+    if period == Period.MONTH:
+        return today.replace(day=1)
+    return None
+
+
+def _board(counts: dict[str, int], names: dict[str, str], me: str, top: int) -> Board:
+    def name_of(email: str) -> str:
+        return names.get(email) or email
+
+    ordered = sorted(
+        ((email, count) for email, count in counts.items() if count > 0),
+        key=lambda item: (-item[1], name_of(item[0]), item[0]),
+    )
+    rows: list[LeaderboardRow] = []
+    for index, (email, count) in enumerate(ordered):
+        # Bằng điểm thì chung hạng (1, 1, 3): lấy hạng của người đứng ngay trước nếu cùng điểm
+        rank = rows[-1].rank if rows and rows[-1].count == count else index + 1
+        rows.append(LeaderboardRow(rank=rank, email=email, name=name_of(email), count=count))
+
+    my_row = next((row for row in rows if row.email == me), None)
+    if my_row is None:
+        my_row = LeaderboardRow(rank=None, email=me, name=name_of(me), count=0)
+    return Board(top=rows[:top], me=None if my_row in rows[:top] else my_row)
+
+
+def leaderboard(
+    facts: ProjectFacts,
+    names: dict[str, str],
+    period: Period,
+    today: date,
+    me: str,
+    top: int = 5,
+) -> Leaderboard:
+    """Xếp hạng người viết case (đã duyệt/đã test) và người bắt bug của một project."""
+    me = normalize_email(me)
+    start = period_start(period, today)
+
+    case_counts: dict[str, int] = {}
+    for case in facts.cases:
+        if case.status in _DONE and (start is None or vn_day(case.created_at) >= start):
+            case_counts[case.created_by] = case_counts.get(case.created_by, 0) + 1
+
+    bug_counts: dict[str, int] = {}
+    for event in bug_events(facts):
+        if start is None or event.day >= start:
+            bug_counts[event.email] = bug_counts.get(event.email, 0) + 1
+
+    return Leaderboard(
+        period=period,
+        cases=_board(case_counts, names, me, top),
+        bugs=_board(bug_counts, names, me, top),
     )

@@ -62,3 +62,54 @@ class MyPet(BaseModel):
     streak: int
     missed_days: int
     mood: PetMood
+
+
+class DayCount(BaseModel):
+    """Số lần chạy trong một ngày (giờ VN) cho đồ thị cột."""
+
+    day: date
+    passed: int
+    failed: int
+    other: int  # BLOCKED + INCONCLUSIVE
+
+
+class ScreenProgress(BaseModel):
+    screen_id: str
+    screen_name: str
+    done: int  # case APPROVED hoặc TESTED
+    total: int  # case chưa lưu trữ / ngừng dùng
+
+
+class ProjectStats(BaseModel):
+    """Các con số của trang Tổng quan project."""
+
+    total_cases: int
+    pass_rate: float | None  # None khi chưa có case nào được chạy PASS/FAIL
+    open_bugs: int
+    daily: list[DayCount]
+    case_status: dict[TestCaseStatus, int]  # luôn đủ DRAFT, IN_REVIEW, APPROVED, TESTED
+    screens: list[ScreenProgress]
+
+
+class Period(StrEnum):
+    WEEK = "week"
+    MONTH = "month"
+    ALL = "all"
+
+
+class LeaderboardRow(BaseModel):
+    rank: int | None  # None: người xem chưa có điểm nào
+    email: str
+    name: str
+    count: int
+
+
+class Board(BaseModel):
+    top: list[LeaderboardRow]
+    me: LeaderboardRow | None  # chỉ có khi người xem nằm ngoài top
+
+
+class Leaderboard(BaseModel):
+    period: Period
+    cases: Board  # xếp hạng viết case
+    bugs: Board  # xếp hạng bắt bug
