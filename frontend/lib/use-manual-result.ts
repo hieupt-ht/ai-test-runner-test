@@ -20,6 +20,9 @@ export function useSubmitManualResult(projectId: string, caseId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId] })
       void queryClient.invalidateQueries({ queryKey: ["me", "assignments"] })
+      // Nhím và tổng quan của tôi đổi theo số bug / chuỗi ngày
+      void queryClient.invalidateQueries({ queryKey: ["me", "pet"] })
+      void queryClient.invalidateQueries({ queryKey: ["me", "dashboard"] })
     },
   })
 }

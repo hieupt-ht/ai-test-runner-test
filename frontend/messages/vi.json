@@ -118,7 +118,9 @@
     "latestResult": "Kết quả gần nhất",
     "noProjects": "Chưa có dự án nào.",
     "noResults": "Chưa có kết quả test.",
-    "viewerEmpty": "Bạn chưa có công việc cần xử lý."
+    "viewerEmpty": "Bạn chưa có công việc cần xử lý.",
+    "projectProgress": "Tiến độ dự án",
+    "recentResults": "Kết quả 14 ngày gần đây"
   },
   "roles": {
     "ADMIN": "Admin",
@@ -178,7 +180,8 @@
     "results": "Kết quả",
     "assignments": "Chia việc",
     "members": "Thành viên",
-    "settings": "Cài đặt"
+    "settings": "Cài đặt",
+    "overview": "Tổng quan"
   },
   "projects": {
     "title": "Quản lý dự án",
@@ -637,5 +640,14 @@
     "inReview": "Chờ duyệt",
     "approved": "Đã duyệt",
     "tested": "Đã test"
+  },
+  "projectOverview": {
+    "numbers": "Các con số chính",
+    "totalCases": "Tổng số case",
+    "passRate": "Tỉ lệ Pass",
+    "openBugs": "Bug đang mở",
+    "daily": "Kết quả 14 ngày gần đây",
+    "caseStatus": "Trạng thái case",
+    "screens": "Tiến độ theo màn hình"
   }
 }

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import OverviewPage from "@/app/(app)/page"
 import type { MyAssignment, Project, ResultItem, Role, User } from "@/lib/api/types"
 import { makeResult } from "@/components/results/result-fixture"
+import type { MyDashboard } from "@/lib/api/types"
 import messages from "@/messages/vi.json"
 
 const mocks = vi.hoisted(() => ({
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   assignments: [] as MyAssignment[],
   projects: [] as Project[],
   overview: { pending_review: 0, latest_result: null as ResultItem | null },
+  dashboard: { projects: [], daily: [] } as MyDashboard,
 }))
 
 vi.mock("@/lib/use-me", () => ({
@@ -34,6 +36,13 @@ vi.mock("@/lib/use-projects", () => ({
 }))
 vi.mock("@/lib/use-overview", () => ({
   useOverview: () => ({ data: mocks.overview, isLoading: false }),
+}))
+vi.mock("@/lib/use-stats", () => ({
+  useMyDashboard: () => ({ data: mocks.dashboard, isLoading: false }),
+}))
+// Đồ thị thật cần đo khung nên thay bằng bản đơn giản
+vi.mock("@/components/charts/lazy", () => ({
+  LazyPassFailChart: ({ days }: { days: unknown[] }) => <div>chart-passfail-{days.length}</div>,
 }))
 
 const activeAssignment: MyAssignment = {
@@ -88,6 +97,7 @@ describe("OverviewPage", () => {
     mocks.assignments = []
     mocks.projects = []
     mocks.overview = { pending_review: 0, latest_result: null }
+    mocks.dashboard = { projects: [], daily: [] }
   })
 
   afterEach(() => {
@@ -143,5 +153,26 @@ describe("OverviewPage", () => {
 
     expect(screen.getByText("Chưa có dự án nào.")).toBeInTheDocument()
     expect(screen.getByText("Chưa có kết quả test.")).toBeInTheDocument()
+  })
+
+  it.each(["TESTER", "VIEWER"] as Role[])("vai trò %s thấy tiến độ từng dự án", (role) => {
+    mocks.role = role
+    mocks.dashboard = {
+      projects: [{ project_id: "p1", project_name: "Dự án A", done: 3, total: 4 }],
+      daily: [{ day: "2026-11-13", passed: 1, failed: 0, other: 0 }],
+    }
+    renderPage()
+
+    expect(screen.getByText("Dự án A")).toBeInTheDocument()
+    expect(screen.getByText("chart-passfail-1")).toBeInTheDocument()
+    // Có dữ liệu thì không còn câu "chưa có công việc"
+    expect(screen.queryByText("Bạn chưa có công việc cần xử lý.")).not.toBeInTheDocument()
+  })
+
+  it("Viewer chưa có dự án nào thì vẫn thấy câu giải thích", () => {
+    mocks.role = "VIEWER"
+    renderPage()
+
+    expect(screen.getByText("Bạn chưa có công việc cần xử lý.")).toBeInTheDocument()
   })
 })

@@ -13,18 +13,25 @@ const SLICES: { key: StatusKey; labelKey: string; color: string }[] = [
 ]
 
 /** Vòng tròn chia theo trạng thái case. */
-export default function CaseStatusDonut({ counts }: { counts: Record<StatusKey, number> }) {
+export default function CaseStatusDonut({ counts }: { counts: Record<string, number> }) {
   const t = useTranslations("charts")
-  const total = SLICES.reduce((sum, slice) => sum + counts[slice.key], 0)
+  // API trả dạng từ điển tự do; thiếu trạng thái nào thì coi là 0
+  const countOf = (key: StatusKey) => counts[key] ?? 0
+  const total = SLICES.reduce((sum, slice) => sum + countOf(slice.key), 0)
   const data = SLICES.map((slice) => ({
     name: t(slice.labelKey),
-    value: counts[slice.key],
+    value: countOf(slice.key),
     color: slice.color,
   }))
 
   return (
     <figure aria-label={t("statusLabel")} className="m-0">
-      <figcaption className="sr-only">{t("statusSummary", counts)}</figcaption>
+      <figcaption className="sr-only">{t("statusSummary", {
+          DRAFT: countOf("DRAFT"),
+          IN_REVIEW: countOf("IN_REVIEW"),
+          APPROVED: countOf("APPROVED"),
+          TESTED: countOf("TESTED"),
+        })}</figcaption>
       {total === 0 ? (
         <p className="py-16 text-center text-sm text-muted-foreground">{t("empty")}</p>
       ) : (
