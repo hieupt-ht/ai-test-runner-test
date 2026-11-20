@@ -41,7 +41,8 @@ export function PetCard() {
         <div className="w-full min-w-0 space-y-2">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="text-xl font-semibold">{t(`level.${level}`)}</p>
-            <p className="text-sm font-medium tabular-nums" aria-label={t("streakLabel")}>
+            <p className="text-sm font-medium tabular-nums">
+              <span className="sr-only">{t("streakLabel")}: </span>
               {t("streak", { count: pet.streak })}
             </p>
             <p className="text-sm tabular-nums text-muted-foreground">{t("bugs", { count: pet.bugs })}</p>

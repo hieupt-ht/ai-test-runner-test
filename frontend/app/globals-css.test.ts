@@ -46,7 +46,7 @@ describe("globals.css", () => {
       "--background": "#FFF7FB",
       "--card": "#FFFFFF",
       "--foreground": "#3A2350",
-      "--primary": "#B15CFF",
+      "--primary": "#8F3FE0",
       "--chart-1": "#C4A1FF",
       "--chart-2": "#FF9FCB",
       "--chart-3": "#8BE3C9",

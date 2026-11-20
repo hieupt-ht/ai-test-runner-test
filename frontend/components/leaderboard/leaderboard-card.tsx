@@ -34,7 +34,8 @@ export function LeaderboardCard({
   const t = useTranslations("leaderboard")
   const top = board.top.slice(0, 5)
   const meInTop = top.some((row) => row.email === meEmail)
-  const showMeBelow = board.me !== null && !meInTop
+  // Bảng trống thì chỉ hiện câu mời, không hiện dòng "Chưa có điểm" của mình
+  const showMeBelow = board.me !== null && !meInTop && top.length > 0
 
   return (
     <Card>

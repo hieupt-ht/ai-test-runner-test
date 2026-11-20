@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MusicProvider, useMusic } from "@/components/music/music-provider"
@@ -53,6 +53,17 @@ describe("MusicProvider", () => {
     expect(container.querySelectorAll("audio")).toHaveLength(1)
     expect(container.querySelector("audio")?.getAttribute("preload")).toBe("none")
     expect(state()).toBe("dung|0|0.4")
+  })
+
+  it("nhạc bị dừng từ bên ngoài (phím media, rút tai nghe) thì nút về trạng thái dừng", async () => {
+    const { container } = renderProvider()
+    await act(async () => screen.getByText("toggle").click())
+    expect(state()).toBe("dang-phat|0|0.4")
+
+    fireEvent.pause(container.querySelector("audio")!)
+    expect(state()).toBe("dung|0|0.4")
+    fireEvent.play(container.querySelector("audio")!)
+    expect(state()).toBe("dang-phat|0|0.4")
   })
 
   it("toggle phát rồi dừng", async () => {

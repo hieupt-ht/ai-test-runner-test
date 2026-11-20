@@ -6,11 +6,11 @@ import ProjectOverviewPage from "@/app/(app)/projects/[projectId]/overview/page"
 import type { ProjectStats } from "@/lib/api/types"
 import messages from "@/messages/vi.json"
 
-const mocks = vi.hoisted(() => ({ stats: undefined as ProjectStats | undefined }))
+const mocks = vi.hoisted(() => ({ stats: undefined as ProjectStats | undefined, isError: false }))
 
 vi.mock("@/lib/use-project-id", () => ({ useProjectId: () => "p1" }))
 vi.mock("@/lib/use-stats", () => ({
-  useProjectStats: () => ({ data: mocks.stats, isLoading: false }),
+  useProjectStats: () => ({ data: mocks.stats, isLoading: false, isError: mocks.isError }),
 }))
 vi.mock("@/components/leaderboard/project-leaderboards", () => ({
   ProjectLeaderboards: () => <div>leaderboards</div>,
@@ -43,10 +43,18 @@ function renderPage() {
 
 beforeEach(() => {
   mocks.stats = makeStats()
+  mocks.isError = false
 })
 afterEach(cleanup)
 
 describe("Tổng quan project", () => {
+  it("API lỗi thì báo lỗi, không hiện khung chờ mãi", () => {
+    mocks.stats = undefined
+    mocks.isError = true
+    renderPage()
+    expect(screen.getByRole("alert")).toHaveTextContent("Không tải được số liệu của project")
+  })
+
   it("hiện 3 thẻ số: tổng case, % Pass, bug đang mở", () => {
     renderPage()
     expect(screen.getByText("128")).toBeInTheDocument()

@@ -38,6 +38,13 @@ describe("PetCard", () => {
     expect(screen.getByText("Nhím nhỡ")).toBeInTheDocument()
   })
 
+  it("chuỗi ngày có chữ ẩn cho trình đọc màn hình, không dùng aria-label trên thẻ p", () => {
+    mocks.pet = pet({})
+    const { container } = renderCard()
+    expect(screen.getByText(/Chuỗi ngày liên tiếp/)).toHaveClass("sr-only")
+    expect(container.querySelector("p[aria-label]")).toBeNull()
+  })
+
   it("Vua nhím không còn thanh lên cấp", () => {
     mocks.pet = pet({ level: 4, bugs: 120, bugs_to_next: null })
     renderCard()

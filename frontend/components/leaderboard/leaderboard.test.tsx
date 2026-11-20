@@ -73,6 +73,13 @@ describe("LeaderboardCard", () => {
     expect(screen.getByText("Chưa có điểm")).toBeInTheDocument()
   })
 
+  it("bảng chưa ai có điểm (backend vẫn trả me 0 điểm) thì hiện câu mời, không hiện dấu …", () => {
+    const board: Board = { top: [], me: row(null, "me@example.com", "Tôi", 0) }
+    wrap(<LeaderboardCard title="Viết case" board={board} meEmail="me@example.com" />)
+    expect(screen.getByText("Chưa ai có điểm — bạn là người đầu tiên nhé!")).toBeInTheDocument()
+    expect(screen.queryByText("…")).not.toBeInTheDocument()
+  })
+
   it("bằng điểm thì cùng hạng", () => {
     const board: Board = { top: [row(1, "a@x.com", "An", 5), row(1, "b@x.com", "Bình", 5)], me: null }
     wrap(<LeaderboardCard title="Viết case" board={board} meEmail="me@example.com" />)

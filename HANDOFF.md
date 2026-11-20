@@ -107,3 +107,13 @@ Thay hẳn Google OAuth. Thiết kế `docs/superpowers/specs/2026-11-17-passwor
 - Chỉ backend ghi Sheet, qua repository; chỉ `gateway.py` gọi Google. Lỗi API có `{"detail": "<câu tiếng Việt>"}`. Chuỗi giao diện đặt ở `frontend/messages/vi.json`.
 - Mã case `TC-000001` có thể trùng giữa các dự án: mọi khoá dùng chung và mọi tìm kiếm issue phải kèm dự án hoặc repo.
 - Google Sheets có hạn mức đọc khoảng 60 lần/phút; tránh thêm lượt đọc dày. Issue của repo công khai không được chứa `test_data` hay email người tạo/sửa.
+
+## Sửa theo review cả nhánh `feature/fun-ui`
+Reviewer: không có lỗi nghiêm trọng. Đã sửa (đều viết test đỏ trước):
+- Màu nút chính Kẹo ngọt `--primary` / `--sidebar-primary` đổi `#B15CFF` → `#8F3FE0` (chữ trắng đạt ~5.3:1). `#B15CFF` còn dùng cho `--ring`, `--accent`, đồ thị.
+- Bảng xếp hạng trống hiện câu mời thay vì dòng "Chưa có điểm".
+- Trang Tổng quan project báo lỗi khi API lỗi (không hiện khung chờ mãi).
+- Nút nhạc theo sự kiện `play`/`pause` của thẻ audio (nhạc dừng từ bên ngoài).
+- Chuỗi ngày của nhím dùng chữ `sr-only` thay `aria-label` trên thẻ `p`.
+- `from_iso` coi giờ thiếu múi giờ là UTC (tránh lỗi 500 khi Sheet bị sửa tay).
+Chưa sửa (nhỏ, để sau): thanh lên cấp tính từ 0 bug; chữ phụ trên nền `--muted` hơi nhạt; `/me/pet` và `/me/dashboard` đọc Sheet 2 lần ở lần đầu; mã màu riêng của nhím ngoài danh sách ngoại lệ; thiếu test 404 cho `/leaderboard`.

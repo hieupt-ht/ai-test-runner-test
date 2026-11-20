@@ -114,7 +114,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     <MusicContext.Provider value={{ playing, track, volume, toggle, next, setVolume }}>
       {children}
       {/* preload="none": chưa bấm phát thì chưa tải file nào */}
-      <audio ref={audioRef} src={TRACKS[track].src} preload="none" onEnded={next} />
+      <audio
+        ref={audioRef}
+        src={TRACKS[track].src}
+        preload="none"
+        onEnded={next}
+        // Nhạc bị dừng/phát từ bên ngoài (phím media, rút tai nghe...) thì nút theo kịp
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+      />
     </MusicContext.Provider>
   )
 }

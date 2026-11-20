@@ -655,7 +655,8 @@
     "openBugs": "Bug đang mở",
     "daily": "Kết quả 14 ngày gần đây",
     "caseStatus": "Trạng thái case",
-    "screens": "Tiến độ theo màn hình"
+    "screens": "Tiến độ theo màn hình",
+    "error": "Không tải được số liệu của project. Bạn thử tải lại trang nhé."
   },
   "pet": {
     "title": "Nhím của tôi",

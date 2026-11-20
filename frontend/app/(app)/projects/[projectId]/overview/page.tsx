@@ -26,8 +26,15 @@ function StatCard({ title, value }: { title: string; value: string }) {
 export default function ProjectOverviewPage() {
   const t = useTranslations("projectOverview")
   const projectId = useProjectId()
-  const { data: stats } = useProjectStats(projectId)
+  const { data: stats, isError } = useProjectStats(projectId)
 
+  if (isError) {
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        {t("error")}
+      </p>
+    )
+  }
   if (!stats) return <Skeleton className="h-64 w-full" />
 
   // Chưa có kết quả PASS/FAIL nào thì không có % để hiện
