@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     # Cache danh sách case/việc/màn hình của dự án. Ngắn, vì ghi xong là xoá cache ngay.
     # Chỉ bị "cũ" khi có người sửa thẳng trên Google Sheet (không qua app).
     sheet_cache_ttl_seconds: int = 60
+    # Cache số liệu (thẻ số, đồ thị, xếp hạng, nhím) của project; ghi case/kết quả là xoá ngay.
+    stats_cache_ttl_seconds: int = 600
 
 
 @lru_cache

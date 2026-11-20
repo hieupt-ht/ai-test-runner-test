@@ -745,6 +745,7 @@ def test_edit_approved_case_with_results_requests_rerun_through_api(
     project: Project,
     review_off: Project,
     gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
 ) -> None:
     sink = RecordingIssueSink()
     app.state.services.issue_sync = sink
@@ -756,7 +757,9 @@ def test_edit_approved_case_with_results_requests_rerun_through_api(
     from app.core.models.run import Result, ResultStatus
     from app.core.repositories.runs import ResultRepository
 
-    ResultRepository(gateway, project.spreadsheet_id).append_batch(
+    ResultRepository(
+        gateway, project.spreadsheet_id, redis=redis, project_id=project.id
+    ).append_batch(
         [
             Result(
                 id="RUN-1-" + case["id"],

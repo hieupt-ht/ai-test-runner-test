@@ -47,6 +47,7 @@ class Services:
     app_base_url: str = "http://localhost:3000"
     lock_wait_seconds: float = 5.0
     sheet_cache_ttl_seconds: int = 60
+    stats_cache_ttl_seconds: int = 600  # cache số liệu project (xoá ngay khi ghi case/kết quả)
 
 
 def is_configured(settings: Settings) -> bool:
@@ -147,4 +148,5 @@ def build_services(settings: Settings, gateway: GoogleSheetsGateway) -> Services
         cloud_name=settings.cloudinary_cloud_name,
         app_base_url=settings.app_base_url,
         sheet_cache_ttl_seconds=settings.sheet_cache_ttl_seconds,
+        stats_cache_ttl_seconds=settings.stats_cache_ttl_seconds,
     )

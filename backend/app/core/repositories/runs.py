@@ -28,6 +28,7 @@ from app.core.models.run import (
 from app.core.sheets.gateway import SheetsGateway
 from app.core.sheets.schema import RESULT_COLUMNS, RESULTS_TAB, RUN_COLUMNS, RUNS_TAB
 from app.core.sheets.table import Record, SheetTable
+from app.core.stats_cache import invalidate_project_stats
 from app.core.time import from_iso, to_iso, utc_now
 
 
@@ -100,7 +101,9 @@ class RunRepository:
         lock_wait_seconds: float = 5.0,
     ) -> None:
         self._table = SheetTable(gateway, spreadsheet_id, RUNS_TAB, RUN_COLUMNS)
-        self._results = ResultRepository(gateway, spreadsheet_id)
+        self._results = ResultRepository(
+            gateway, spreadsheet_id, redis=redis, project_id=project_id
+        )
         self._ids = IdGenerator(
             gateway, spreadsheet_id, redis, project_id, lock_wait_seconds=lock_wait_seconds
         )
@@ -335,12 +338,18 @@ def _result_from_record(record: Record) -> Result:
 
 
 class ResultRepository:
-    def __init__(self, gateway: SheetsGateway, spreadsheet_id: str) -> None:
+    def __init__(
+        self, gateway: SheetsGateway, spreadsheet_id: str, *, redis: Redis, project_id: str
+    ) -> None:
         self._table = SheetTable(gateway, spreadsheet_id, RESULTS_TAB, RESULT_COLUMNS)
+        self._redis = redis
+        self._project_id = project_id
 
     def append_batch(self, results: list[Result]) -> None:
         """Ghi nhiều kết quả bằng đúng một lời gọi Google."""
         self._table.append_many([_result_to_record(result) for result in results])
+        # Số liệu của project (bug, % Pass, xếp hạng...) đang cache phải tính lại
+        invalidate_project_stats(self._redis, self._project_id)
 
     def list_all(self) -> list[Result]:
         """Đọc toàn bộ Results một lượt để tổng hợp nhiều run mà không đọc lặp Sheet."""
