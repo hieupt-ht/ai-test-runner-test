@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 
 import { LazyPassFailChart } from "@/components/charts/lazy"
 import { ProgressList } from "@/components/charts/progress-list"
+import { PetCard } from "@/components/pet/pet-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { ResultItem } from "@/lib/api/types"
 import { useMe } from "@/lib/use-me"
@@ -99,6 +100,8 @@ export default function OverviewPage() {
         <h1 className="text-2xl font-semibold">{t("greeting", { name: user?.name ?? "" })}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
       </div>
+
+      <PetCard />
 
       {user?.role === "TESTER" && (
         <section aria-label={t("testerSection")} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -40,6 +40,7 @@ vi.mock("@/lib/use-overview", () => ({
 vi.mock("@/lib/use-stats", () => ({
   useMyDashboard: () => ({ data: mocks.dashboard, isLoading: false }),
 }))
+vi.mock("@/components/pet/pet-card", () => ({ PetCard: () => <div>pet-card</div> }))
 // Đồ thị thật cần đo khung nên thay bằng bản đơn giản
 vi.mock("@/components/charts/lazy", () => ({
   LazyPassFailChart: ({ days }: { days: unknown[] }) => <div>chart-passfail-{days.length}</div>,
