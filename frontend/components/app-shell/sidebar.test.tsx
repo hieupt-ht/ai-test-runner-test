@@ -53,4 +53,34 @@ describe("Sidebar", () => {
 
     expect(screen.getAllByRole("link", { name: "Kết quả" })[0]).toHaveAttribute("aria-current", "page")
   })
+
+  it("chỉ có một mục Tổng quan trong project", () => {
+    mocks.projects = [{ id: "p1", name: "Dự án A", archived: false }]
+    mocks.pathname = "/projects/p1/overview"
+    renderSidebar()
+
+    // Sidebar có hai bản (máy tính và điện thoại) nên mỗi mục xuất hiện 2 lần
+    const links = screen.getAllByRole("link", { name: "Tổng quan" })
+    const projectLinks = links.filter((a) => a.getAttribute("href")?.startsWith("/projects/p1"))
+    expect(projectLinks.map((a) => a.getAttribute("href"))).toEqual([
+      "/projects/p1/overview",
+      "/projects/p1/overview",
+    ])
+  })
+
+  it("project đang xem vẫn thu lại được khi bấm nút, bấm nữa thì mở lại", () => {
+    mocks.projects = [{ id: "p1", name: "Dự án A", archived: false }]
+    mocks.pathname = "/projects/p1/results"
+    renderSidebar()
+
+    const button = screen.getAllByRole("button", { name: "Dự án A" })[0]
+    expect(button).toHaveAttribute("aria-expanded", "true")
+
+    fireEvent.click(button)
+    expect(screen.getAllByRole("button", { name: "Dự án A" })[0]).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByRole("link", { name: "Kết quả" })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Dự án A" })[0])
+    expect(screen.getAllByRole("link", { name: "Kết quả" })[0]).toBeInTheDocument()
+  })
 })
