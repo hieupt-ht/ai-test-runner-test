@@ -29,9 +29,7 @@ def test_list_for_filters_and_sorts_newest_first(audit_log: AuditLogRepository) 
     def record(
         actor: str, action: str, entity: str, entity_id: str, diff: dict[str, object]
     ) -> None:
-        audit_log.record(
-            actor=actor, action=action, entity=entity, entity_id=entity_id, diff=diff
-        )
+        audit_log.record(actor=actor, action=action, entity=entity, entity_id=entity_id, diff=diff)
 
     record("a@x.com", "CREATE", "test_case", "TC-000001", {})
     record("a@x.com", "CREATE", "test_case", "TC-000002", {})
@@ -67,3 +65,32 @@ def test_latest_returns_only_when_return_is_the_latest_status_change(
     assert list(found) == ["TC-1"]
     assert found["TC-1"].diff["comment"] == "Thiếu bước 3"
     assert found["TC-1"].actor == "lead@x.com"
+
+
+def test_record_many_single_append(
+    audit_log: AuditLogRepository, gateway: FakeSheetsGateway
+) -> None:
+    before = gateway.calls.count("append:AuditLog")
+
+    audit_log.record_many(
+        [
+            {
+                "actor": "a@x.com",
+                "action": "CREATE",
+                "entity": "test_case",
+                "entity_id": "TC-000001",
+                "diff": {"title": "Một"},
+            },
+            {
+                "actor": "a@x.com",
+                "action": "CREATE",
+                "entity": "test_case",
+                "entity_id": "TC-000002",
+                "diff": {},
+            },
+        ]
+    )
+
+    assert gateway.calls.count("append:AuditLog") == before + 1
+    assert audit_log.list_for("test_case", "TC-000001")[0].diff == {"title": "Một"}
+    assert len(audit_log.list_for("test_case", "TC-000002")) == 1

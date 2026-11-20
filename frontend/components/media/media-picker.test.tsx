@@ -57,6 +57,42 @@ describe("MediaPicker", () => {
     expect(onChange).toHaveBeenCalledWith([media("a"), { ...media("b"), note: "nút Đăng nhập" }])
   })
 
+  it("dán ảnh (Ctrl+V) trong ô thì tải ảnh đó lên", async () => {
+    vi.mocked(uploadMedia).mockResolvedValue(media("pasted"))
+    const onChange = renderPicker([])
+    const file = new File(["x"], "image.png", { type: "image/png" })
+    fireEvent.paste(screen.getByRole("group", { name: "Ảnh/video hướng dẫn" }), {
+      clipboardData: { files: [file], items: [] },
+    })
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([media("pasted")]))
+    expect(uploadMedia).toHaveBeenCalledWith(file, expect.objectContaining({ projectId: "PRJ-0001" }))
+  })
+
+  it("pasteScope=page: dán ảnh ở bất kỳ đâu trên trang cũng tải lên", async () => {
+    vi.mocked(uploadMedia).mockResolvedValue(media("anywhere"))
+    const onChange = vi.fn()
+    render(
+      <NextIntlClientProvider locale="vi" messages={messages}>
+        <input aria-label="ô khác" />
+        <MediaPicker value={[]} onChange={onChange} projectId="PRJ-0001" pasteScope="page" />
+      </NextIntlClientProvider>,
+    )
+    const file = new File(["x"], "image.png", { type: "image/png" })
+    fireEvent.paste(screen.getByLabelText("ô khác"), {
+      clipboardData: { files: [file], items: [] },
+    })
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([media("anywhere")]))
+  })
+
+  it("dán chữ thì bỏ qua, không tải gì lên", () => {
+    vi.mocked(uploadMedia).mockClear()
+    renderPicker([])
+    fireEvent.paste(screen.getByRole("group", { name: "Ảnh/video hướng dẫn" }), {
+      clipboardData: { files: [], items: [] },
+    })
+    expect(uploadMedia).not.toHaveBeenCalled()
+  })
+
   it("video có thẻ video có nút điều khiển, ảnh bấm mở xem lớn", () => {
     const { container } = render(
       <NextIntlClientProvider locale="vi" messages={messages}>

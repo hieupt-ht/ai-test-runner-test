@@ -138,6 +138,38 @@ def test_create_on_unknown_screen_is_invalid(env: Env) -> None:
         env.service.create(LEAD, screen_id="SC-9999", content=content())
 
 
+def test_assigned_tester_can_run_but_not_edit_others_case(env: Env) -> None:
+    # Spec mục 4: được giao màn hình thì chỉ chạy, không sửa case người khác tạo.
+    env.assignments.create(
+        screen_id="SC-0001",
+        assignee_email=TESTER_B.email,
+        deadline=today_in_vietnam() + timedelta(days=7),
+    )
+    case = env.service.create(TESTER_A, screen_id="SC-0001", content=content())
+
+    assert env.service.can_edit(TESTER_B, case) is False
+    assert env.service.can_run(TESTER_B, case) is True
+    assert env.service.can_edit(TESTER_A, case) is True
+    with pytest.raises(TestCasePermissionError):
+        env.service.update_content(TESTER_B, case.id, version=1, content=content("Khác"))
+
+
+def test_mark_tested_by_assigned_runner(env: Env) -> None:
+    env.assignments.create(
+        screen_id="SC-0001",
+        assignee_email=TESTER_B.email,
+        deadline=today_in_vietnam() + timedelta(days=7),
+    )
+    manual = content().model_copy(update={"execution_mode": ExecutionMode.MANUAL})
+    case = env.service.create(TESTER_A, screen_id="SC-0001", content=manual)
+
+    tested = env.service.mark_tested(TESTER_B, case.id, version=case.version)
+
+    assert tested.status == TestCaseStatus.TESTED
+    last = env.service.history(case.id)[0]
+    assert (last.action, last.actor) == ("MANUAL_TEST", "b@x.com")
+
+
 def test_tester_edit_rules(env: Env, case_of_a: Callable[[], TestCase]) -> None:
     case = case_of_a()
 
@@ -497,9 +529,7 @@ def test_edit_with_review_on_resets_to_draft_and_sends_no_note(env: Env) -> None
     service.transition(TESTER_A, case.id, CaseAction.SUBMIT, version=1)
     service.transition(LEAD, case.id, CaseAction.APPROVE, version=2)
 
-    saved = service.update_content(
-        TESTER_A, case.id, version=3, content=content("Tiêu đề khác")
-    )
+    saved = service.update_content(TESTER_A, case.id, version=3, content=content("Tiêu đề khác"))
 
     assert saved.status == TestCaseStatus.DRAFT
     assert sink.edits == []
@@ -556,9 +586,7 @@ def test_media_removed_from_case_is_sent_to_janitor(env: Env) -> None:
         TESTER_A, screen_id="SC-0001", content=content_with([image("a"), image("b")], [])
     )
 
-    service.update_content(
-        TESTER_A, case.id, version=1, content=content_with([image("b")], [])
-    )
+    service.update_content(TESTER_A, case.id, version=1, content=content_with([image("b")], []))
 
     assert janitor.deleted == ["a"]
 
@@ -566,9 +594,7 @@ def test_media_removed_from_case_is_sent_to_janitor(env: Env) -> None:
 def test_media_removed_from_a_step_is_also_cleaned(env: Env) -> None:
     janitor = FakeJanitor()
     service = with_media(env, janitor)
-    case = service.create(
-        TESTER_A, screen_id="SC-0001", content=content_with([], [image("s1")])
-    )
+    case = service.create(TESTER_A, screen_id="SC-0001", content=content_with([], [image("s1")]))
 
     service.update_content(TESTER_A, case.id, version=1, content=content_with([], []))
 
@@ -619,9 +645,7 @@ def test_audit_diff_keeps_only_kind_and_note_of_media(env: Env) -> None:
     case = service.create(
         TESTER_A, screen_id="SC-0001", content=content_with([image("a")], [image("s1")])
     )
-    service.update_content(
-        TESTER_A, case.id, version=1, content=content_with([image("b")], [])
-    )
+    service.update_content(TESTER_A, case.id, version=1, content=content_with([image("b")], []))
 
     rows = env.gateway.data[env.project.spreadsheet_id]["AuditLog"]
     assert "res.cloudinary.com" not in str(rows)

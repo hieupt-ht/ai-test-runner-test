@@ -1,6 +1,6 @@
 # HANDOFF — đọc file này đầu tiên
 
-Cập nhật: 2026-11-15. Nhánh hiện tại: `feature/ai-agent-runner` (từ `develop`). **Không push, không tạo PR khi chưa được chủ dự án đồng ý.**
+Cập nhật: 2026-11-19. Nhánh hiện tại: `feature/ai-agent-runner` (từ `develop`). **Không push, không tạo PR khi chưa được chủ dự án đồng ý.**
 
 ## Dự án đang ở đâu
 
@@ -9,6 +9,17 @@ AI Test Runner là web app nội bộ cho QA: Tester viết case, QA Lead duyệ
 M1–M3 đã nằm ở `develop`. Kế hoạch mới ở `docs/superpowers/plans/2026-11-14-case-to-issue-and-codex-agent.md`, thiết kế ở `docs/superpowers/specs/2026-11-14-case-to-issue-and-codex-agent-design.md`. Hướng worker Playwright cũ được giữ ở nhánh `feature/m4-playwright-worker` và tag `m4-playwright-v1`; **không** có worker hay tab Chạy test trên nhánh hiện tại. Chỉ mô hình và repository `Runs`/`Results` được lấy lại từ tag để phục vụ API agent.
 
 Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026-11-14-notifications-results-dashboard.md` đã hoàn thành đủ 10 task. Ứng dụng hiện có chuông thông báo, trang Kết quả, hai tab "Đang làm"/"Đã xong", trang Tổng quan theo vai trò và hộp thoại dùng tốt hơn trên màn hình hẹp. Thông báo lưu trong Redis 30 ngày, tối đa 100 cái mỗi người; mất thông báo không làm mất dữ liệu chính. Cách cấu hình Codex và prompt mẫu ở `docs/codex-agent.md`. Tính năng **Chạy lại** đã xong: nút ở trang Kết quả (QA Lead/Admin) gọi `POST /api/projects/{project_id}/test-cases/{case_id}/request-rerun`, app comment + mở lại issue + gắn nhãn `needs-rerun`; khi có kết quả mới app tự bỏ nhãn này. Đã chạy thử trên repo thật `hieupt-ht/ShopHub` (RUN-0005). Codex **không** tự comment lên issue, app làm việc đó bằng GitHub App. Kiểm tra cuối: backend **388 test**, frontend **105 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
+
+## Đã xong (2026-11-19): nhập test case từ Excel
+
+Thiết kế `docs/superpowers/specs/2026-11-19-import-test-cases-design.md`, kế hoạch `docs/superpowers/plans/2026-11-19-import-test-cases.md` (10 task / 3 đợt, làm kiểu subagent: mỗi task một người làm + một người kiểm tra).
+
+- **Đợt 1 xong** (Task 1–3, commit `22cd6ba`, `13b1410`, `6f3aedb`): trạng thái việc đếm mọi case của màn hình (nhãn WRITING = "Đang làm"); tách `can_edit` (người tạo / lead) và `can_run` (thêm tester được giao màn hình; `Action.RUN_TEST_CASE`); kết quả test tay FAIL bắt buộc có ít nhất một ảnh/video (422); trang case hiện khung chạy cho người chỉ được chạy. Backend **743 test**, frontend **272 test**, mypy/ruff/tsc/eslint sạch.
+- **Đợt 2 xong** (Task 4–7, backend; commit `bfd4b2c`+`192fdcb`, `2759e9f`, `b3e9448`+`6d45ff1`, `c78d01c`): `case_import.py` đọc file .xlsx theo 16 cột (chặn file >2 MB, >2000 dòng, >300 case, dừng đọc sớm); `next_ids`/`create_many`/`record_many` ghi một lô; `TestCaseService.preview_import`/`import_cases` (kiểm tra trong khoá assignments→test-cases, có lỗi thì không ghi gì, audit/trạng thái/thông báo sau khi ghi chỉ log nếu lỗi); API `GET .../test-cases/import/template`, `POST .../import/preview`, `POST .../import` (422 `{detail, errors}`, 409 khoá bận, 503 lỗi Sheet; file rỗng báo "File không có test case nào"). Backend **798 test**, mypy/ruff sạch; API types đã sinh lại. Việc nhỏ chưa sửa (ghi ở sổ SDD): chuẩn hoá NFC chữ có dấu, `_refresh_status` chưa bắt lỗi mạng ngoài HttpError.
+- **Đợt 3 xong** (Task 8–10, frontend + tài liệu; commit `25d12ae`, `3082672`, `62044d6`, docs): hook `use-case-import`, nút "Nhập từ Excel" ở trang danh sách case mở hộp thoại (tải file mẫu, chọn file, xem trước lỗi/cảnh báo, "Nhập N case"). Hướng dẫn cho QA/tester: `docs/huong-dan-nhap-test-case.md`.
+- **Thay đổi hành vi cần biết:** (1) khoá case: tester chỉ **sửa** case mình tạo, case người khác viết chỉ **chạy** được (tester B được giao màn hình không còn sửa được case của tester A); (2) trạng thái việc của màn hình đếm mọi case chưa ngừng dùng, ai tạo cũng tính; (3) nhãn `WRITING` hiển thị là "Đang làm" (giá trị trong Sheet/API giữ nguyên); (4) FAIL ở test tay bắt buộc có ảnh/video.
+- **Việc còn lại:** review cả nhánh (các việc nhỏ hoãn lại ghi ở sổ SDD `.superpowers/sdd/2026-11-19-import-test-cases/progress.md`); chạy thử app bằng trình duyệt thật, chụp màn hình ở 1366×768 (cần dữ liệu Google thật, chưa làm).
+- **Cần xem lại:** `backend/app/api/routers/me.py` `case_counts` vẫn lọc theo `created_by`, lệch luật trạng thái mới (thẻ "Việc của tôi" có thể đếm ít hơn trạng thái).
 
 ## Đang làm (2026-11-16)
 

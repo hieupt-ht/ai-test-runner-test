@@ -15,6 +15,7 @@ class Action(StrEnum):
     MANAGE_MEMBERS = "MANAGE_MEMBERS"
     MANAGE_SCREENS = "MANAGE_SCREENS"
     EDIT_TEST_CASE = "EDIT_TEST_CASE"
+    RUN_TEST_CASE = "RUN_TEST_CASE"
     REVIEW_TEST_CASE = "REVIEW_TEST_CASE"
     TRIGGER_RUN = "TRIGGER_RUN"
     REVIEW_RESULTS = "REVIEW_RESULTS"
@@ -31,6 +32,7 @@ ALLOWED_ROLES: dict[Action, set[Role]] = {
     Action.MANAGE_MEMBERS: _LEADS,
     Action.MANAGE_SCREENS: _LEADS,
     Action.EDIT_TEST_CASE: _LEADS | {Role.TESTER},
+    Action.RUN_TEST_CASE: _LEADS | {Role.TESTER},
     Action.REVIEW_TEST_CASE: _LEADS,
     Action.TRIGGER_RUN: _LEADS,
     Action.REVIEW_RESULTS: _LEADS,
@@ -55,8 +57,9 @@ def can(
     if needs_membership and not is_member:
         return False
 
-    # Tester chỉ sửa được case mình tạo, hoặc case thuộc màn hình được giao cho mình.
-    if user.role == Role.TESTER and action == Action.EDIT_TEST_CASE:
+    # Tester chỉ sửa/chạy được case mình tạo, hoặc case thuộc màn hình được giao cho mình
+    # (service quyết định "của mình": sửa chỉ người tạo, chạy thì cả người được giao).
+    if user.role == Role.TESTER and action in (Action.EDIT_TEST_CASE, Action.RUN_TEST_CASE):
         return owns_or_assigned
 
     return True

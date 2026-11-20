@@ -10,6 +10,9 @@ import messages from "@/messages/vi.json"
 const mocks = vi.hoisted(() => ({
   cases: [] as unknown[],
   results: [] as unknown[],
+  project: { archived: false, permissions: ["EDIT_TEST_CASE"] } as unknown,
+  me: { email: "lead@x.vn", role: "QA_LEAD" } as unknown,
+  assignments: [] as unknown[],
 }))
 
 vi.mock("@/lib/use-project-id", () => ({ useProjectId: () => "p1" }))
@@ -18,10 +21,17 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }))
 vi.mock("@/lib/use-projects", () => ({
-  useProject: () => ({ data: { archived: false, permissions: ["EDIT_TEST_CASE"] } }),
+  useProject: () => ({ data: mocks.project }),
 }))
 vi.mock("@/lib/use-project-data", () => ({
   useScreens: () => ({ data: [{ id: "SC-0001", name: "Đăng nhập" }] }),
+  useAssignments: () => ({ data: mocks.assignments }),
+}))
+vi.mock("@/lib/use-me", () => ({ useMe: () => ({ user: mocks.me, isLoading: false }) }))
+vi.mock("@/lib/use-case-import", () => ({
+  templateUrl: () => "/template",
+  usePreviewImport: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useImportCases: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 vi.mock("@/lib/use-test-cases", () => ({
   useTestCases: () => ({ data: mocks.cases, isLoading: false, isError: false }),
@@ -65,6 +75,9 @@ describe("Danh sách test case – cách chạy và kết quả gần nhất", (
     cleanup()
     mocks.cases = []
     mocks.results = []
+    mocks.project = { archived: false, permissions: ["EDIT_TEST_CASE"] }
+    mocks.me = { email: "lead@x.vn", role: "QA_LEAD" }
+    mocks.assignments = []
   })
 
   it("cột Cách chạy ghi Test tay hoặc Tự động", () => {
@@ -101,5 +114,22 @@ describe("Danh sách test case – cách chạy và kết quả gần nhất", (
     mocks.results = [{ case_id: "TC-000001", status: "FAIL" }]
     renderPage()
     expect(within(rowOf("TC-000001")).queryByText(/Fail/)).not.toBeInTheDocument()
+  })
+
+  it("QA Lead thấy nút Nhập từ Excel", () => {
+    renderPage()
+    expect(screen.getByRole("button", { name: "Nhập từ Excel" })).toBeInTheDocument()
+  })
+
+  it("tester chưa được giao màn hình nào thì không thấy nút Nhập từ Excel", () => {
+    mocks.me = { email: "t@x.vn", role: "TESTER" }
+    renderPage()
+    expect(screen.queryByRole("button", { name: "Nhập từ Excel" })).not.toBeInTheDocument()
+  })
+
+  it("dự án đã lưu trữ thì không thấy nút Nhập từ Excel", () => {
+    mocks.project = { archived: true, permissions: ["EDIT_TEST_CASE"] }
+    renderPage()
+    expect(screen.queryByRole("button", { name: "Nhập từ Excel" })).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Any
+from typing import Any, TypedDict
 
 from pydantic import BaseModel
 
@@ -19,6 +19,16 @@ class AuditEntry(BaseModel):
     diff: dict[str, Any]
 
 
+class AuditRecord(TypedDict):
+    """Dữ liệu một dòng cần ghi (dùng cho `record_many`)."""
+
+    actor: str
+    action: str
+    entity: str
+    entity_id: str
+    diff: dict[str, Any]
+
+
 class AuditLogRepository:
     """Ghi lại mọi thay đổi dữ liệu: ai, lúc nào, làm gì, đổi những gì."""
 
@@ -29,16 +39,28 @@ class AuditLogRepository:
         self, *, actor: str, action: str, entity: str, entity_id: str, diff: dict[str, Any]
     ) -> None:
         self._table.append(
-            {
-                "at": to_iso(utc_now()),
-                "actor": actor,
-                "action": action,
-                "entity": entity,
-                "entity_id": entity_id,
-                # ensure_ascii=False để tiếng Việt vẫn đọc được khi mở Sheet
-                "diff_json": json.dumps(diff, ensure_ascii=False, default=str),
-            }
+            self._to_row(
+                AuditRecord(
+                    actor=actor, action=action, entity=entity, entity_id=entity_id, diff=diff
+                )
+            )
         )
+
+    def record_many(self, entries: list[AuditRecord]) -> None:
+        """Ghi nhiều dòng lịch sử bằng một lời gọi Google."""
+        self._table.append_many([self._to_row(entry) for entry in entries])
+
+    @staticmethod
+    def _to_row(entry: AuditRecord) -> dict[str, str]:
+        return {
+            "at": to_iso(utc_now()),
+            "actor": entry["actor"],
+            "action": entry["action"],
+            "entity": entry["entity"],
+            "entity_id": entry["entity_id"],
+            # ensure_ascii=False để tiếng Việt vẫn đọc được khi mở Sheet
+            "diff_json": json.dumps(entry["diff"], ensure_ascii=False, default=str),
+        }
 
     def list_for(self, entity: str, entity_id: str) -> list[AuditEntry]:
         """Lịch sử của một đối tượng, mới nhất trước."""

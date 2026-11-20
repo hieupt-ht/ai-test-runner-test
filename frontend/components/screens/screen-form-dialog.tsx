@@ -119,14 +119,14 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={trigger}>{triggerLabel}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
             {screen ? t("screens.formEdit", { id: screen.id }) : t("screens.formAdd")}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={submit} className="flex max-h-[80dvh] flex-col gap-4 overflow-y-auto" noValidate>
+        <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2" noValidate>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="screen-name">{t("screens.fieldName")}</Label>
             <Input id="screen-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -156,11 +156,11 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
             {submitted && ownerError && <p className="text-xs text-destructive">{ownerError}</p>}
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="screen-description">{t("screens.fieldDescription")}</Label>
             <textarea
               id="screen-description"
-              rows={3}
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
@@ -174,6 +174,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
               onChange={setMedia}
               projectId={projectId}
               storage={storage}
+              pasteScope="page"
               onBusyChange={setUploading}
             />
             <p className="text-xs text-muted-foreground">{t("screens.mediaHint")}</p>
@@ -222,7 +223,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="sm:col-span-2">
             <DialogClose render={<Button variant="outline" type="button" />}>
               {t("common.cancel")}
             </DialogClose>

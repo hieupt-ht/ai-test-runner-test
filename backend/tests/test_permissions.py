@@ -16,6 +16,7 @@ SPEC_TABLE: dict[Action, set[Role]] = {
     Action.MANAGE_MEMBERS: {A, Q},
     Action.MANAGE_SCREENS: {A, Q},
     Action.EDIT_TEST_CASE: {A, Q, T},
+    Action.RUN_TEST_CASE: {A, Q, T},
     Action.REVIEW_TEST_CASE: {A, Q},
     Action.TRIGGER_RUN: {A, Q},
     Action.REVIEW_RESULTS: {A, Q},
@@ -58,3 +59,12 @@ def test_inactive_user_can_do_nothing(action: Action) -> None:
     user = make_user("u@x.com", role=Role.ADMIN, active=False)
 
     assert not can(user, action, is_member=True, owns_or_assigned=True)
+
+
+def test_tester_run_needs_owns_or_assigned() -> None:
+    tester = make_user("t@x.com", role=Role.TESTER)
+    viewer = make_user("v@x.com", role=Role.VIEWER)
+
+    assert can(tester, Action.RUN_TEST_CASE, is_member=True, owns_or_assigned=False) is False
+    assert can(tester, Action.RUN_TEST_CASE, is_member=True, owns_or_assigned=True) is True
+    assert can(viewer, Action.RUN_TEST_CASE, is_member=True, owns_or_assigned=True) is False

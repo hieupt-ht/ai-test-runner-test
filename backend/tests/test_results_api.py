@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
 import pytest
 from fastapi import FastAPI
@@ -143,6 +143,23 @@ def test_tester_sees_only_own_cases(
 
     assert response.status_code == 200
     assert [item["case_id"] for item in response.json()] == [first_id]
+
+
+def test_tester_also_sees_cases_on_assigned_screens(
+    app: FastAPI,
+    users: UserRepository,
+    project: Project,
+) -> None:
+    first_id, second_id = seed_results(app, project)
+    scope = scope_for(app.state.services, project)
+    # Màn hình "Trang chủ" (SC-0002) có case của binh; giao nó cho an
+    scope.assignments.create(
+        screen_id="SC-0002", assignee_email="an@x.com", deadline=date(2099, 1, 1)
+    )
+
+    response = browser(app, users, "an@x.com", Role.TESTER).get(path(project))
+
+    assert {item["case_id"] for item in response.json()} == {first_id, second_id}
 
 
 def test_filter_by_status(

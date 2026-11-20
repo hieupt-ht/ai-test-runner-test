@@ -74,13 +74,30 @@ def test_derive_status(statuses: list[str], expected: str) -> None:
     assert derive(cases) == AssignmentStatus(expected)
 
 
-def test_only_counts_this_testers_cases_on_this_screen() -> None:
-    cases = [
-        make_case("DRAFT", created_by="other@x.com"),
-        make_case("DRAFT", screen_id="SC-0002"),
-    ]
+def test_only_counts_cases_on_this_screen() -> None:
+    cases = [make_case("DRAFT", screen_id="SC-0002")]
 
     assert derive(cases) == AssignmentStatus.TODO
+
+
+def test_counts_cases_created_by_someone_else() -> None:
+    draft = make_case("DRAFT", created_by="lead@x.com")
+    tested = make_case("TESTED", created_by="lead@x.com").model_copy(
+        update={"execution_mode": ExecutionMode.MANUAL}
+    )
+
+    assert derive([draft]) == AssignmentStatus.WRITING
+    assert derive([tested]) == AssignmentStatus.TESTED
+
+
+def test_testers_on_same_screen_share_status() -> None:
+    case = make_case("TESTED", created_by="a@x.com").model_copy(
+        update={"execution_mode": ExecutionMode.MANUAL}
+    )
+
+    for email in ("a@x.com", "b@x.com"):
+        status = derive_assignment_status([case], screen_id=SCREEN, tester_email=email)
+        assert status == AssignmentStatus.TESTED
 
 
 def test_tested_when_all_approved_cases_have_results() -> None:
@@ -148,9 +165,11 @@ def test_refresh_updates_only_changed_rows(gateway: FakeSheetsGateway, setup: Se
     setup.updater().refresh_screen(SCREEN)
 
     statuses = {a.assignee_email: a.status for a in setup.assignments.list_all()}
-    assert statuses == {"a@x.com": AssignmentStatus.WRITING, "b@x.com": AssignmentStatus.TODO}
+    # Mọi tester cùng màn hình có chung trạng thái, nên cả hai dòng đều đổi.
+    assert statuses == {"a@x.com": AssignmentStatus.WRITING, "b@x.com": AssignmentStatus.WRITING}
     assert [c for c in gateway.calls if c.startswith("update:Assignments!")] == [
-        "update:Assignments!2"
+        "update:Assignments!2",
+        "update:Assignments!3",
     ]
 
 

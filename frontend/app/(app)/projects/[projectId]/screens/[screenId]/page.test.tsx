@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   screens: [] as unknown[],
   assignments: [] as unknown[],
   cases: [] as unknown[],
+  members: [] as unknown[],
 }))
 
 vi.mock("@/lib/use-project-id", () => ({ useProjectId: () => "p1" }))
@@ -31,6 +32,8 @@ vi.mock("@/lib/use-projects", () => ({
 vi.mock("@/lib/use-project-data", () => ({
   useScreens: () => ({ data: mocks.screens, isLoading: false }),
   useAssignments: () => ({ data: mocks.assignments }),
+  useMembers: () => ({ data: mocks.members }),
+  useAssign: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSaveScreen: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 vi.mock("@/lib/use-test-cases", () => ({
@@ -120,6 +123,17 @@ describe("ScreenDetailPage", () => {
     renderPage()
     expect(screen.getByRole("link", { name: "Tạo case" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Sửa" })).toBeInTheDocument()
+  })
+
+  it("QA Lead thấy nút Giao việc, tester thì không", () => {
+    mocks.user = lead
+    mocks.permissions = ["EDIT_TEST_CASE", "MANAGE_SCREENS"]
+    renderPage()
+    expect(screen.getByRole("button", { name: "Giao việc" })).toBeInTheDocument()
+    cleanup()
+    mocks.permissions = ["EDIT_TEST_CASE"]
+    renderPage()
+    expect(screen.queryByRole("button", { name: "Giao việc" })).not.toBeInTheDocument()
   })
 
   it("tester được giao thấy Tạo case với link ?screen=SC-0001", () => {

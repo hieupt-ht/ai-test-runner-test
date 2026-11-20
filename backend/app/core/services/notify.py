@@ -65,3 +65,13 @@ class Notifier:
                 title=f"Lần chạy {run_id} đã xong: {failed}/{total} case FAIL",
                 link=f"/projects/{project_id}/results",
             )
+
+    def cases_imported(
+        self, *, email: str, project_id: str, count: int, screen_names: list[str]
+    ) -> None:
+        self._send(
+            email,
+            type="cases_imported",
+            title=f"Có {count} case mới cần chạy ở: {', '.join(screen_names)}",
+            link=f"/projects/{project_id}/test-cases",
+        )

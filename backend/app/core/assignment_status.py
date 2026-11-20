@@ -13,16 +13,15 @@ def derive_assignment_status(
     tester_email: str,
     tested_case_ids: frozenset[str] = frozenset(),
 ) -> AssignmentStatus:
-    """Tính trạng thái việc của `tester_email` trên `screen_id` (hàm thuần, không đọc Sheet).
+    """Tính trạng thái việc của màn hình `screen_id` (hàm thuần, không đọc Sheet).
 
-    Chỉ xét case do chính tester tạo trên màn hình đó, bỏ qua case DEPRECATED.
+    Xét mọi case của màn hình, bất kể ai tạo (kể cả case nhập từ Excel), bỏ qua DEPRECATED.
+    `tester_email` giữ cho tương thích, mọi tester cùng màn hình có chung trạng thái.
     """
     mine = [
         case
         for case in cases
-        if case.screen_id == screen_id
-        and case.created_by == tester_email
-        and case.status != TestCaseStatus.DEPRECATED
+        if case.screen_id == screen_id and case.status != TestCaseStatus.DEPRECATED
     ]
     if not mine:
         return AssignmentStatus.TODO

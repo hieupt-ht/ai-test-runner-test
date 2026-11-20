@@ -305,6 +305,48 @@ Nếu bạn sửa case sau khi đã duyệt, nội dung issue trên GitHub có t
 
 Vào **Kết quả** trong dự án để xem từng lần Codex chạy: case nào PASS, FAIL, hay BLOCKED.
 
+### 5. Chạy test bằng Codex
+
+> Tester **không cần** bước này — chỉ người chạy Codex (thường là QA Lead) mới cần.
+
+Codex là AI agent chạy **ngoài** app, đọc GitHub Issue rồi tự chạy Playwright. Để dùng được, bạn cần chuẩn bị:
+
+#### a. Tạo GitHub PAT của riêng bạn
+
+Mỗi người dùng Codex phải tạo token GitHub cá nhân — **không dùng chung với người khác**.
+
+1. Vào GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Đặt tên, ví dụ `codex-ai-test-runner`.
+3. **Repository access**: chọn **Only select repositories** → chọn repo của dự án.
+4. **Permissions**: `Issues` → **Read and write**. Nếu repo riêng tư thêm `Contents` → **Read-only**.
+5. Bấm **Generate token**, copy giá trị — chỉ hiện một lần.
+
+#### b. Cấu hình GitHub MCP cho Codex
+
+Lưu token vừa tạo vào biến môi trường `GITHUB_PAT_TOKEN` (không dán vào file hay tin nhắn), rồi thêm server vào Codex:
+
+```bash
+codex mcp add github --url https://api.githubcopilot.com/mcp/ --bearer-token-env-var GITHUB_PAT_TOKEN
+```
+
+Hoặc thêm vào `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.github]
+url = "https://api.githubcopilot.com/mcp/"
+bearer_token_env_var = "GITHUB_PAT_TOKEN"
+```
+
+Mở lại Codex, dùng `/mcp` để kiểm tra công cụ GitHub đã hiện.
+
+#### c. Lấy AGENT_API_TOKEN từ admin
+
+Token này dùng để Codex ghi kết quả vào app sau khi chạy xong. **Cả nhóm dùng chung một giá trị** — nhắn admin lấy giá trị `AGENT_API_TOKEN` và lưu vào biến môi trường (không dán vào file hay tin nhắn).
+
+#### d. Chạy Codex
+
+Mở Codex tại thư mục repo của **app cần test** (không phải repo AI Test Runner), paste prompt mẫu từ [docs/codex-agent.md](docs/codex-agent.md), thay `<owner/repo>` bằng repo của dự án.
+
 ---
 
 ## Thông báo
