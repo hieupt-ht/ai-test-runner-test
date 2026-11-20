@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel
 
@@ -43,3 +44,21 @@ class BugEvent:
     email: str
     case_id: str
     day: date
+
+
+class PetMood(StrEnum):
+    HAPPY = "HAPPY"  # hôm nay vừa bắt được bug
+    NORMAL = "NORMAL"
+    HUNGRY = "HUNGRY"  # vắng 1-2 ngày làm việc
+    CRY = "CRY"  # vắng từ 3 ngày làm việc
+
+
+class MyPet(BaseModel):
+    """Con nhím của một người: cấp theo số bug, biểu cảm theo chuỗi ngày."""
+
+    level: int  # 1..4
+    bugs: int
+    bugs_to_next: int | None  # số bug còn thiếu để lên cấp; cấp cao nhất thì None
+    streak: int
+    missed_days: int
+    mood: PetMood

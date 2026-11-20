@@ -3,9 +3,17 @@
 from datetime import UTC, date, datetime
 
 from app.core.models.run import ResultStatus
-from app.core.models.stats import BugEvent, CaseFact, ProjectFacts, ResultFact
+from app.core.models.stats import BugEvent, CaseFact, PetMood, ProjectFacts, ResultFact
 from app.core.models.test_case import TestCaseStatus
-from app.core.services.stats import bug_events, vn_day
+from app.core.services.stats import (
+    bug_events,
+    build_pet,
+    level_for,
+    mood_for,
+    streak_and_missed,
+    vn_day,
+    work_days,
+)
 
 
 def at(text: str) -> datetime:
@@ -111,3 +119,90 @@ def test_vietnam_day_boundary() -> None:
     assert vn_day(at("2026-11-18T17:30")) == date(2026, 11, 19)
     facts = ProjectFacts(cases=[case()], results=[result(when="2026-11-18T17:30")])
     assert bug_events(facts)[0].day == date(2026, 11, 19)
+
+
+# ---- Task 4: ngày làm việc, chuỗi, biểu cảm, cấp nhím ----
+
+MONDAY = date(2026, 11, 23)  # "hôm nay" trong các test chuỗi
+
+
+def days(*numbers: int) -> set[date]:
+    """Các ngày trong tháng 11/2026."""
+    return {date(2026, 11, number) for number in numbers}
+
+
+def test_friday_work_keeps_streak_on_monday_morning() -> None:
+    assert streak_and_missed(days(18, 19, 20), MONDAY) == (3, 0)
+
+
+def test_weekend_work_adds_to_streak() -> None:
+    assert streak_and_missed(days(20, 21, 23), MONDAY) == (3, 0)
+
+
+def test_missing_one_weekday_breaks_streak() -> None:
+    streak, _ = streak_and_missed(days(18, 20), MONDAY)
+    assert streak == 1
+
+
+def test_missed_days_count_only_past_weekdays() -> None:
+    # Làm lần cuối thứ 3 (17/11): thiếu thứ 4, 5, 6; cuối tuần và hôm nay không tính
+    assert streak_and_missed(days(17), MONDAY) == (0, 3)
+
+
+def test_never_worked_is_zero() -> None:
+    assert streak_and_missed(set(), MONDAY) == (0, 0)
+
+
+def test_level_thresholds() -> None:
+    assert level_for(0) == (1, 5)
+    assert level_for(4) == (1, 1)
+    assert level_for(5) == (2, 15)
+    assert level_for(19) == (2, 1)
+    assert level_for(20) == (3, 30)
+    assert level_for(50) == (4, None)
+
+
+def test_mood_rules() -> None:
+    assert mood_for(caught_bug_today=True, worked_today=True, missed_days=5) == PetMood.HAPPY
+    assert mood_for(caught_bug_today=False, worked_today=True, missed_days=0) == PetMood.NORMAL
+    assert mood_for(caught_bug_today=False, worked_today=False, missed_days=0) == PetMood.NORMAL
+    assert mood_for(caught_bug_today=False, worked_today=False, missed_days=2) == PetMood.HUNGRY
+    assert mood_for(caught_bug_today=False, worked_today=False, missed_days=3) == PetMood.CRY
+
+
+def test_work_days_match_email_ignoring_case() -> None:
+    facts = facts_for_pet()
+    assert work_days([facts], "AN@x.com") == {date(2026, 11, 10), date(2026, 11, 12)}
+
+
+def facts_for_pet() -> ProjectFacts:
+    """An tạo case ngày 10/11 và chạy một kết quả ngày 12/11; Bình tạo case ngày 11/11."""
+    return ProjectFacts(
+        cases=[
+            case("TC-1", created_by="an@x.com", created_at="2026-11-10T03:00"),
+            case("TC-2", created_by="binh@x.com", created_at="2026-11-11T03:00"),
+        ],
+        results=[result("TC-2", ResultStatus.PASS, "2026-11-12T03:00", by="an@x.com")],
+    )
+
+
+def test_build_pet_sums_bugs_across_projects() -> None:
+    def three_bugs() -> ProjectFacts:
+        return ProjectFacts(
+            cases=[case(f"TC-{n}") for n in range(3)],
+            results=[result(f"TC-{n}", when="2026-11-20T03:00", by="an@x.com") for n in range(3)],
+        )
+
+    pet = build_pet([three_bugs(), three_bugs()], "AN@x.com", MONDAY)
+    assert (pet.bugs, pet.level, pet.bugs_to_next) == (6, 2, 14)
+    assert pet.streak == 1  # làm thứ 6, hôm nay (thứ 2) chưa làm vẫn giữ chuỗi
+    assert pet.missed_days == 0
+    assert pet.mood == PetMood.NORMAL
+
+
+def test_build_pet_is_happy_when_bug_caught_today() -> None:
+    facts = ProjectFacts(
+        cases=[case("TC-1")], results=[result("TC-1", when="2026-11-23T03:00", by="an@x.com")]
+    )
+    pet = build_pet([facts], "an@x.com", MONDAY)
+    assert (pet.mood, pet.streak) == (PetMood.HAPPY, 1)
