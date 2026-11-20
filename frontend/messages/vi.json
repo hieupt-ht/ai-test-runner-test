@@ -676,5 +676,18 @@
     "bugs": "{count} bug đã bắt",
     "toNext": "Còn {count} bug nữa lên cấp",
     "maxLevel": "Cấp cao nhất rồi!"
+  },
+  "leaderboard": {
+    "section": "Bảng xếp hạng",
+    "cases": "Viết case nhiều nhất",
+    "bugs": "Bắt bug nhiều nhất",
+    "you": "(bạn)",
+    "noScore": "Chưa có điểm",
+    "empty": "Chưa ai có điểm — bạn là người đầu tiên nhé!",
+    "period": {
+      "week": "Tuần này",
+      "month": "Tháng này",
+      "all": "Tất cả"
+    }
   }
 }

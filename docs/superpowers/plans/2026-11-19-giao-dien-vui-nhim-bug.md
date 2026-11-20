@@ -16,7 +16,7 @@
 - [x] Đợt 2: backend số liệu + API + cache (Task 3–8)
 - [x] Đợt 3: Tổng quan project + đồ thị Tổng quan chung (Task 9–11)
 - [x] Đợt 4: nhím + chuỗi ngày (Task 12–13)
-- [ ] Đợt 5: bảng xếp hạng (Task 14)
+- [x] Đợt 5: bảng xếp hạng (Task 14)
 - [ ] Đợt 6: nút nhạc (Task 15–16)
 
 Làm **một đợt mỗi lần**: xong đợt thì đánh dấu ở đây, ghi một đoạn ngắn vào `HANDOFF.md` (mục "Đang làm (2026-11-19): giao diện vui + nhím bug"), báo chủ dự án rồi dừng.

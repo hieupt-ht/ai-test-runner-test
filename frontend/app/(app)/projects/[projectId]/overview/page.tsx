@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 
+import { ProjectLeaderboards } from "@/components/leaderboard/project-leaderboards"
 import { ProgressList } from "@/components/charts/progress-list"
 import { LazyCaseStatusDonut, LazyPassFailChart } from "@/components/charts/lazy"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -75,7 +76,7 @@ export default function ProjectOverviewPage() {
         </CardContent>
       </Card>
 
-      {/* Chỗ cho bảng xếp hạng (Đợt 5) */}
+      <ProjectLeaderboards projectId={projectId} />
     </div>
   )
 }

@@ -12,6 +12,9 @@ vi.mock("@/lib/use-project-id", () => ({ useProjectId: () => "p1" }))
 vi.mock("@/lib/use-stats", () => ({
   useProjectStats: () => ({ data: mocks.stats, isLoading: false }),
 }))
+vi.mock("@/components/leaderboard/project-leaderboards", () => ({
+  ProjectLeaderboards: () => <div>leaderboards</div>,
+}))
 // Đồ thị thật nặng và cần đo khung: thay bằng bản in ra props cho dễ kiểm tra
 vi.mock("@/components/charts/lazy", () => ({
   LazyPassFailChart: ({ days }: { days: unknown[] }) => <div>chart-passfail-{days.length}</div>,
