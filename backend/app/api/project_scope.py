@@ -10,6 +10,8 @@ from app.core.repositories.modules import ModuleAssignmentRepository, ModuleRepo
 from app.core.repositories.runs import ResultRepository, RunRepository
 from app.core.repositories.screens import ScreenRepository
 from app.core.repositories.test_cases import TestCaseRepository
+from app.core.services.module_work import ModuleWorkService
+from app.core.services.notify import Notifier
 
 
 @dataclass
@@ -80,4 +82,20 @@ def scope_for(services: Services, project: Project) -> ProjectScope:
             lock_wait_seconds=services.lock_wait_seconds,
             cache_ttl_seconds=services.sheet_cache_ttl_seconds,
         ),
+    )
+
+
+def module_work_for(services: Services, scope: ProjectScope) -> ModuleWorkService:
+    """Dựng ModuleWorkService trên đúng các repository của `scope` (khoá lồng được)."""
+    return ModuleWorkService(
+        project_id=scope.project.id,
+        modules=scope.modules,
+        screens=scope.screens,
+        assignments=scope.assignments,
+        module_assignments=scope.module_assignments,
+        test_cases=scope.test_cases,
+        members=services.members,
+        users=services.users,
+        audit_log=scope.audit_log,
+        notifier=Notifier(services.notifications),
     )

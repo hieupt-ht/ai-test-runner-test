@@ -5,7 +5,7 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.project_access import load_project
-from app.api.project_scope import scope_for
+from app.api.project_scope import module_work_for, scope_for
 from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.media import MediaList
@@ -71,12 +71,14 @@ class UpdateScreenRequest(BaseModel):
 def _service(services: Services, user: User, project_id: str, action: Action) -> ScreenService:
     project = load_project(services, user, project_id, action)
     scope = scope_for(services, project)
+    work = module_work_for(services, scope)
     return ScreenService(
         scope.screens,
         scope.assignments,
         scope.test_cases,
         scope.audit_log,
         modules=scope.modules,
+        on_screens_added=lambda ids, module_id: work.assign_new_screens(ids, module_id),
         cloud_name=services.cloud_name,
         drive_enabled=services.drive is not None,
         janitor=services.media_janitor,
