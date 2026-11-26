@@ -1,7 +1,8 @@
 """Đọc/ghi tab `Screens` trong Sheet riêng của một dự án."""
 
 import json
-from contextlib import AbstractContextManager
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from redis import Redis
 
@@ -33,6 +34,7 @@ def _to_record(screen: Screen) -> Record:
         "media_json": json.dumps(
             [item.model_dump(mode="json") for item in screen.media], ensure_ascii=False
         ),
+        "module_id": screen.module_id,
     }
 
 
@@ -46,6 +48,7 @@ def _from_record(record: Record) -> Screen:
         created_at=from_iso(record["created_at"]),
         dev_owner=record["dev_owner"],
         media=[Media(**item) for item in json.loads(record["media_json"] or "[]")],
+        module_id=record["module_id"],
     )
 
 
@@ -68,9 +71,11 @@ class ScreenRepository:
         self._redis = redis
         self._lock_key = f"lock:{project_id}:screens"
         self._lock_wait_seconds = lock_wait_seconds
+        self._holding_lock = False
 
     def list_all(self) -> list[Screen]:
-        return self._cache.read(self._read_sheet)
+        # Đang giữ khoá (kiểm tra rồi ghi) thì đọc thẳng Sheet, không qua cache.
+        return self._cache.read(self._read_sheet, bypass=self._holding_lock)
 
     def _read_sheet(self) -> list[Screen]:
         screens = [_from_record(record) for record in self._table.read_all()]
@@ -88,6 +93,7 @@ class ScreenRepository:
         code_paths: list[str],
         dev_owner: str = "",
         media: list[Media] | None = None,
+        module_id: str = "",
     ) -> Screen:
         screen = Screen(
             id=self._ids.next_id("screen", "SC"),
@@ -98,14 +104,38 @@ class ScreenRepository:
             created_at=utc_now(),
             dev_owner=dev_owner,
             media=media or [],
+            module_id=module_id,
         )
-        with self._lock():
+        with self.lock():
             self._table.append(_to_record(screen))
             self._cache.invalidate()
         return screen
 
+    def create_many(self, names: list[str], *, module_id: str) -> list[Screen]:
+        """Tạo nhiều màn hình (chỉ có tên) trong một module: cấp mã một lượt, ghi một lượt."""
+        if not names:
+            return []
+        now = utc_now()
+        with self.lock():
+            ids = self._ids.next_ids("screen", "SC", len(names))
+            screens = [
+                Screen(
+                    id=screen_id,
+                    name=name,
+                    description="",
+                    route="",
+                    code_paths=[],
+                    created_at=now,
+                    module_id=module_id,
+                )
+                for screen_id, name in zip(ids, names, strict=True)
+            ]
+            self._table.append_many([_to_record(screen) for screen in screens])
+            self._cache.invalidate()
+        return screens
+
     def update(self, screen: Screen) -> Screen:
-        with self._lock():
+        with self.lock():
             row_number = self._table.find_row_number("id", screen.id)
             if row_number is None:
                 raise ScreenNotFoundError(screen.id)
@@ -114,12 +144,25 @@ class ScreenRepository:
         return screen
 
     def delete(self, screen_id: str) -> None:
-        with self._lock():
+        with self.lock():
             row_number = self._table.find_row_number("id", screen_id)
             if row_number is None:
                 raise ScreenNotFoundError(screen_id)
             self._table.delete_row(row_number)
             self._cache.invalidate()
 
-    def _lock(self) -> AbstractContextManager[None]:
-        return redis_lock(self._redis, self._lock_key, wait_seconds=self._lock_wait_seconds)
+    @contextmanager
+    def lock(self) -> Iterator[None]:
+        """Khoá cả tab Screens của dự án; gọi lồng trên CÙNG repository chỉ khoá Redis một lần.
+
+        Thứ tự khoá khi lồng: screens, assignments, module-assignments, test-cases.
+        """
+        if self._holding_lock:
+            yield
+            return
+        with redis_lock(self._redis, self._lock_key, wait_seconds=self._lock_wait_seconds):
+            self._holding_lock = True
+            try:
+                yield
+            finally:
+                self._holding_lock = False
