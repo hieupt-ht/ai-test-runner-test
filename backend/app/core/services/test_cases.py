@@ -558,8 +558,10 @@ class TestCaseService:
             )
             if not claimed:
                 return ParseResult(errors=[ImportIssue(row=None, message=CLAIM_MODULE_FIRST)])
-        screens = [s for s in self._screens.list_all() if s.module_id == module_id]
-        result = parse_workbook(data, screens, create_missing=True)
+        every_screen = self._screens.list_all()
+        screens = [s for s in every_screen if s.module_id == module_id]
+        others = {s.id for s in every_screen if s.module_id != module_id}
+        result = parse_workbook(data, screens, create_missing=True, other_screen_ids=others)
         return check_import(result, existing=self._test_cases.list_all(), allowed_screen_ids=None)
 
     def _create_module_screens(

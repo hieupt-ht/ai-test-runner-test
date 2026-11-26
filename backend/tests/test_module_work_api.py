@@ -372,3 +372,34 @@ def test_assign_new_screens_skips_member_who_left(
 
     assignments, _ = repos(gateway, redis, project)
     assert [a.assignee_email for a in assignments.list_all()] == ["tester@x.com"]
+
+
+def test_assign_again_with_new_deadline_updates_it(
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    module = make_module_with_screens(lead, project, count=2)
+    assign(lead, project, module, ["tester@x.com"])
+
+    response = assign(lead, project, module, ["tester@x.com"], deadline=IN_TWO_WEEKS)
+
+    assert response.status_code == 201
+    assert [w["deadline"] for w in response.json()] == [IN_TWO_WEEKS]
+    assignments, module_assignments = repos(gateway, redis, project)
+    assert len(module_assignments.list_all()) == 1
+    assert module_assignments.list_all()[0].deadline.isoformat() == IN_TWO_WEEKS
+    assert {a.deadline.isoformat() for a in assignments.list_all()} == {IN_TWO_WEEKS}
+
+
+def test_assign_again_with_same_deadline_returns_nothing(
+    lead: TestClient, project: Project
+) -> None:
+    module = make_module_with_screens(lead, project, count=1)
+    assign(lead, project, module, ["tester@x.com"])
+
+    response = assign(lead, project, module, ["tester@x.com"])
+
+    assert response.status_code == 201
+    assert response.json() == []

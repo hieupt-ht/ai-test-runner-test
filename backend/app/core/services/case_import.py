@@ -263,6 +263,7 @@ def _build_case(
     screens: list[Screen],
     errors: list[ImportIssue],
     create_missing: bool,
+    other_screen_ids: frozenset[str],
 ) -> ParsedCase | None:
     """Dựng một case từ các dòng của nhóm; lỗi ghi vào `errors`, có lỗi thì trả None.
 
@@ -293,8 +294,12 @@ def _build_case(
         fail(first_row, "Màn hình", _REQUIRED)
     elif screen is None:
         if create_missing and screen_error == _SCREEN_NOT_FOUND:
-            if _SCREEN_ID.match(screen_text):
+            if screen_text.upper() in other_screen_ids:
                 fail(first_row, "Màn hình", f"Màn hình {screen_text.upper()} thuộc module khác")
+            elif _SCREEN_ID.match(screen_text):
+                fail(
+                    first_row, "Màn hình", screen_error
+                )  # mã không tồn tại, không tạo màn "SC-xxxx"
             else:
                 new_screen_name = screen_text
         else:
@@ -347,12 +352,17 @@ def _build_case(
 
 
 def parse_workbook(
-    data: bytes, screens: list[Screen], *, create_missing: bool = False
+    data: bytes,
+    screens: list[Screen],
+    *,
+    create_missing: bool = False,
+    other_screen_ids: set[str] | None = None,
 ) -> ParseResult:
     """Đọc file .xlsx theo mẫu. Lỗi xếp theo số dòng (lỗi chung của file đứng đầu).
 
     `create_missing=True` (nhập theo module): tên màn hình chưa có không phải lỗi mà được gom
-    vào `ParseResult.new_screens` để tạo mới.
+    vào `ParseResult.new_screens` để tạo mới. `other_screen_ids` là mã các màn hình có thật
+    nhưng thuộc module khác: ghi mã đó trong file thì báo "thuộc module khác".
     """
     if len(data) > MAX_FILE_BYTES:
         return _file_error("File quá lớn, tối đa 2 MB")
@@ -381,9 +391,10 @@ def parse_workbook(
     if len(groups) > MAX_CASES:
         return _file_error(f"File có quá {MAX_CASES} test case, hãy chia nhỏ file")
 
+    other_ids = frozenset(item.upper() for item in other_screen_ids or ())
     cases: list[ParsedCase] = []
     for group, lines in groups.items():
-        case = _build_case(group, lines, screens, errors, create_missing)
+        case = _build_case(group, lines, screens, errors, create_missing, other_ids)
         if case:
             cases.append(case)
     errors.sort(key=lambda e: e.row or 0)

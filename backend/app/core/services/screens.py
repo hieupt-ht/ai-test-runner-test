@@ -83,7 +83,12 @@ class ScreenService:
                 media=media,
                 module_id=module_id,
             )
-            self._notify_added([screen.id], module_id)
+            try:
+                self._notify_added([screen.id], module_id)
+            except Exception:
+                # Giao việc lỗi thì gỡ màn hình vừa tạo, để không còn màn hình mồ côi
+                self._screens.delete(screen.id)
+                raise
         self._record(actor, "CREATE", screen.id, screen.model_dump(mode="json"))
         return screen
 
