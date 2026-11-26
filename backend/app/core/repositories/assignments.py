@@ -146,8 +146,7 @@ class AssignmentRepository:
             for assignment_id in assignment_ids:
                 if assignment_id not in rows:
                     raise AssignmentNotFoundError(assignment_id)
-            for row_number in sorted((rows[i] for i in assignment_ids), reverse=True):
-                self._table.delete_row(row_number)
+            self._table.delete_rows([rows[i] for i in assignment_ids])
             self._cache.invalidate()
 
     def update(self, assignment: Assignment) -> Assignment:

@@ -135,3 +135,22 @@ def test_old_screen_row_without_module_id_reads_empty(parts) -> None:
     ]
 
     assert screens.list_all()[0].module_id == ""
+
+
+def test_delete_many_is_one_google_call(parts, redis) -> None:
+    gateway_, _, module_assignments, _ = parts
+    assignments = AssignmentRepository(gateway_, SHEET, redis, "p1")
+    created = assignments.create_many(
+        [(f"SC-000{n}", "a@x.com", DEADLINE, AssignmentStatus.TODO) for n in range(1, 5)]
+    )
+    rows = module_assignments.create_many([("MD-0001", f"t{n}@x.com", DEADLINE) for n in range(3)])
+    gateway_.calls.clear()
+
+    assignments.delete_many([created[0].id, created[2].id, created[3].id])
+    module_assignments.delete_many([rows[0].id, rows[2].id])
+
+    assert [a.id for a in assignments.list_all()] == [created[1].id]
+    assert [m.id for m in module_assignments.list_all()] == [rows[1].id]
+    assert gateway_.calls.count("delete_rows:Assignments") == 1
+    assert gateway_.calls.count("delete_rows:ModuleAssignments") == 1
+    assert not [c for c in gateway_.calls if c.startswith("delete:")]

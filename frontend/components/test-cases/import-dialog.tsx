@@ -117,7 +117,14 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   /** Đổi module sau khi đã chọn file thì xem trước lại với module mới. */
   function onChooseModule(value: string) {
     setChoice(value)
-    if (file && value) void runPreview(file, value === NO_MODULE ? "" : value)
+    if (!value) {
+      // Chưa chọn module thì không được giữ bản xem trước của module cũ (và bỏ kết quả đang chờ)
+      latestPick.current += 1
+      setResult(null)
+      setMessage(null)
+      return
+    }
+    if (file) void runPreview(file, value === NO_MODULE ? "" : value)
   }
 
   async function onImport() {

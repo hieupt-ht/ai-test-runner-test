@@ -334,3 +334,22 @@ describe("Nhập theo module", () => {
     expect(names).toEqual(["Chọn module", "Không theo module (như cũ)", "Tài khoản"])
   })
 })
+
+describe("Đổi module về chưa chọn", () => {
+  afterEach(cleanup)
+
+  it("khoá nút Nhập và bỏ bản xem trước cũ", async () => {
+    mocks.preview.mockReset()
+    mocks.modules = [{ id: "MD-0001", name: "Tài khoản", workers: [] }]
+    mocks.user = { email: "lead@x.com", role: "QA_LEAD" }
+    mocks.preview.mockResolvedValue(okResult())
+    renderDialog()
+    await pickFile("MD-0001")
+    await screen.findByRole("button", { name: "Nhập 12 case" })
+
+    chooseModule("")
+
+    expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()
+    expect(screen.queryByText(/Xem trước:/)).not.toBeInTheDocument()
+  })
+})

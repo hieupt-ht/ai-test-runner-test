@@ -217,8 +217,7 @@ class ModuleAssignmentRepository:
             for item_id in ids:
                 if item_id not in rows:
                     raise ModuleAssignmentNotFoundError(item_id)
-            for row_number in sorted((rows[i] for i in ids), reverse=True):
-                self._table.delete_row(row_number)
+            self._table.delete_rows([rows[i] for i in ids])
             self._cache.invalidate()
 
     @contextmanager
