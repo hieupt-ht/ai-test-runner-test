@@ -568,7 +568,12 @@
       "submitIdle": "Nhập",
       "importing": "Đang nhập...",
       "success": "Đã nhập {count} case",
-      "close": "Đóng"
+      "close": "Đóng",
+      "moduleLabel": "Module",
+      "modulePlaceholder": "Chọn module",
+      "moduleNone": "Không theo module (như cũ)",
+      "pickModuleFirst": "Hãy chọn module trước khi chọn file",
+      "newScreens": "Sẽ tạo mới {count} màn hình: {names}"
     },
     "conflict": {
       "title": "Case đã bị thay đổi",

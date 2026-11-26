@@ -49,6 +49,7 @@ const sc1 = {
   created_at: "2026-11-17T00:00:00Z",
   dev_owner: "nguyenvana",
   media: [],
+  module_id: "",
 } satisfies Screen
 const sc2 = { ...sc1, id: "SC-0002", name: "Trang chủ" }
 

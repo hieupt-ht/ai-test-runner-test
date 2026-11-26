@@ -59,6 +59,7 @@ const existing = {
   created_at: "2026-11-17T00:00:00Z",
   dev_owner: "nguyenvana",
   media: [existingMedia],
+  module_id: "",
 } satisfies Screen
 
 function openDialog(screenToEdit?: Screen) {

@@ -25,6 +25,9 @@ import {
 import { ApiError } from "@/lib/api/client"
 import type { components } from "@/lib/api/schema"
 import { templateUrl, useImportCases, usePreviewImport } from "@/lib/use-case-import"
+import { useMe } from "@/lib/use-me"
+import { useModules } from "@/lib/use-modules"
+import { useAssignments, useScreens } from "@/lib/use-project-data"
 
 type ParseResult = components["schemas"]["ParseResult"]
 type Issue = components["schemas"]["ImportIssue"]
@@ -49,11 +52,19 @@ function sortByRow(issues: Issue[]): Issue[] {
   return [...issues].sort((a, b) => (a.row ?? 0) - (b.row ?? 0))
 }
 
-/** Hộp thoại nhập test case từ file Excel: chọn file → xem trước → nhập. */
+// Giá trị ô chọn: "" là chưa chọn, "none" là không theo module (như cũ), còn lại là mã module
+const NO_MODULE = "none"
+
+/** Hộp thoại nhập test case từ file Excel: chọn module → chọn file → xem trước → nhập. */
 export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   const t = useTranslations("testCases.import")
   const preview = usePreviewImport(projectId)
   const importCases = useImportCases(projectId)
+  const { user } = useMe()
+  const modules = useModules(projectId).data ?? []
+  const screens = useScreens(projectId).data ?? []
+  const assignments = useAssignments(projectId).data ?? []
+  const [choice, setChoice] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<ParseResult | null>(null)
   const [message, setMessage] = useState<string | null>(null) // câu lỗi chung từ backend
@@ -64,6 +75,7 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   function handleOpenChange(next: boolean) {
     if (!next) {
       latestPick.current += 1
+      setChoice("")
       setFile(null)
       setResult(null)
       setMessage(null)
@@ -78,33 +90,51 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
     return issue.column ? `${prefix} · ${issue.column}: ${issue.message}` : `${prefix}: ${issue.message}`
   }
 
-  async function onPickFile(picked: File | undefined) {
-    if (!picked) return
+  /** Mã module gửi lên backend; "" nghĩa là không theo module. */
+  const moduleId = choice === NO_MODULE ? "" : choice
+
+  async function runPreview(target: File, targetModuleId: string) {
     const pick = ++latestPick.current
-    setFile(picked)
     setResult(null)
     setMessage(null)
     try {
-      const parsed = await preview.mutateAsync(picked)
+      const parsed = await preview.mutateAsync({ file: target, moduleId: targetModuleId })
       if (pick === latestPick.current) setResult(parsed)
     } catch (error) {
       if (pick !== latestPick.current) return
       const issues = issuesFromError(error)
-      if (issues) setResult({ cases: [], errors: issues, warnings: [] })
+      if (issues) setResult({ cases: [], errors: issues, warnings: [], new_screens: [] })
       else setMessage(error instanceof Error ? error.message : String(error))
     }
+  }
+
+  function onPickFile(picked: File | undefined) {
+    if (!picked) return
+    setFile(picked)
+    void runPreview(picked, moduleId)
+  }
+
+  /** Đổi module sau khi đã chọn file thì xem trước lại với module mới. */
+  function onChooseModule(value: string) {
+    setChoice(value)
+    if (file && value) void runPreview(file, value === NO_MODULE ? "" : value)
   }
 
   async function onImport() {
     if (!file) return
     setMessage(null)
     try {
-      const created = await importCases.mutateAsync(file)
+      const created = await importCases.mutateAsync({ file, moduleId })
       toast.success(t("success", { count: created.created.length }))
       handleOpenChange(false)
     } catch (error) {
       const issues = issuesFromError(error)
-      if (issues) setResult({ cases: result?.cases ?? [], errors: issues, warnings: [] })
+      if (issues) setResult({
+          cases: result?.cases ?? [],
+          errors: issues,
+          warnings: [],
+          new_screens: result?.new_screens ?? [],
+        })
       else setMessage(error instanceof Error ? error.message : String(error))
     }
   }
@@ -113,7 +143,20 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   const errors = sortByRow(result?.errors ?? [])
   const warnings = sortByRow(result?.warnings ?? [])
   const steps = cases.reduce((sum, item) => sum + item.step_count, 0)
-  const screenCount = new Set(cases.map((item) => item.screen_id)).size
+  // Màn hình sắp tạo mới chưa có mã, nên đếm theo tên
+  const screenCount = new Set(cases.map((item) => item.screen_id || item.screen_name)).size
+  const newScreens = result?.new_screens ?? []
+
+  // QA thấy mọi module; tester chỉ thấy module mình đang làm
+  const isTester = user?.role === "TESTER"
+  const myEmail = user?.email ?? ""
+  const visibleModules = isTester
+    ? modules.filter((module) => module.workers.some((worker) => worker.email === myEmail))
+    : modules
+  const looseScreenIds = new Set(screens.filter((screen) => !screen.module_id).map((screen) => screen.id))
+  const showNone =
+    !isTester ||
+    assignments.some((item) => item.assignee_email === myEmail && looseScreenIds.has(item.screen_id))
   const busy = preview.isPending || importCases.isPending
   const canSubmit = result !== null && errors.length === 0 && cases.length > 0 && !busy
 
@@ -126,6 +169,27 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="import-module" className="text-sm font-medium">
+              {t("moduleLabel")}
+            </label>
+            <select
+              id="import-module"
+              value={choice}
+              onChange={(event) => onChooseModule(event.target.value)}
+              className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+            >
+              <option value="">{t("modulePlaceholder")}</option>
+              {showNone && <option value={NO_MODULE}>{t("moduleNone")}</option>}
+              {visibleModules.map((module) => (
+                <option key={module.id} value={module.id}>
+                  {module.name}
+                </option>
+              ))}
+            </select>
+            {!choice && <p className="text-xs text-muted-foreground">{t("pickModuleFirst")}</p>}
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label className="flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed px-4 py-5 text-center text-sm hover:bg-muted focus-within:ring-2 focus-within:ring-ring">
               <FileSpreadsheet className="size-6 text-muted-foreground" />
@@ -134,11 +198,12 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
               <input
                 type="file"
                 accept=".xlsx"
+                disabled={!choice}
                 className="sr-only"
                 onChange={(event) => {
                   const picked = event.target.files?.[0] // lấy file TRƯỚC khi xoá giá trị ô
                   event.target.value = "" // để chọn lại đúng file đó vẫn bắn sự kiện change
-                  void onPickFile(picked)
+                  onPickFile(picked)
                 }}
               />
               {/* Ô chọn file bị xoá giá trị sau khi chọn, nên tên file đang xem trước hiện ở trên */}
@@ -173,6 +238,12 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
             </div>
           )}
 
+          {newScreens.length > 0 && (
+            <p className="text-sm text-blue-700 dark:text-blue-400">
+              {t("newScreens", { count: newScreens.length, names: newScreens.join(", ") })}
+            </p>
+          )}
+
           {cases.length > 0 && (
             <>
               <p className="text-sm font-medium">
@@ -194,7 +265,7 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
                       <TableRow key={`${item.group}-${item.row}`}>
                         <TableCell className="font-mono text-xs">{item.group}</TableCell>
                         <TableCell className="text-xs">
-                          {item.screen_id} · {item.screen_name}
+                          {item.screen_id ? `${item.screen_id} · ${item.screen_name}` : item.screen_name}
                         </TableCell>
                         <TableCell>{item.title}</TableCell>
                         <TableCell>{item.step_count}</TableCell>

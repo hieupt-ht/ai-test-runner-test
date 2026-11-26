@@ -46,13 +46,25 @@ describe("usePreviewImport", () => {
     const { wrapper } = setup()
     const { result } = renderHook(() => usePreviewImport("P1"), { wrapper })
 
-    await act(() => result.current.mutateAsync(file))
+    await act(() => result.current.mutateAsync({ file, moduleId: "" }))
 
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe("/api/projects/P1/test-cases/import/preview")
     expect(init.method).toBe("POST")
     expect(init.credentials).toBe("same-origin")
     expect((init.body as FormData).get("file")).toBe(file)
+    expect((init.body as FormData).get("module_id")).toBe("")
+  })
+
+  it("gửi module_id đã chọn cùng file", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { cases: [], errors: [] }))
+    vi.stubGlobal("fetch", fetchMock)
+    const { wrapper } = setup()
+    const { result } = renderHook(() => usePreviewImport("P1"), { wrapper })
+
+    await act(() => result.current.mutateAsync({ file, moduleId: "MD-0001" }))
+
+    expect((fetchMock.mock.calls[0][1].body as FormData).get("module_id")).toBe("MD-0001")
   })
 })
 
@@ -63,7 +75,7 @@ describe("useImportCases", () => {
     const invalidate = vi.spyOn(queryClient, "invalidateQueries")
     const { result } = renderHook(() => useImportCases("P1"), { wrapper })
 
-    const created = await act(() => result.current.mutateAsync(file))
+    const created = await act(() => result.current.mutateAsync({ file, moduleId: "" }))
 
     expect(created).toEqual({ created: ["TC-1"] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "P1"] })
@@ -75,7 +87,7 @@ describe("useImportCases", () => {
     const { wrapper } = setup()
     const { result } = renderHook(() => useImportCases("P1"), { wrapper })
 
-    const error = await rejectionOf(result.current.mutateAsync(file))
+    const error = await rejectionOf(result.current.mutateAsync({ file, moduleId: "" }))
 
     expect(error).toBeInstanceOf(ApiError)
     expect(error.status).toBe(503)
@@ -88,7 +100,7 @@ describe("useImportCases", () => {
     const { wrapper } = setup()
     const { result } = renderHook(() => useImportCases("P1"), { wrapper })
 
-    const error = await rejectionOf(result.current.mutateAsync(file))
+    const error = await rejectionOf(result.current.mutateAsync({ file, moduleId: "" }))
 
     expect(error.status).toBe(422)
     expect((error.body as typeof body).errors).toHaveLength(2)
