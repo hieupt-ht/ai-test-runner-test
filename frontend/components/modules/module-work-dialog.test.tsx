@@ -93,6 +93,35 @@ describe("ModuleWorkDialog", () => {
     expect(screen.getByLabelText("Deadline")).toHaveValue(FAR)
   })
 
+  it("recomputes the default deadline each time the dialog opens", () => {
+    const tree = (module: ModuleView) => (
+      <QueryClientProvider client={new QueryClient()}>
+        <NextIntlClientProvider locale="vi" messages={messages}>
+          <ModuleWorkDialog
+            projectId="P1"
+            module={module}
+            mode="claim"
+            testers={testers}
+            meEmail="an@x.com"
+            trigger={<button type="button" />}
+            triggerLabel="Mở"
+          />
+        </NextIntlClientProvider>
+      </QueryClientProvider>
+    )
+    const { rerender } = render(tree(base)) // dữ liệu module về chậm: lúc đầu chưa có ai làm
+    rerender(
+      tree({
+        ...base,
+        workers: [{ assignment_id: "MA-0002", email: "c@x.com", name: "Chi", deadline: FAR }],
+      }),
+    )
+
+    fireEvent.click(screen.getByText("Mở"))
+
+    expect(screen.getByLabelText("Deadline")).toHaveValue(FAR)
+  })
+
   it("default deadline is today + 7 days when nobody works", () => {
     open(base)
 
