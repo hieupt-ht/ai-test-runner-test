@@ -51,7 +51,7 @@ class AssignmentService:
         self, actor: User, *, screen_id: str, assignee_emails: list[str], deadline: date
     ) -> list[Assignment]:
         """Tạo việc cho các tester chưa được giao màn hình này; cặp đã có thì bỏ qua."""
-        _check_deadline(deadline)
+        check_deadline(deadline)
         emails = list(dict.fromkeys(normalize_email(email) for email in assignee_emails))
 
         # Giữ khoá tab Assignments trong suốt "kiểm tra rồi ghi". Xoá màn hình và bỏ thành
@@ -99,7 +99,7 @@ class AssignmentService:
         current = self._assignments.get(assignment_id)
         if current is None:
             raise AssignmentNotFoundError(assignment_id)
-        _check_deadline(deadline)
+        check_deadline(deadline)
         updated = self._assignments.update(current.model_copy(update={"deadline": deadline}))
         self._audit_log.record(
             actor=actor.email,
@@ -118,9 +118,7 @@ class AssignmentService:
         self._record(actor, "DELETE", current)
 
     def _check_assignee(self, email: str) -> None:
-        user = self._users.get(email)
-        is_active_tester = user is not None and user.active and user.role == Role.TESTER
-        if not (is_active_tester and self._members.is_member(self._project_id, email)):
+        if not is_active_tester_member(self._users, self._members, self._project_id, email):
             raise InvalidAssignmentError(f"{email} không phải tester đang hoạt động của dự án")
 
     def _record(self, actor: User, action: str, assignment: Assignment) -> None:
@@ -133,6 +131,15 @@ class AssignmentService:
         )
 
 
-def _check_deadline(deadline: date) -> None:
+def is_active_tester_member(
+    users: UserRepository, members: ProjectMemberRepository, project_id: str, email: str
+) -> bool:
+    """Có phải tester còn hoạt động và đang là thành viên dự án (đủ điều kiện được giao việc)."""
+    user = users.get(email)
+    is_active_tester = user is not None and user.active and user.role == Role.TESTER
+    return is_active_tester and members.is_member(project_id, email)
+
+
+def check_deadline(deadline: date) -> None:
     if deadline < today_in_vietnam():
         raise InvalidAssignmentError("Deadline phải từ hôm nay trở đi")

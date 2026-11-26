@@ -98,6 +98,57 @@ class AssignmentRepository:
             self._cache.invalidate()
         return assignment
 
+    def create_many(self, items: list[tuple[str, str, date, AssignmentStatus]]) -> list[Assignment]:
+        """Tạo nhiều việc một lượt: `items` là (screen_id, email, hạn, trạng thái)."""
+        if not items:
+            return []
+        now = utc_now()
+        with self.lock():
+            ids = self._ids.next_ids("assignment", "AS", len(items))
+            created = [
+                Assignment(
+                    id=assignment_id,
+                    screen_id=screen_id,
+                    assignee_email=normalize_email(email),
+                    deadline=deadline,
+                    status=status,
+                    updated_at=now,
+                )
+                for assignment_id, (screen_id, email, deadline, status) in zip(
+                    ids, items, strict=True
+                )
+            ]
+            self._table.append_many([_to_record(a) for a in created])
+            self._cache.invalidate()
+        return created
+
+    def update_many(self, items: list[Assignment]) -> list[Assignment]:
+        """Ghi nhiều việc một lượt (id phải có sẵn); trả về các việc đã cập nhật `updated_at`."""
+        if not items:
+            return []
+        now = utc_now()
+        updated = [item.model_copy(update={"updated_at": now}) for item in items]
+        with self.lock():
+            rows = {record["id"]: number for number, record in self._table.read_rows_numbered()}
+            for item in updated:
+                if item.id not in rows:
+                    raise AssignmentNotFoundError(item.id)
+            self._table.update_many([(rows[item.id], _to_record(item)) for item in updated])
+            self._cache.invalidate()
+        return updated
+
+    def delete_many(self, assignment_ids: list[str]) -> None:
+        """Xoá nhiều việc (xoá từ dòng dưới lên để số dòng không bị lệch)."""
+        if not assignment_ids:
+            return
+        with self.lock():
+            rows = {record["id"]: number for number, record in self._table.read_rows_numbered()}
+            for assignment_id in assignment_ids:
+                if assignment_id not in rows:
+                    raise AssignmentNotFoundError(assignment_id)
+            self._table.delete_rows([rows[i] for i in assignment_ids])
+            self._cache.invalidate()
+
     def update(self, assignment: Assignment) -> Assignment:
         assignment = assignment.model_copy(update={"updated_at": utc_now()})
         with self.lock():

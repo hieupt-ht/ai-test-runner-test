@@ -6,7 +6,8 @@ Việc tính lại lấy khoá `assignments`, nên luôn chạy SAU KHI đã nh�
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -18,6 +19,7 @@ from app.core.assignment_status import AssignmentStatusUpdater
 from app.core.media.cloudinary import MediaJanitor
 from app.core.models.assignment import Assignment
 from app.core.models.media import ForeignMediaError, ensure_own_media
+from app.core.models.module import name_key
 from app.core.models.project import Project
 from app.core.models.screen import Screen
 from app.core.models.test_case import (
@@ -34,6 +36,7 @@ from app.core.permissions import Action, can
 from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditEntry, AuditLogRepository, AuditRecord
 from app.core.repositories.members import ProjectMemberRepository
+from app.core.repositories.modules import ModuleAssignmentRepository, ModuleRepository
 from app.core.repositories.screens import ScreenRepository
 from app.core.repositories.test_cases import (
     TestCaseNotFoundError,
@@ -43,11 +46,13 @@ from app.core.repositories.test_cases import (
 from app.core.repositories.users import UserRepository
 from app.core.services.case_import import (
     ImportIssue,
+    ParsedCase,
     ParseResult,
     check_import,
     parse_workbook,
 )
 from app.core.services.issue_sync import IssueSink, IssueSyncer
+from app.core.services.module_work import ModuleWorkService
 from app.core.services.notify import Notifier
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
@@ -59,6 +64,7 @@ MAX_COMMENT_LENGTH = 1000
 MAX_SYNC_BATCH_SIZE = 200
 REVIEW_OFF = "Dự án đang tắt bước duyệt"
 MANUAL_NO_REVIEW = "Case test tay không cần gửi duyệt"
+CLAIM_MODULE_FIRST = "Hãy nhận module trước khi nhập"
 
 
 class CaseAction(StrEnum):
@@ -90,6 +96,10 @@ class ImportWriteError(Exception):
 
     Lỗi xảy ra trước khi có dòng nào được ghi, nên chưa có case nào được tạo.
     """
+
+
+class ImportModuleNotFoundError(Exception):
+    """Nhập vào module không tồn tại (router trả 422)."""
 
 
 # Thao tác -> (trạng thái được phép đi từ đó, trạng thái đích). DEPRECATE xử lý riêng.
@@ -183,6 +193,9 @@ class TestCaseService:
         cloud_name: str = "",
         drive_enabled: bool = False,
         janitor: MediaJanitor | None = None,
+        modules: ModuleRepository | None = None,
+        module_assignments: ModuleAssignmentRepository | None = None,
+        module_work: ModuleWorkService | None = None,
     ) -> None:
         self._project_id = project_id
         self._test_cases = test_cases
@@ -200,6 +213,9 @@ class TestCaseService:
         self._cloud_name = cloud_name
         self._drive_enabled = drive_enabled
         self._janitor = janitor
+        self._modules = modules
+        self._module_assignments = module_assignments
+        self._module_work = module_work
         self._screens_by_id: dict[str, Screen] | None = None
 
     @property
@@ -442,35 +458,48 @@ class TestCaseService:
 
     # --- Nhập từ file Excel ---
 
-    def preview_import(self, user: User, data: bytes) -> ParseResult:
+    def preview_import(
+        self, user: User, data: bytes, *, module_id: str | None = None
+    ) -> ParseResult:
         """Đọc và kiểm tra file, không ghi gì (bước xem trước)."""
         self._require_import(user)
-        return self._check_file(user, data, self._assignments.list_all())
+        return self._check_file(user, data, self._assignments.list_all(), module_id)
 
-    def import_cases(self, user: User, data: bytes) -> ImportOutcome:
+    def import_cases(
+        self, user: User, data: bytes, *, module_id: str | None = None
+    ) -> ImportOutcome:
         """Nhập cả file một lượt: hoặc tạo hết các case, hoặc không tạo case nào.
 
         Số lượt gọi Google không tăng theo số case: một lần ghi case, một lần ghi AuditLog,
         mỗi màn hình tính lại trạng thái việc một lần. File được đọc và kiểm tra lại từ đầu
         BÊN TRONG khoá (assignments trước, test-cases sau), nên màn hình bị xoá hay việc bị
         bỏ giao sau bước xem trước đều bị phát hiện. `LockTimeout` để router trả 409.
+
+        Có `module_id`: màn hình chưa có trong module được tạo luôn và giao cho những người
+        đang làm module (thứ tự khoá: screens, assignments, module-assignments, test-cases).
+        Màn hình tạo xong mà ghi case lỗi thì vẫn còn đó; nhập lại sẽ khớp tên, không tạo trùng.
         """
         self._require_import(user)
-        with self._assignments.lock(), self._test_cases.lock():
+        with self._import_locks(module_id):
             assignments = self._assignments.list_all()
-            result = self._check_file(user, data, assignments)
+            result = self._check_file(user, data, assignments, module_id)
             if result.errors:
                 return ImportOutcome(errors=result.errors)
-            items = [(case.screen_id, case.content) for case in result.cases]
+            cases = result.cases
+            if module_id is not None:
+                cases = self._create_module_screens(user, result, module_id)
+            items = [(case.screen_id, case.content) for case in cases]
             try:
                 created = self._test_cases.create_many(items, actor=normalize_email(user.email))
             except (SheetAccessDeniedError, MissingColumnsError, HttpError) as error:
                 raise ImportWriteError("Google Sheets đang bận, chưa nhập case nào") from error
+            if module_id is not None:
+                assignments = self._assignments.list_all()  # đã có việc giao mới
 
         # Case đã nằm trên Sheet: các bước sau lỗi thì chỉ ghi log, không báo lỗi request,
         # để người dùng không bấm nhập lại và sinh case trùng.
         self._audit_import(user, created)
-        screen_names = {case.screen_id: case.screen_name for case in result.cases}
+        screen_names = {case.screen_id: case.screen_name for case in cases}
         touched = list(dict.fromkeys(case.screen_id for case in created))
         for screen_id in touched:
             self._refresh_status(screen_id)
@@ -479,6 +508,17 @@ class TestCaseService:
         except Exception:
             logger.warning("Không gửi được thông báo nhập %d case", len(created), exc_info=True)
         return ImportOutcome(created=created)
+
+    @contextmanager
+    def _import_locks(self, module_id: str | None) -> Iterator[None]:
+        with ExitStack() as stack:
+            if module_id is not None:
+                stack.enter_context(self._screens.lock())
+            stack.enter_context(self._assignments.lock())
+            if module_id is not None and self._module_assignments is not None:
+                stack.enter_context(self._module_assignments.lock())
+            stack.enter_context(self._test_cases.lock())
+            yield
 
     def _require_import(self, user: User) -> None:
         # Quyền chung: QA Lead/Admin, hoặc tester là thành viên. Tester được nhập vào màn hình
@@ -489,8 +529,12 @@ class TestCaseService:
         if not allowed:
             raise TestCasePermissionError("Bạn không có quyền tạo test case")
 
-    def _check_file(self, user: User, data: bytes, assignments: list[Assignment]) -> ParseResult:
+    def _check_file(
+        self, user: User, data: bytes, assignments: list[Assignment], module_id: str | None = None
+    ) -> ParseResult:
         """Đọc file theo màn hình hiện có, rồi xét quyền theo màn hình và trùng tiêu đề."""
+        if module_id is not None:
+            return self._check_module_file(user, data, module_id)
         result = parse_workbook(data, self._screens.list_all())
         allowed: set[str] | None = None  # QA Lead/Admin nhập được mọi màn hình
         if user.role == Role.TESTER:
@@ -500,6 +544,70 @@ class TestCaseService:
         return check_import(
             result, existing=self._test_cases.list_all(), allowed_screen_ids=allowed
         )
+
+    def _check_module_file(self, user: User, data: bytes, module_id: str) -> ParseResult:
+        """Như `_check_file` nhưng theo module: màn hình lạ sẽ được tạo, không xét việc giao."""
+        assert self._modules is not None and self._module_assignments is not None
+        if self._modules.get(module_id) is None:
+            raise ImportModuleNotFoundError(module_id)
+        if user.role == Role.TESTER:
+            email = normalize_email(user.email)
+            claimed = any(
+                w.module_id == module_id and w.assignee_email == email
+                for w in self._module_assignments.list_all()
+            )
+            if not claimed:
+                return ParseResult(errors=[ImportIssue(row=None, message=CLAIM_MODULE_FIRST)])
+        screens = [s for s in self._screens.list_all() if s.module_id == module_id]
+        result = parse_workbook(data, screens, create_missing=True)
+        return check_import(result, existing=self._test_cases.list_all(), allowed_screen_ids=None)
+
+    def _create_module_screens(
+        self, user: User, result: ParseResult, module_id: str
+    ) -> list[ParsedCase]:
+        """Tạo màn hình mới, giao việc, trả các case đã có `screen_id` thật.
+
+        Đang giữ các khoá của lần nhập. Lỗi Google ở bước này báo `ImportWriteError` trước khi
+        ghi case nào (màn hình đã tạo thì nhập lại sẽ khớp tên).
+        """
+        assert self._module_work is not None
+        try:
+            new_screens = self._screens.create_many(result.new_screens, module_id=module_id)
+            new_ids = {name_key(screen.name): screen.id for screen in new_screens}
+            cases = [
+                case.model_copy(update={"screen_id": new_ids[name_key(case.screen_name)]})
+                if not case.screen_id
+                else case
+                for case in result.cases
+            ]
+            screen_ids = list(dict.fromkeys(case.screen_id for case in cases))
+            also = user.email if user.role == Role.TESTER else None
+            self._module_work.assign_new_screens(screen_ids, module_id, also=also)
+        except (SheetAccessDeniedError, MissingColumnsError, HttpError) as error:
+            raise ImportWriteError("Google Sheets đang bận, chưa nhập case nào") from error
+        self._audit_new_screens(user, new_screens)
+        return cases
+
+    def _audit_new_screens(self, user: User, screens: list[Screen]) -> None:
+        if not screens:
+            return
+        try:
+            self._audit_log.record_many(
+                [
+                    AuditRecord(
+                        actor=user.email,
+                        action="CREATE",
+                        entity="screen",
+                        entity_id=screen.id,
+                        diff=screen.model_dump(mode="json"),
+                    )
+                    for screen in screens
+                ]
+            )
+        except Exception:
+            logger.warning(
+                "Không ghi được lịch sử cho %d màn hình vừa tạo", len(screens), exc_info=True
+            )
 
     def _audit_import(self, user: User, created: list[TestCase]) -> None:
         """Mỗi case một dòng `IMPORT` (diff như `CREATE`), ghi bằng một lời gọi Google."""

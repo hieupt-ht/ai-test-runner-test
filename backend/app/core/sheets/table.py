@@ -199,6 +199,12 @@ class SheetTable:
         new_row = self._merge_row(header, current, record)
         self._gateway.update_row(self._spreadsheet_id, self._tab, row_number, new_row)
 
+    def delete_rows(self, row_numbers: list[int]) -> None:
+        """Xoá nhiều dòng bằng một lượt gọi Google. Chỉ gọi khi đang giữ khoá của tab."""
+        if any(row_number < 2 for row_number in row_numbers):
+            raise ValueError("Không được xoá hàng tiêu đề")
+        self._gateway.delete_rows(self._spreadsheet_id, self._tab, row_numbers)
+
     def delete_row(self, row_number: int) -> None:
         """Xoá hẳn một dòng; các dòng bên dưới dịch lên. Chỉ gọi khi đang giữ khoá của tab."""
         if row_number < 2:

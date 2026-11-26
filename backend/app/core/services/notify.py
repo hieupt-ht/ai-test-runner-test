@@ -33,6 +33,14 @@ class Notifier:
             link=f"/projects/{project_id}/screens",
         )
 
+    def module_assigned(
+        self, *, email: str, project_id: str, module_id: str, module_name: str
+    ) -> None:
+        self._send(
+            email, type="module_assigned", title=f"Bạn được giao module {module_name}",
+            link=f"/projects/{project_id}/screens?module={module_id}",
+        )
+
     def case_returned(
         self, *, email: str, project_id: str, case_id: str, comment: str
     ) -> None:

@@ -172,3 +172,25 @@ def test_upgrade_skips_archived_and_survives_errors() -> None:
 
     assert "TestCases" in gateway.data["ok"]  # dự án lỗi không chặn dự án sau
     assert gateway.data["old"] == {}  # dự án lưu trữ không bị đụng tới
+
+
+def test_project_bootstrap_adds_module_tabs_and_column() -> None:
+    from app.core.bootstrap import bootstrap_project_spreadsheet
+
+    old_screens = [
+        "id",
+        "name",
+        "description",
+        "route",
+        "code_paths",
+        "created_at",
+        "dev_owner",
+        "media_json",
+    ]
+    gateway = FakeSheetsGateway({"proj": {"Screens": [old_screens]}})
+
+    created = bootstrap_project_spreadsheet(gateway, "proj")
+
+    assert "Modules" in created and "ModuleAssignments" in created
+    assert gateway.data["proj"]["Screens"][0][-1] == "module_id"
+    assert gateway.data["proj"]["Modules"][0] == ["id", "name", "description", "created_at"]

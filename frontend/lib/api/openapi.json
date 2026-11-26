@@ -786,6 +786,398 @@
         }
       }
     },
+    "/api/projects/{project_id}/modules": {
+      "get": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "List Modules",
+        "operationId": "list_modules_api_projects__project_id__modules_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModuleView"
+                  },
+                  "title": "Response List Modules Api Projects  Project Id  Modules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Create Module",
+        "operationId": "create_module_api_projects__project_id__modules_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateModuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Module"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/modules/{module_id}": {
+      "patch": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Update Module",
+        "operationId": "update_module_api_projects__project_id__modules__module_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Module Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateModuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Module"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Delete Module",
+        "operationId": "delete_module_api_projects__project_id__modules__module_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Module Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/modules/{module_id}/workers": {
+      "post": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Assign Workers",
+        "operationId": "assign_workers_api_projects__project_id__modules__module_id__workers_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Module Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignWorkersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModuleAssignment"
+                  },
+                  "title": "Response Assign Workers Api Projects  Project Id  Modules  Module Id  Workers Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/modules/{module_id}/workers/{worker_id}": {
+      "patch": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Change Worker Deadline",
+        "operationId": "change_worker_deadline_api_projects__project_id__modules__module_id__workers__worker_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "worker_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Worker Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeDeadlineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleAssignment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Unassign Worker",
+        "operationId": "unassign_worker_api_projects__project_id__modules__module_id__workers__worker_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "worker_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Worker Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnassignResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/assignments": {
       "get": {
         "tags": [
@@ -3337,6 +3729,30 @@
         ],
         "title": "AssignRequest"
       },
+      "AssignWorkersRequest": {
+        "properties": {
+          "emails": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Emails"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "title": "Deadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "emails",
+          "deadline"
+        ],
+        "title": "AssignWorkersRequest"
+      },
       "Assignment": {
         "properties": {
           "id": {
@@ -3493,6 +3909,11 @@
             "type": "string",
             "contentMediaType": "application/octet-stream",
             "title": "File"
+          },
+          "module_id": {
+            "type": "string",
+            "title": "Module Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -3507,6 +3928,11 @@
             "type": "string",
             "contentMediaType": "application/octet-stream",
             "title": "File"
+          },
+          "module_id": {
+            "type": "string",
+            "title": "Module Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -3603,6 +4029,27 @@
         ],
         "title": "ConflictResponse",
         "description": "Phản hồi 409 khi version cũ: kèm bản mới nhất để giao diện cho người dùng so sánh."
+      },
+      "CreateModuleRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateModuleRequest"
       },
       "CreateProjectRequest": {
         "properties": {
@@ -3710,6 +4157,11 @@
             "maxItems": 5,
             "title": "Media",
             "default": []
+          },
+          "module_id": {
+            "type": "string",
+            "title": "Module Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -4311,6 +4763,143 @@
         ],
         "title": "MemberView"
       },
+      "Module": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "created_at"
+        ],
+        "title": "Module",
+        "description": "Một nhóm màn hình (ví dụ \"Tài khoản\") để QA chia việc cho tester."
+      },
+      "ModuleAssignment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "module_id": {
+            "type": "string",
+            "title": "Module Id"
+          },
+          "assignee_email": {
+            "type": "string",
+            "title": "Assignee Email"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "title": "Deadline"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "module_id",
+          "assignee_email",
+          "deadline",
+          "created_at"
+        ],
+        "title": "ModuleAssignment",
+        "description": "Ai đang nhận làm module nào, hạn bao giờ."
+      },
+      "ModuleView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "screen_count": {
+            "type": "integer",
+            "title": "Screen Count"
+          },
+          "workers": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleWorker"
+            },
+            "type": "array",
+            "title": "Workers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "created_at",
+          "screen_count",
+          "workers"
+        ],
+        "title": "ModuleView"
+      },
+      "ModuleWorker": {
+        "properties": {
+          "assignment_id": {
+            "type": "string",
+            "title": "Assignment Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date",
+            "title": "Deadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignment_id",
+          "email",
+          "name",
+          "deadline"
+        ],
+        "title": "ModuleWorker"
+      },
       "MyAssignment": {
         "properties": {
           "assignment_id": {
@@ -4545,6 +5134,14 @@
             },
             "type": "array",
             "title": "Warnings",
+            "default": []
+          },
+          "new_screens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "New Screens",
             "default": []
           }
         },
@@ -5254,6 +5851,11 @@
             "type": "array",
             "maxItems": 5,
             "title": "Media"
+          },
+          "module_id": {
+            "type": "string",
+            "title": "Module Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -5985,6 +6587,50 @@
         ],
         "title": "TransitionRequest"
       },
+      "UnassignResult": {
+        "properties": {
+          "removed_screen_assignments": {
+            "type": "integer",
+            "title": "Removed Screen Assignments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "removed_screen_assignments"
+        ],
+        "title": "UnassignResult"
+      },
+      "UpdateModuleRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "UpdateModuleRequest"
+      },
       "UpdateProjectRequest": {
         "properties": {
           "name": {
@@ -6174,6 +6820,17 @@
               }
             ],
             "title": "Media"
+          },
+          "module_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module Id"
           }
         },
         "type": "object",

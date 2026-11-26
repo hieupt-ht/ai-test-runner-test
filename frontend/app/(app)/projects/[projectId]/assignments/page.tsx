@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useModules } from "@/lib/use-modules"
 import { useAssignments, useMembers, useScreens, useUnassign } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
@@ -21,6 +22,7 @@ export default function AssignmentsPage() {
   const screens = useScreens(projectId)
   const assignments = useAssignments(projectId)
   const members = useMembers(projectId)
+  const modules = useModules(projectId)
   const unassign = useUnassign(projectId)
 
   const canManage = Boolean(project?.permissions.includes("MANAGE_SCREENS")) && !project?.archived
@@ -29,6 +31,7 @@ export default function AssignmentsPage() {
     return <Skeleton className="h-48 w-full" />
   }
 
+  const moduleName = new Map((modules.data ?? []).map((module) => [module.id, module.name]))
   const memberByEmail = new Map((members.data ?? []).map((member) => [member.email, member]))
   const activeTesters = (members.data ?? []).filter((m) => m.role === "TESTER" && m.active)
 
@@ -56,6 +59,9 @@ export default function AssignmentsPage() {
               <div className="min-w-0">
                 <CardTitle className="truncate">{screen.name}</CardTitle>
                 <p className="font-mono text-xs text-muted-foreground">{screen.id}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {t("modules.colModule")}: {moduleName.get(screen.module_id) ?? "—"}
+                </p>
               </div>
               {canManage && (
                 <AssignDialog

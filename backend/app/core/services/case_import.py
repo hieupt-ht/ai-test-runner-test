@@ -4,6 +4,7 @@
 Google Sheets. `parse_workbook` không xét quyền và trùng tiêu đề, việc đó do `check_import`.
 """
 
+import re
 import unicodedata
 import zipfile
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from pydantic import BaseModel, ValidationError
 
+from app.core.models.module import name_key
 from app.core.models.screen import Screen
 from app.core.models.test_case import (
     Platform,
@@ -36,6 +38,8 @@ MAX_CASES = 300
 _WRONG_TEMPLATE = "File không đúng mẫu, hãy tải file mẫu mới"
 _REQUIRED = "Không được để trống"
 _NOT_ASSIGNED = "Bạn chưa được giao màn hình này"
+_SCREEN_NOT_FOUND = "Không tìm thấy màn hình này trong dự án"
+_SCREEN_ID = re.compile(r"^sc-\d+$", re.IGNORECASE)
 
 # Giá trị ô Regression: chữ (đã hạ chữ thường) nào là Có, chữ nào là Không
 _YES = {"có", "co", "x", "yes", "true"}
@@ -95,6 +99,8 @@ class ParseResult(BaseModel):
     cases: list[ParsedCase] = []
     errors: list[ImportIssue] = []
     warnings: list[ImportIssue] = []
+    # Tên màn hình sẽ được tạo mới (chỉ khi nhập theo module), theo thứ tự trong file
+    new_screens: list[str] = []
 
 
 def _file_error(message: str) -> ParseResult:
@@ -193,7 +199,7 @@ def _find_screen(text: str, screens: list[Screen]) -> tuple[Screen | None, str]:
     if len(named) > 1:
         return None, "Có nhiều màn hình tên này, hãy ghi mã màn hình"
     if not named:
-        return None, "Không tìm thấy màn hình này trong dự án"
+        return None, _SCREEN_NOT_FOUND
     return named[0], ""
 
 
@@ -256,8 +262,13 @@ def _build_case(
     lines: list[tuple[int, list[str]]],
     screens: list[Screen],
     errors: list[ImportIssue],
+    create_missing: bool,
 ) -> ParsedCase | None:
-    """Dựng một case từ các dòng của nhóm; lỗi ghi vào `errors`, có lỗi thì trả None."""
+    """Dựng một case từ các dòng của nhóm; lỗi ghi vào `errors`, có lỗi thì trả None.
+
+    `create_missing`: tên màn hình chưa có thì không lỗi, case mang `screen_id` rỗng và tên
+    đó (để service tạo màn hình mới); riêng mã `SC-xxxx` không có trong `screens` vẫn là lỗi.
+    """
     first_row, first = lines[0]
     before = len(errors)
     bad_columns: set[str] = set()  # cột đã báo lỗi, tránh báo trùng với lỗi Pydantic
@@ -275,11 +286,19 @@ def _build_case(
             if value and value != first[_COL[column.header]]:
                 fail(number, column.header, "Khác với dòng đầu của nhóm")
 
-    screen, screen_error = _find_screen(first[_COL["Màn hình"]], screens)
-    if first[_COL["Màn hình"]] == "":
+    screen_text = first[_COL["Màn hình"]]
+    screen, screen_error = _find_screen(screen_text, screens)
+    new_screen_name = ""
+    if screen_text == "":
         fail(first_row, "Màn hình", _REQUIRED)
     elif screen is None:
-        fail(first_row, "Màn hình", screen_error)
+        if create_missing and screen_error == _SCREEN_NOT_FOUND:
+            if _SCREEN_ID.match(screen_text):
+                fail(first_row, "Màn hình", f"Màn hình {screen_text.upper()} thuộc module khác")
+            else:
+                new_screen_name = screen_text
+        else:
+            fail(first_row, "Màn hình", screen_error)
 
     data: dict[str, Any] = {}
     for col in COLUMNS:
@@ -314,21 +333,27 @@ def _build_case(
             if header_name not in bad_columns:
                 errors.append(ImportIssue(row=row, column=header_name, message=_translate(error)))
 
-    if len(errors) > before or screen is None or content is None:
+    if len(errors) > before or content is None or (screen is None and not new_screen_name):
         return None
     return ParsedCase(
         group=group,
         row=first_row,
-        screen_id=screen.id,
-        screen_name=screen.name,
+        screen_id=screen.id if screen else "",
+        screen_name=screen.name if screen else new_screen_name,
         title=content.title,
         step_count=len(content.steps),
         content=content,
     )
 
 
-def parse_workbook(data: bytes, screens: list[Screen]) -> ParseResult:
-    """Đọc file .xlsx theo mẫu. Lỗi xếp theo số dòng (lỗi chung của file đứng đầu)."""
+def parse_workbook(
+    data: bytes, screens: list[Screen], *, create_missing: bool = False
+) -> ParseResult:
+    """Đọc file .xlsx theo mẫu. Lỗi xếp theo số dòng (lỗi chung của file đứng đầu).
+
+    `create_missing=True` (nhập theo module): tên màn hình chưa có không phải lỗi mà được gom
+    vào `ParseResult.new_screens` để tạo mới.
+    """
     if len(data) > MAX_FILE_BYTES:
         return _file_error("File quá lớn, tối đa 2 MB")
     unpacked = _unpacked_size(data)
@@ -358,11 +383,24 @@ def parse_workbook(data: bytes, screens: list[Screen]) -> ParseResult:
 
     cases: list[ParsedCase] = []
     for group, lines in groups.items():
-        case = _build_case(group, lines, screens, errors)
+        case = _build_case(group, lines, screens, errors, create_missing)
         if case:
             cases.append(case)
     errors.sort(key=lambda e: e.row or 0)
-    return ParseResult(cases=cases, errors=errors)
+    new_screens = _unify_new_screens(cases)
+    return ParseResult(cases=cases, errors=errors, new_screens=new_screens)
+
+
+def _unify_new_screens(cases: list[ParsedCase]) -> list[str]:
+    """Gom tên màn hình mới theo khoá so tên; mọi case dùng cách viết của lần xuất hiện đầu."""
+    spelling: dict[str, str] = {}
+    for case in cases:
+        if not case.screen_id:
+            spelling.setdefault(name_key(case.screen_name), case.screen_name)
+    for case in cases:
+        if not case.screen_id:
+            case.screen_name = spelling[name_key(case.screen_name)]
+    return list(spelling.values())
 
 
 # Case ở hai trạng thái này coi như không còn dùng: trùng tiêu đề với chúng thì không cảnh báo
@@ -399,7 +437,9 @@ def check_import(
                 )
             )
     errors.sort(key=lambda e: e.row or 0)
-    return ParseResult(cases=result.cases, errors=errors, warnings=warnings)
+    return ParseResult(
+        cases=result.cases, errors=errors, warnings=warnings, new_screens=result.new_screens
+    )
 
 
 # Màn hình dùng trong case ví dụ của file mẫu

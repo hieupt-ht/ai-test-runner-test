@@ -12,6 +12,10 @@ vi.mock("@/lib/use-project-data", () => ({
   useSaveScreen: () => ({ mutateAsync, isPending: false }),
 }))
 
+vi.mock("@/lib/use-modules", () => ({
+  useModules: () => ({ data: [{ id: "MD-0001", name: "Tài khoản" }] }),
+}))
+
 vi.mock("@/lib/use-projects", () => ({
   useProject: () => ({ data: { storage: "cloudinary" } }),
 }))
@@ -55,6 +59,7 @@ const existing = {
   created_at: "2026-11-17T00:00:00Z",
   dev_owner: "nguyenvana",
   media: [existingMedia],
+  module_id: "",
 } satisfies Screen
 
 function openDialog(screenToEdit?: Screen) {
@@ -154,5 +159,31 @@ describe("ScreenFormDialog – mở lại sau khi huỷ", () => {
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled())
     expect(mutateAsync.mock.calls[0][0]).toMatchObject({ media: [existingMedia] })
+  })
+})
+
+describe("ScreenFormDialog – module", () => {
+  afterEach(() => {
+    cleanup()
+    mutateAsync.mockReset()
+  })
+
+  it("có lựa chọn Chưa phân module và gửi module_id đã chọn", async () => {
+    mutateAsync.mockResolvedValue(existing)
+    openDialog(existing)
+    const select = screen.getByLabelText("Module")
+    expect(select).toHaveValue("")
+    expect(screen.getByRole("option", { name: "Chưa phân module" })).toBeInTheDocument()
+
+    fireEvent.change(select, { target: { value: "MD-0001" } })
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled())
+    expect(mutateAsync.mock.calls[0][0]).toMatchObject({ module_id: "MD-0001" })
+  })
+
+  it("hiện sẵn module hiện tại khi sửa màn hình", () => {
+    openDialog({ ...existing, module_id: "MD-0001" })
+    expect(screen.getByLabelText("Module")).toHaveValue("MD-0001")
   })
 })

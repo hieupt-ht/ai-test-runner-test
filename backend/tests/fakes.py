@@ -109,6 +109,14 @@ class FakeSheetsGateway:
         self.calls.append(f"delete:{tab}!{row_number}")
         del self._tab(spreadsheet_id, tab)[row_number - 1]
 
+    def delete_rows(self, spreadsheet_id: str, tab: str, row_numbers: list[int]) -> None:
+        if not row_numbers:
+            return
+        self.calls.append(f"delete_rows:{tab}")
+        rows = self._tab(spreadsheet_id, tab)
+        for row_number in sorted(set(row_numbers), reverse=True):
+            del rows[row_number - 1]
+
     def add_tab(self, spreadsheet_id: str, tab: str, header: list[str]) -> None:
         if spreadsheet_id in self.denied:
             raise SheetAccessDeniedError(spreadsheet_id)
