@@ -134,3 +134,57 @@ def test_tester_cannot_manage_members(
 
 def test_non_member_gets_404(client_as_tester: TestClient, project: Project) -> None:
     assert client_as_tester.get(members_url(project)).status_code == 404
+
+
+def test_remove_member_deletes_their_module_assignments(
+    lead: TestClient,
+    project: Project,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    from app.core.repositories.modules import ModuleAssignmentRepository
+    from tests.conftest import SHEET_A
+
+    lead.post(members_url(project), json={"email": "binh@x.com"})
+    module = lead.post(f"/api/projects/{project.id}/modules", json={"name": "Tài khoản"}).json()
+    deadline = (today_in_vietnam() + timedelta(days=3)).isoformat()
+    lead.post(
+        f"/api/projects/{project.id}/modules/{module['id']}/workers",
+        json={"emails": ["binh@x.com"], "deadline": deadline},
+    )
+    module_assignments = ModuleAssignmentRepository(gateway, SHEET_A, redis, project.id)
+    assert len(module_assignments.list_all()) == 1
+
+    response = lead.delete(f"{members_url(project)}/binh@x.com")
+
+    assert response.status_code == 204
+    assert module_assignments.list_all() == []
+
+
+def test_inactive_worker_skipped_when_screen_added(
+    lead: TestClient,
+    project: Project,
+    users: UserRepository,
+    gateway: FakeSheetsGateway,
+    redis: fakeredis.FakeRedis,
+) -> None:
+    from app.core.repositories.assignments import AssignmentRepository
+    from tests.conftest import SHEET_A
+
+    lead.post(members_url(project), json={"email": "binh@x.com"})
+    module = lead.post(f"/api/projects/{project.id}/modules", json={"name": "Tài khoản"}).json()
+    deadline = (today_in_vietnam() + timedelta(days=3)).isoformat()
+    lead.post(
+        f"/api/projects/{project.id}/modules/{module['id']}/workers",
+        json={"emails": ["binh@x.com"], "deadline": deadline},
+    )
+    binh = users.get("binh@x.com")
+    assert binh is not None
+    users.update(binh.model_copy(update={"active": False}))
+
+    response = lead.post(
+        f"/api/projects/{project.id}/screens", json={"name": "Hồ sơ", "module_id": module["id"]}
+    )
+
+    assert response.status_code == 201
+    assert AssignmentRepository(gateway, SHEET_A, redis, project.id).list_all() == []

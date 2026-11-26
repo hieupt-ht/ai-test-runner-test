@@ -26,11 +26,13 @@ class AddMemberRequest(BaseModel):
 
 def _service(services: Services, user: User, project_id: str, action: Action) -> MemberService:
     project = load_project(services, user, project_id, action)
+    scope = scope_for(services, project)
     return MemberService(
         project_id=project.id,
         members=services.members,
         users=services.users,
-        assignments=scope_for(services, project).assignments,
+        assignments=scope.assignments,
+        module_assignments=scope.module_assignments,
         audit_log=services.audit_log,
         project_name=project.name,
         notifier=Notifier(services.notifications),

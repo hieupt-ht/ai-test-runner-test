@@ -20,7 +20,7 @@ from app.core.models.user import Role
 from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
-from app.core.repositories.modules import ModuleRepository
+from app.core.repositories.modules import ModuleAssignmentRepository, ModuleRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.screens import ScreenRepository
 from app.core.repositories.test_cases import TestCaseRepository
@@ -71,6 +71,9 @@ class Request:
             members=members,
             users=users,
             assignments=self.assignments,
+            module_assignments=ModuleAssignmentRepository(
+                gateway, sheet, redis, project.id, lock_wait_seconds=0.1
+            ),
             audit_log=audit,
         )
         self.screen_service = ScreenService(
