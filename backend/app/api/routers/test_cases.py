@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser, ServicesDep
 from app.api.project_access import load_project
-from app.api.project_scope import scope_for
+from app.api.project_scope import module_work_for, scope_for
 from app.api.routers.results import results_for_project
 from app.api.services import Services
 from app.core.assignment_status import AssignmentStatusUpdater
@@ -126,6 +126,9 @@ def service_for(services: Services, project: Project) -> TestCaseService:
         cloud_name=services.cloud_name,
         drive_enabled=services.drive is not None,
         janitor=services.media_janitor,
+        modules=scope.modules,
+        module_assignments=scope.module_assignments,
+        module_work=module_work_for(services, scope),
     )
 
 
