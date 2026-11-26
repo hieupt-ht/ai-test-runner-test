@@ -274,6 +274,77 @@ export interface paths {
         patch: operations["update_screen_api_projects__project_id__screens__screen_id__patch"];
         trace?: never;
     };
+    "/api/projects/{project_id}/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Modules */
+        get: operations["list_modules_api_projects__project_id__modules_get"];
+        put?: never;
+        /** Create Module */
+        post: operations["create_module_api_projects__project_id__modules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/modules/{module_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Module */
+        delete: operations["delete_module_api_projects__project_id__modules__module_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Module */
+        patch: operations["update_module_api_projects__project_id__modules__module_id__patch"];
+        trace?: never;
+    };
+    "/api/projects/{project_id}/modules/{module_id}/workers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign Workers */
+        post: operations["assign_workers_api_projects__project_id__modules__module_id__workers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/modules/{module_id}/workers/{worker_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unassign Worker */
+        delete: operations["unassign_worker_api_projects__project_id__modules__module_id__workers__worker_id__delete"];
+        options?: never;
+        head?: never;
+        /** Change Worker Deadline */
+        patch: operations["change_worker_deadline_api_projects__project_id__modules__module_id__workers__worker_id__patch"];
+        trace?: never;
+    };
     "/api/projects/{project_id}/assignments": {
         parameters: {
             query?: never;
@@ -1085,6 +1156,16 @@ export interface components {
              */
             deadline: string;
         };
+        /** AssignWorkersRequest */
+        AssignWorkersRequest: {
+            /** Emails */
+            emails: string[];
+            /**
+             * Deadline
+             * Format: date
+             */
+            deadline: string;
+        };
         /** Assignment */
         Assignment: {
             /** Id */
@@ -1151,11 +1232,21 @@ export interface components {
         Body_import_cases_api_projects__project_id__test_cases_import_post: {
             /** File */
             file: string;
+            /**
+             * Module Id
+             * @default
+             */
+            module_id: string;
         };
         /** Body_preview_import_api_projects__project_id__test_cases_import_preview_post */
         Body_preview_import_api_projects__project_id__test_cases_import_preview_post: {
             /** File */
             file: string;
+            /**
+             * Module Id
+             * @default
+             */
+            module_id: string;
         };
         /** Body_upload_agent_media_api_agent_projects__project_id__media_upload_post */
         Body_upload_agent_media_api_agent_projects__project_id__media_upload_post: {
@@ -1196,6 +1287,16 @@ export interface components {
             /** Detail */
             detail: string;
             latest: components["schemas"]["TestCase"];
+        };
+        /** CreateModuleRequest */
+        CreateModuleRequest: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
         };
         /** CreateProjectRequest */
         CreateProjectRequest: {
@@ -1244,6 +1345,11 @@ export interface components {
              * @default []
              */
             media: components["schemas"]["Media"][];
+            /**
+             * Module Id
+             * @default
+             */
+            module_id: string;
         };
         /** CreateTestCaseRequest */
         CreateTestCaseRequest: {
@@ -1503,6 +1609,77 @@ export interface components {
             added_at: string;
         };
         /**
+         * Module
+         * @description Một nhóm màn hình (ví dụ "Tài khoản") để QA chia việc cho tester.
+         */
+        Module: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * ModuleAssignment
+         * @description Ai đang nhận làm module nào, hạn bao giờ.
+         */
+        ModuleAssignment: {
+            /** Id */
+            id: string;
+            /** Module Id */
+            module_id: string;
+            /** Assignee Email */
+            assignee_email: string;
+            /**
+             * Deadline
+             * Format: date
+             */
+            deadline: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ModuleView */
+        ModuleView: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Screen Count */
+            screen_count: number;
+            /** Workers */
+            workers: components["schemas"]["ModuleWorker"][];
+        };
+        /** ModuleWorker */
+        ModuleWorker: {
+            /** Assignment Id */
+            assignment_id: string;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /**
+             * Deadline
+             * Format: date
+             */
+            deadline: string;
+        };
+        /**
          * MyAssignment
          * @description Một dòng trong trang "Việc của tôi".
          */
@@ -1605,6 +1782,11 @@ export interface components {
              * @default []
              */
             warnings: components["schemas"]["ImportIssue"][];
+            /**
+             * New Screens
+             * @default []
+             */
+            new_screens: string[];
         };
         /** ParsedCase */
         ParsedCase: {
@@ -1926,6 +2108,11 @@ export interface components {
             dev_owner: string;
             /** Media */
             media?: components["schemas"]["Media"][];
+            /**
+             * Module Id
+             * @default
+             */
+            module_id: string;
         };
         /** ScreenProgress */
         ScreenProgress: {
@@ -2294,6 +2481,18 @@ export interface components {
              */
             comment: string;
         };
+        /** UnassignResult */
+        UnassignResult: {
+            /** Removed Screen Assignments */
+            removed_screen_assignments: number;
+        };
+        /** UpdateModuleRequest */
+        UpdateModuleRequest: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+        };
         /** UpdateProjectRequest */
         UpdateProjectRequest: {
             /** Name */
@@ -2327,6 +2526,8 @@ export interface components {
             dev_owner?: string | null;
             /** Media */
             media?: components["schemas"]["Media"][] | null;
+            /** Module Id */
+            module_id?: string | null;
         };
         /** UpdateTestCaseRequest */
         UpdateTestCaseRequest: {
@@ -3012,6 +3213,244 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Screen"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_modules_api_projects__project_id__modules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_module_api_projects__project_id__modules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateModuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_module_api_projects__project_id__modules__module_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_module_api_projects__project_id__modules__module_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateModuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_workers_api_projects__project_id__modules__module_id__workers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignWorkersRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleAssignment"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unassign_worker_api_projects__project_id__modules__module_id__workers__worker_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                module_id: string;
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnassignResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_worker_deadline_api_projects__project_id__modules__module_id__workers__worker_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                module_id: string;
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeDeadlineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleAssignment"];
                 };
             };
             /** @description Validation Error */

@@ -33,6 +33,7 @@ export type ScreenInput = {
   code_paths: string[]
   dev_owner: string
   media: Media[]
+  module_id: string
 }
 
 export function useScreens(projectId: string) {
