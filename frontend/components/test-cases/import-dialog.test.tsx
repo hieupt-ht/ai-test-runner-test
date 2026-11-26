@@ -10,6 +10,17 @@ const mocks = vi.hoisted(() => ({
   preview: vi.fn(),
   importCases: vi.fn(),
   toastSuccess: vi.fn(),
+  user: { email: "lead@x.com", role: "QA_LEAD" } as { email: string; role: string },
+  modules: [] as unknown[],
+  screens: [] as unknown[],
+  assignments: [] as unknown[],
+}))
+
+vi.mock("@/lib/use-me", () => ({ useMe: () => ({ user: mocks.user, isLoading: false }) }))
+vi.mock("@/lib/use-modules", () => ({ useModules: () => ({ data: mocks.modules }) }))
+vi.mock("@/lib/use-project-data", () => ({
+  useScreens: () => ({ data: mocks.screens }),
+  useAssignments: () => ({ data: mocks.assignments }),
 }))
 
 vi.mock("sonner", () => ({ toast: { success: mocks.toastSuccess, error: vi.fn() } }))
@@ -47,7 +58,13 @@ function renderDialog(onOpenChange = vi.fn()) {
   return onOpenChange
 }
 
-async function pickFile() {
+/** Chọn module trước (bắt buộc); mặc định "Không theo module (như cũ)". */
+function chooseModule(value = "none") {
+  fireEvent.change(screen.getByLabelText("Module"), { target: { value } })
+}
+
+async function pickFile(moduleValue: string | null = "none") {
+  if (moduleValue !== null) chooseModule(moduleValue)
   const file = new File(["x"], "cases.xlsx")
   const input = document.querySelector('input[type="file"]') as HTMLInputElement
   fireEvent.change(input, { target: { files: [file] } })
@@ -59,6 +76,10 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     mocks.preview.mockReset()
     mocks.importCases.mockReset()
     mocks.toastSuccess.mockReset()
+    mocks.user = { email: "lead@x.com", role: "QA_LEAD" }
+    mocks.modules = []
+    mocks.screens = []
+    mocks.assignments = []
   })
   afterEach(cleanup)
 
@@ -66,7 +87,7 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     mocks.preview.mockResolvedValue(okResult())
     renderDialog()
     const file = await pickFile()
-    expect(mocks.preview).toHaveBeenCalledWith(file)
+    expect(mocks.preview).toHaveBeenCalledWith({ file, moduleId: "" })
     expect(await screen.findByText("Xem trước: 12 case · 41 bước · 3 màn hình")).toBeInTheDocument()
     for (const name of ["Mã nhóm", "Màn hình", "Tiêu đề", "Số bước"]) {
       expect(screen.getByRole("columnheader", { name })).toBeInTheDocument()
@@ -118,7 +139,7 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     const onOpenChange = renderDialog()
     const file = await pickFile()
     fireEvent.click(await screen.findByRole("button", { name: "Nhập 12 case" }))
-    await waitFor(() => expect(mocks.importCases).toHaveBeenCalledWith(file))
+    await waitFor(() => expect(mocks.importCases).toHaveBeenCalledWith({ file, moduleId: "" }))
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Đã nhập 12 case")
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
@@ -165,7 +186,9 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     Object.defineProperty(input, "value", { set: resetValue, get: () => "" })
     await pickFile()
     expect(resetValue).toHaveBeenCalledWith("")
-    await waitFor(() => expect(mocks.preview).toHaveBeenCalledWith(expect.any(File)))
+    await waitFor(() =>
+      expect(mocks.preview).toHaveBeenCalledWith({ file: expect.any(File), moduleId: "" }),
+    )
   })
 
   it("hiện tên file đã chọn dưới ô chọn file", async () => {
@@ -218,5 +241,138 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()
     expect(screen.queryByText(/Xem trước:/)).not.toBeInTheDocument()
     expect(screen.queryByText("cases.xlsx")).not.toBeInTheDocument()
+  })
+})
+
+
+describe("Nhập theo module", () => {
+  beforeEach(() => {
+    mocks.preview.mockReset()
+    mocks.importCases.mockReset()
+    mocks.user = { email: "lead@x.com", role: "QA_LEAD" }
+    mocks.modules = [
+      { id: "MD-0001", name: "Tài khoản", workers: [{ email: "an@x.com", name: "An" }] },
+      { id: "MD-0002", name: "Giỏ hàng", workers: [] },
+    ]
+    mocks.screens = []
+    mocks.assignments = []
+  })
+  afterEach(cleanup)
+
+  it("requires module choice before upload", () => {
+    renderDialog()
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    expect(input).toBeDisabled()
+    expect(screen.getByText("Hãy chọn module trước khi chọn file")).toBeInTheDocument()
+
+    chooseModule("MD-0001")
+    expect(input).toBeEnabled()
+  })
+
+  it("sends module_id with file", async () => {
+    mocks.preview.mockResolvedValue(okResult())
+    mocks.importCases.mockResolvedValue({ created: ["TC-1"] })
+    renderDialog()
+    const file = await pickFile("MD-0001")
+
+    expect(mocks.preview).toHaveBeenCalledWith({ file, moduleId: "MD-0001" })
+    fireEvent.click(await screen.findByRole("button", { name: "Nhập 12 case" }))
+    await waitFor(() =>
+      expect(mocks.importCases).toHaveBeenCalledWith({ file, moduleId: "MD-0001" }),
+    )
+  })
+
+  it("changing module after preview previews again", async () => {
+    mocks.preview.mockResolvedValue(okResult())
+    renderDialog()
+    const file = await pickFile("MD-0001")
+    await screen.findByRole("button", { name: "Nhập 12 case" })
+
+    chooseModule("MD-0002")
+
+    await waitFor(() =>
+      expect(mocks.preview).toHaveBeenLastCalledWith({ file, moduleId: "MD-0002" }),
+    )
+    expect(mocks.preview).toHaveBeenCalledTimes(2)
+  })
+
+  it("shows new screens notice and allows import", async () => {
+    mocks.preview.mockResolvedValue({
+      ...okResult(),
+      new_screens: ["Đăng ký", "Hồ sơ"],
+    })
+    renderDialog()
+    await pickFile("MD-0001")
+
+    expect(await screen.findByText("Sẽ tạo mới 2 màn hình: Đăng ký, Hồ sơ")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Nhập 12 case" })).toBeEnabled()
+  })
+
+  it("qa sees every module plus the old option", () => {
+    renderDialog()
+
+    const names = screen.getAllByRole("option").map((option) => option.textContent)
+    expect(names).toEqual(["Chọn module", "Không theo module (như cũ)", "Tài khoản", "Giỏ hàng"])
+  })
+
+  it("tester only sees own modules", () => {
+    mocks.user = { email: "an@x.com", role: "TESTER" }
+    renderDialog()
+
+    const names = screen.getAllByRole("option").map((option) => option.textContent)
+    expect(names).toEqual(["Chọn module", "Tài khoản"])
+  })
+
+  it("tester with loose screen assignments also sees the old option", () => {
+    mocks.user = { email: "an@x.com", role: "TESTER" }
+    mocks.screens = [{ id: "SC-0009", module_id: "" }]
+    mocks.assignments = [{ screen_id: "SC-0009", assignee_email: "an@x.com" }]
+    renderDialog()
+
+    const names = screen.getAllByRole("option").map((option) => option.textContent)
+    expect(names).toEqual(["Chọn module", "Không theo module (như cũ)", "Tài khoản"])
+  })
+})
+
+describe("Đổi module về chưa chọn", () => {
+  afterEach(cleanup)
+
+  it("khoá nút Nhập và bỏ bản xem trước cũ", async () => {
+    mocks.preview.mockReset()
+    mocks.modules = [{ id: "MD-0001", name: "Tài khoản", workers: [] }]
+    mocks.user = { email: "lead@x.com", role: "QA_LEAD" }
+    mocks.preview.mockResolvedValue(okResult())
+    renderDialog()
+    await pickFile("MD-0001")
+    await screen.findByRole("button", { name: "Nhập 12 case" })
+
+    chooseModule("")
+
+    expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()
+    expect(screen.queryByText(/Xem trước:/)).not.toBeInTheDocument()
+  })
+
+  it("lỗi nhập của module cũ về chậm thì không đè bản xem trước mới", async () => {
+    mocks.modules = [
+      { id: "MD-0001", name: "Tài khoản", workers: [] },
+      { id: "MD-0002", name: "Đơn hàng", workers: [] },
+    ]
+    let rejectImport: (error: unknown) => void = () => {}
+    mocks.importCases.mockReturnValue(new Promise((_, reject) => (rejectImport = reject)))
+    const second = { ...okResult(), cases: [parsed("G1", "SC-0001", 2)] }
+    mocks.preview.mockResolvedValueOnce(okResult()).mockResolvedValueOnce(second)
+    renderDialog()
+    await pickFile("MD-0001")
+    fireEvent.click(await screen.findByRole("button", { name: "Nhập 12 case" }))
+
+    chooseModule("MD-0002") // đổi module trong lúc lượt nhập cũ còn đang chạy
+    await screen.findByRole("button", { name: "Nhập 1 case" })
+    rejectImport(new ApiError(422, "x", { errors: [{ row: 5, column: "Tiêu đề", message: "Lỗi cũ" }] }))
+
+    await waitFor(() => expect(mocks.importCases).toHaveBeenCalled())
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(screen.queryByText(/Lỗi cũ/)).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Nhập 1 case" })).toBeEnabled()
   })
 })

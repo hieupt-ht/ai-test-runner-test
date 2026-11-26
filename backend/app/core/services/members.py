@@ -8,6 +8,7 @@ from app.core.models.user import Role, User, normalize_email
 from app.core.repositories.assignments import AssignmentRepository
 from app.core.repositories.audit_log import AuditLogRepository
 from app.core.repositories.members import ProjectMemberRepository
+from app.core.repositories.modules import ModuleAssignmentRepository
 from app.core.repositories.users import UserRepository
 from app.core.services.notify import Notifier
 
@@ -38,6 +39,7 @@ class MemberService:
         members: ProjectMemberRepository,
         users: UserRepository,
         assignments: AssignmentRepository,
+        module_assignments: ModuleAssignmentRepository,
         audit_log: AuditLogRepository,  # nhật ký của Sheet hệ thống
         project_name: str = "",
         notifier: Notifier | None = None,
@@ -46,6 +48,7 @@ class MemberService:
         self._members = members
         self._users = users
         self._assignments = assignments
+        self._module_assignments = module_assignments
         self._audit_log = audit_log
         self._project_name = project_name
         self._notifier = notifier
@@ -87,11 +90,15 @@ class MemberService:
     def remove_member(self, actor: User, email: str) -> None:
         email = normalize_email(email)
         # Giữ khoá tab Assignments từ lúc kiểm tra tới lúc xoá xong, để không ai giao việc
-        # cho người này đúng lúc họ đang bị bỏ khỏi dự án.
-        with self._assignments.lock():
+        # cho người này đúng lúc họ đang bị bỏ khỏi dự án. Thứ tự khoá: assignments → module.
+        with self._assignments.lock(), self._module_assignments.lock():
             assigned = [a for a in self._assignments.list_all() if a.assignee_email == email]
             if assigned:
                 raise MemberHasAssignmentsError(len({a.screen_id for a in assigned}))
+            # Còn nhận module rỗng (chưa có việc giao nào) thì dọn luôn dòng nhận module
+            self._module_assignments.delete_many(
+                [w.id for w in self._module_assignments.list_all() if w.assignee_email == email]
+            )
             self._members.remove(self._project_id, email)
         self._record(actor, "DELETE", email)
 

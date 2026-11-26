@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label"
 import { MediaPicker } from "@/components/media/media-picker"
 import { MAX_CODE_PATHS, codePathError } from "@/components/screens/code-path"
 import type { Media, Screen } from "@/lib/api/types"
+import { useModules } from "@/lib/use-modules"
 import { useSaveScreen } from "@/lib/use-project-data"
 import { useProject } from "@/lib/use-projects"
 
@@ -49,10 +50,12 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
   const [devOwner, setDevOwner] = useState(screen?.dev_owner ?? "")
   const [codePaths, setCodePaths] = useState<string[]>(screen?.code_paths ?? [])
   const [media, setMedia] = useState<Media[]>(screen?.media ?? [])
+  const [moduleId, setModuleId] = useState(screen?.module_id ?? "")
   const [uploading, setUploading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const storage = useProject(projectId).data?.storage ?? "cloudinary"
   const saveScreen = useSaveScreen(projectId)
+  const modules = useModules(projectId).data ?? []
 
   const pathErrors = codePaths.map((path) => codePathError(path))
   const nameError = name.trim() ? null : t("screens.nameRequired")
@@ -72,6 +75,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
       setDevOwner(screen.dev_owner)
       setCodePaths(screen.code_paths)
       setMedia(screen.media ?? [])
+      setModuleId(screen.module_id ?? "")
       setUploading(false)
       setSubmitted(false)
     }
@@ -99,6 +103,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
         code_paths: codePaths.map((path) => path.trim()),
         dev_owner: cleanedOwner,
         media,
+        module_id: moduleId,
       })
       toast.success(t("common.saved"))
       setOpen(false)
@@ -109,6 +114,7 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
         setDevOwner("")
         setCodePaths([])
         setMedia([])
+        setModuleId("")
         setSubmitted(false)
       }
     } catch (error) {
@@ -141,6 +147,23 @@ export function ScreenFormDialog({ projectId, screen, trigger, triggerLabel }: P
               value={route}
               onChange={(e) => setRoute(e.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="screen-module">{t("modules.fieldModule")}</Label>
+            <select
+              id="screen-module"
+              value={moduleId}
+              onChange={(e) => setModuleId(e.target.value)}
+              className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+            >
+              <option value="">{t("modules.noModule")}</option>
+              {modules.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex flex-col gap-1.5">

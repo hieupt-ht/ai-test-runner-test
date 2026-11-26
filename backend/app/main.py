@@ -16,6 +16,7 @@ from app.api.routers import (
     me,
     media,
     members,
+    modules,
     notifications,
     projects,
     regression,
@@ -79,6 +80,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(projects.router)
     app.include_router(github.router)
     app.include_router(screens.router)
+    app.include_router(modules.router)
     app.include_router(assignments.router)
     app.include_router(agent.router)
     app.include_router(media.router)

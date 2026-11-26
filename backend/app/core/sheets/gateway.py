@@ -42,6 +42,8 @@ class SheetsGateway(Protocol):
 
     def delete_row(self, spreadsheet_id: str, tab: str, row_number: int) -> None: ...
 
+    def delete_rows(self, spreadsheet_id: str, tab: str, row_numbers: list[int]) -> None: ...
+
 
 def _is_retryable(error: HttpError) -> bool:
     """429 = Google báo gọi quá nhiều; 5xx = lỗi tạm thời phía Google."""
@@ -200,6 +202,30 @@ class GoogleSheetsGateway:
                     ]
                 },
             )
+            .execute()
+        )
+
+    def delete_rows(self, spreadsheet_id: str, tab: str, row_numbers: list[int]) -> None:
+        """Xoá nhiều dòng bằng MỘT lượt gọi Google (xếp từ dòng dưới lên để số dòng không lệch)."""
+        if not row_numbers:
+            return
+        sheet_id = self._sheet_id(spreadsheet_id, tab)
+        requests = [
+            {
+                "deleteDimension": {
+                    "range": {
+                        "sheetId": sheet_id,
+                        "dimension": "ROWS",
+                        "startIndex": row_number - 1,
+                        "endIndex": row_number,
+                    }
+                }
+            }
+            for row_number in sorted(set(row_numbers), reverse=True)
+        ]
+        _call(
+            lambda: self._spreadsheets()
+            .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
             .execute()
         )
 

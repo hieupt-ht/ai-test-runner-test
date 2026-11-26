@@ -1,6 +1,6 @@
 """Test API nhập test case từ file Excel: tải mẫu, xem trước, nhập."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from typing import Any
 
@@ -20,6 +20,7 @@ from app.core.services.case_import import MAX_FILE_BYTES, parse_workbook
 from app.core.services.test_cases import TestCaseService
 from app.core.sheets.gateway import SheetAccessDeniedError
 from app.core.sheets.table import MissingColumnsError
+from app.core.time import today_in_vietnam
 from tests.conftest import client_for
 from tests.fakes import make_http_error
 from tests.test_test_cases_api import an, lead, project, url  # noqa: F401  (fixture dùng chung)
@@ -195,3 +196,92 @@ def test_sheet_read_errors_are_503(
         response = lead.post(url(project, path), files=files)
         assert response.status_code == 503
         assert response.json() == {"detail": BUSY_WRITE}
+
+
+# ----- Nhập theo module -----
+
+
+def _module_row(screen: str, group: str = "A1", title: str = "Đăng ký thành công") -> list[Any]:
+    cells = _row(group, title)
+    cells[1] = screen
+    return cells
+
+
+def _make_module(lead: TestClient, project: Project) -> str:  # noqa: F811
+    response = lead.post(f"/api/projects/{project.id}/modules", json={"name": "Tài khoản"})
+    assert response.status_code == 201, response.text
+    module_id: str = response.json()["id"]
+    return module_id
+
+
+def test_preview_with_module_lists_new_screens(lead: TestClient, project: Project) -> None:  # noqa: F811
+    module = _make_module(lead, project)
+    data = make_xlsx([_module_row("Đăng ký"), _module_row(" đăng ký ", "A2", "Khác")])
+
+    response = lead.post(
+        url(project, "/import/preview"), files=_files(data), data={"module_id": module}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["errors"] == []
+    assert response.json()["new_screens"] == ["Đăng ký"]
+
+
+def test_import_with_module_creates_screen_and_cases(lead: TestClient, project: Project) -> None:  # noqa: F811
+    module = _make_module(lead, project)
+    data = make_xlsx([_module_row("Đăng ký")])
+
+    response = lead.post(url(project, "/import"), files=_files(data), data={"module_id": module})
+
+    assert response.status_code == 201
+    assert len(response.json()["created"]) == 1
+    screens = lead.get(f"/api/projects/{project.id}/screens").json()
+    assert [(s["name"], s["module_id"]) for s in screens if s["module_id"]] == [("Đăng ký", module)]
+
+
+def test_import_with_unknown_module_is_422(lead: TestClient, project: Project) -> None:  # noqa: F811
+    data = make_xlsx([_module_row("Đăng ký")])
+
+    for path in ("/import/preview", "/import"):
+        response = lead.post(url(project, path), files=_files(data), data={"module_id": "MD-0999"})
+        assert response.status_code == 422
+        assert response.json() == {"detail": "Module không tồn tại"}
+
+
+def test_tester_without_claim_gets_422_claim_first(
+    lead: TestClient,  # noqa: F811
+    an: TestClient,  # noqa: F811
+    project: Project,  # noqa: F811
+) -> None:
+    module = _make_module(lead, project)
+    data = make_xlsx([_module_row("Đăng ký")])
+
+    response = an.post(url(project, "/import"), files=_files(data), data={"module_id": module})
+
+    assert response.status_code == 422
+    assert response.json()["errors"] == [
+        {"row": None, "column": None, "message": "Hãy nhận module trước khi nhập"}
+    ]
+
+
+def test_tester_claims_then_imports_into_module(
+    lead: TestClient,  # noqa: F811
+    an: TestClient,  # noqa: F811
+    project: Project,  # noqa: F811
+) -> None:
+    module = _make_module(lead, project)
+    deadline = (today_in_vietnam() + timedelta(days=7)).isoformat()
+    claim = an.post(
+        f"/api/projects/{project.id}/modules/{module}/workers",
+        json={"emails": ["an@x.com"], "deadline": deadline},
+    )
+    assert claim.status_code == 201
+    data = make_xlsx([_module_row("Đăng ký")])
+
+    response = an.post(url(project, "/import"), files=_files(data), data={"module_id": module})
+
+    assert response.status_code == 201
+    screens = an.get(f"/api/projects/{project.id}/screens").json()
+    new_id = next(s["id"] for s in screens if s["name"] == "Đăng ký")
+    mine = an.get(f"/api/projects/{project.id}/assignments").json()
+    assert new_id in {a["screen_id"] for a in mine}

@@ -20,10 +20,14 @@ export function templateUrl(projectId: string): string {
   return importUrl(projectId, "template")
 }
 
-/** Gửi file lên backend (multipart, trường `file`); lỗi thì ném ApiError, giữ nguyên body gốc. */
-async function postFile<T>(url: string, file: File): Promise<T> {
+/** File kèm module muốn nhập vào ("" = không theo module, như cũ). */
+export type ImportInput = { file: File; moduleId: string }
+
+/** Gửi file lên backend (multipart, trường `file` và `module_id`); lỗi thì ném ApiError, giữ nguyên body gốc. */
+async function postFile<T>(url: string, { file, moduleId }: ImportInput): Promise<T> {
   const form = new FormData()
   form.append("file", file)
+  form.append("module_id", moduleId)
   const response = await fetch(url, { method: "POST", body: form, credentials: "same-origin" })
   const body: unknown = await response.json().catch(() => undefined)
   if (!response.ok) {
@@ -35,16 +39,16 @@ async function postFile<T>(url: string, file: File): Promise<T> {
 
 /** Xem trước file: chỉ kiểm tra, chưa tạo gì. */
 export function usePreviewImport(projectId: string) {
-  return useMutation<ParseResult, ApiError, File>({
-    mutationFn: (file) => postFile<ParseResult>(importUrl(projectId, "preview"), file),
+  return useMutation<ParseResult, ApiError, ImportInput>({
+    mutationFn: (input) => postFile<ParseResult>(importUrl(projectId, "preview"), input),
   })
 }
 
 /** Nhập thật; xong thì làm mới dữ liệu của dự án. */
 export function useImportCases(projectId: string) {
   const queryClient = useQueryClient()
-  return useMutation<ImportCreated, ApiError, File>({
-    mutationFn: (file) => postFile<ImportCreated>(importUrl(projectId), file),
+  return useMutation<ImportCreated, ApiError, ImportInput>({
+    mutationFn: (input) => postFile<ImportCreated>(importUrl(projectId), input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId] })
       // Số case trên "Việc của tôi" cũng đổi theo

@@ -313,3 +313,73 @@ def test_nfd_header_and_screen_name_are_accepted() -> None:
 
     assert result.errors == []
     assert result.cases[0].screen_id == "SC-0001"
+
+
+# ----- Nhập theo module: màn hình chưa có thì tự tạo -----
+
+
+def _case_row(group: str, screen: str) -> list[Any]:
+    return _with(_with(_row(), "Mã nhóm", group), "Màn hình", screen)
+
+
+def test_unknown_screen_becomes_new_screen_when_create_missing() -> None:
+    data = make_xlsx([_case_row("A1", "  Đăng ký  ")])
+
+    result = parse_workbook(data, SCREENS, create_missing=True)
+
+    assert result.errors == []
+    assert result.new_screens == ["Đăng ký"]
+    assert result.cases[0].screen_id == ""
+    assert result.cases[0].screen_name == "Đăng ký"
+
+
+def test_new_screen_names_grouped_case_and_space_insensitive() -> None:
+    data = make_xlsx(
+        [_case_row("A1", "Đăng ký"), _case_row("A2", " đăng ký "), _case_row("A3", "Hồ sơ")]
+    )
+
+    result = parse_workbook(data, SCREENS, create_missing=True)
+
+    assert result.new_screens == ["Đăng ký", "Hồ sơ"]
+    assert [c.screen_name for c in result.cases] == ["Đăng ký", "Đăng ký", "Hồ sơ"]
+
+
+def test_existing_screen_is_not_new_when_create_missing() -> None:
+    data = make_xlsx([_case_row("A1", "đăng nhập")])
+
+    result = parse_workbook(data, SCREENS, create_missing=True)
+
+    assert result.new_screens == []
+    assert result.cases[0].screen_id == "SC-0001"
+
+
+def test_screen_id_from_other_module_is_error() -> None:
+    data = make_xlsx([_case_row("A1", "SC-0099")])
+
+    result = parse_workbook(data, SCREENS, create_missing=True, other_screen_ids={"SC-0099"})
+
+    assert result.errors == [
+        ImportIssue(row=2, column="Màn hình", message="Màn hình SC-0099 thuộc module khác")
+    ]
+    assert result.new_screens == []
+
+
+def test_screen_id_that_does_not_exist_is_not_called_other_module() -> None:
+    data = make_xlsx([_case_row("A1", "SC-0099")])
+
+    result = parse_workbook(data, SCREENS, create_missing=True, other_screen_ids={"SC-0050"})
+
+    assert result.errors == [
+        ImportIssue(row=2, column="Màn hình", message="Không tìm thấy màn hình này trong dự án")
+    ]
+
+
+def test_without_create_missing_unknown_screen_still_error() -> None:
+    data = make_xlsx([_case_row("A1", "Đăng ký")])
+
+    result = parse_workbook(data, SCREENS)
+
+    assert result.errors == [
+        ImportIssue(row=2, column="Màn hình", message="Không tìm thấy màn hình này trong dự án")
+    ]
+    assert result.new_screens == []

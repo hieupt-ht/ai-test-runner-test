@@ -39,6 +39,8 @@ ASSIGNMENTS_TAB = "Assignments"
 TEST_CASES_TAB = "TestCases"
 RUNS_TAB = "Runs"
 RESULTS_TAB = "Results"
+MODULES_TAB = "Modules"
+MODULE_ASSIGNMENTS_TAB = "ModuleAssignments"
 
 META_COLUMNS = ["key", "value"]
 SCREEN_COLUMNS = [
@@ -50,7 +52,10 @@ SCREEN_COLUMNS = [
     "created_at",
     "dev_owner",
     "media_json",
+    "module_id",  # cột thêm sau, luôn nối vào CUỐI ("" = chưa thuộc module nào)
 ]
+MODULE_COLUMNS = ["id", "name", "description", "created_at"]
+MODULE_ASSIGNMENT_COLUMNS = ["id", "module_id", "assignee_email", "deadline", "created_at"]
 ASSIGNMENT_COLUMNS = ["id", "screen_id", "assignee_email", "deadline", "status", "updated_at"]
 TEST_CASE_COLUMNS = [
     "id",
@@ -124,4 +129,6 @@ PROJECT_TABS: dict[str, list[str]] = {
     RUNS_TAB: RUN_COLUMNS,
     RESULTS_TAB: RESULT_COLUMNS,
     AUDIT_LOG_TAB: AUDIT_LOG_COLUMNS,
+    MODULES_TAB: MODULE_COLUMNS,
+    MODULE_ASSIGNMENTS_TAB: MODULE_ASSIGNMENT_COLUMNS,
 }

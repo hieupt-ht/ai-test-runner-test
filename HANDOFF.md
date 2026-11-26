@@ -10,6 +10,17 @@ M1–M3 đã nằm ở `develop`. Kế hoạch mới ở `docs/superpowers/plans
 
 Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026-11-14-notifications-results-dashboard.md` đã hoàn thành đủ 10 task. Ứng dụng hiện có chuông thông báo, trang Kết quả, hai tab "Đang làm"/"Đã xong", trang Tổng quan theo vai trò và hộp thoại dùng tốt hơn trên màn hình hẹp. Thông báo lưu trong Redis 30 ngày, tối đa 100 cái mỗi người; mất thông báo không làm mất dữ liệu chính. Cách cấu hình Codex và prompt mẫu ở `docs/codex-agent.md`. Tính năng **Chạy lại** đã xong: nút ở trang Kết quả (QA Lead/Admin) gọi `POST /api/projects/{project_id}/test-cases/{case_id}/request-rerun`, app comment + mở lại issue + gắn nhãn `needs-rerun`; khi có kết quả mới app tự bỏ nhãn này. Đã chạy thử trên repo thật `hieupt-ht/ShopHub` (RUN-0005). Codex **không** tự comment lên issue, app làm việc đó bằng GitHub App. Kiểm tra cuối: backend **388 test**, frontend **105 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
 
+## Đã xong (2026-11-26): chia việc theo module
+
+Thiết kế `docs/superpowers/specs/2026-11-26-modules-design.md`, kế hoạch `docs/superpowers/plans/2026-11-26-modules.md` (8 task, làm kiểu tự làm một mạch trên nhánh `feature/modules`, chưa push).
+
+- **Ý tưởng:** QA chia việc theo **module** (nhóm màn hình) thay vì từng màn hình. Việc giao theo màn hình (`Assignments`) giữ nguyên và vẫn quyết định quyền, kết quả, thông báo; module chỉ tự sinh/xoá các dòng đó.
+- **Dữ liệu:** Sheet dự án có thêm tab `Modules`, `ModuleAssignments` và cột `module_id` ở `Screens` (app tự thêm khi khởi động, Sheet cũ không cần sửa tay).
+- **Luồng dùng:** QA tạo module (trang Màn hình) → gán màn hình vào module → **Giao** cho tester, hoặc tester tự bấm **Nhận**. Module đã có người làm chỉ hiện dòng đỏ cảnh báo, vẫn nhận được (backend không chặn). **Bỏ nhận** xoá việc giao màn hình của module, test case đã viết vẫn còn.
+- **Import:** hộp thoại "Nhập từ Excel" bắt chọn module trước. Tên màn hình chưa có trong module được **tự tạo** (không báo lỗi như trước) và tự giao cho người đang làm module. Tester phải nhận module trước khi nhập. Chọn "Không theo module (như cũ)" thì chạy đúng luồng cũ.
+- **Khoá:** thứ tự luôn là screens → assignments → module-assignments → test-cases (`ModuleAssignmentRepository` có khoá riêng, khác bản thiết kế ghi dùng chung).
+- **Kiểm tra:** backend 911 test, frontend 373 test qua; ruff, lint, typecheck sạch. Test frontend mặc định hết 5 giây thì lỗi giả trên máy chậm, chạy `npx vitest run --testTimeout=60000`.
+
 ## Đã xong (2026-11-19): nhập test case từ Excel
 
 Thiết kế `docs/superpowers/specs/2026-11-19-import-test-cases-design.md`, kế hoạch `docs/superpowers/plans/2026-11-19-import-test-cases.md` (10 task / 3 đợt, làm kiểu subagent: mỗi task một người làm + một người kiểm tra).

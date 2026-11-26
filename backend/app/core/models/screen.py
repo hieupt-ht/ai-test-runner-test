@@ -39,3 +39,4 @@ class Screen(BaseModel):
     dev_owner: str = ""  # tên GitHub của dev phụ trách, dùng để giao bug
     # Ảnh/video tham khảo để tester hình dung màn hình (không đưa lên GitHub issue)
     media: MediaList = Field(default_factory=list)
+    module_id: str = ""  # "" = chưa thuộc module nào
