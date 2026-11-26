@@ -352,4 +352,27 @@ describe("Đổi module về chưa chọn", () => {
     expect(screen.getByRole("button", { name: "Nhập" })).toBeDisabled()
     expect(screen.queryByText(/Xem trước:/)).not.toBeInTheDocument()
   })
+
+  it("lỗi nhập của module cũ về chậm thì không đè bản xem trước mới", async () => {
+    mocks.modules = [
+      { id: "MD-0001", name: "Tài khoản", workers: [] },
+      { id: "MD-0002", name: "Đơn hàng", workers: [] },
+    ]
+    let rejectImport: (error: unknown) => void = () => {}
+    mocks.importCases.mockReturnValue(new Promise((_, reject) => (rejectImport = reject)))
+    const second = { ...okResult(), cases: [parsed("G1", "SC-0001", 2)] }
+    mocks.preview.mockResolvedValueOnce(okResult()).mockResolvedValueOnce(second)
+    renderDialog()
+    await pickFile("MD-0001")
+    fireEvent.click(await screen.findByRole("button", { name: "Nhập 12 case" }))
+
+    chooseModule("MD-0002") // đổi module trong lúc lượt nhập cũ còn đang chạy
+    await screen.findByRole("button", { name: "Nhập 1 case" })
+    rejectImport(new ApiError(422, "x", { errors: [{ row: 5, column: "Tiêu đề", message: "Lỗi cũ" }] }))
+
+    await waitFor(() => expect(mocks.importCases).toHaveBeenCalled())
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(screen.queryByText(/Lỗi cũ/)).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Nhập 1 case" })).toBeEnabled()
+  })
 })

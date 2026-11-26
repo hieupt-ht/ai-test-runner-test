@@ -47,12 +47,12 @@ export function ModuleWorkDialog({
   const today = todayInVietnam()
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
-  const [deadline, setDeadline] = useState(() =>
+  const defaultDeadline = () =>
     defaultModuleDeadline(
       module.workers.map((worker) => worker.deadline),
       today,
-    ),
-  )
+    )
+  const [deadline, setDeadline] = useState(defaultDeadline)
   const [submitted, setSubmitted] = useState(false)
   const assign = useAssignModule(projectId)
 
@@ -81,7 +81,14 @@ export function ModuleWorkDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Mỗi lần mở tính lại hạn mặc định, vì danh sách người làm có thể đã đổi từ lúc hiện trang
+        if (next) setDeadline(defaultDeadline())
+        setOpen(next)
+      }}
+    >
       <DialogTrigger render={trigger}>{triggerLabel}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

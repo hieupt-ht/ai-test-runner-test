@@ -356,12 +356,22 @@ def test_existing_screen_is_not_new_when_create_missing() -> None:
 def test_screen_id_from_other_module_is_error() -> None:
     data = make_xlsx([_case_row("A1", "SC-0099")])
 
-    result = parse_workbook(data, SCREENS, create_missing=True)
+    result = parse_workbook(data, SCREENS, create_missing=True, other_screen_ids={"SC-0099"})
 
     assert result.errors == [
         ImportIssue(row=2, column="Màn hình", message="Màn hình SC-0099 thuộc module khác")
     ]
     assert result.new_screens == []
+
+
+def test_screen_id_that_does_not_exist_is_not_called_other_module() -> None:
+    data = make_xlsx([_case_row("A1", "SC-0099")])
+
+    result = parse_workbook(data, SCREENS, create_missing=True, other_screen_ids={"SC-0050"})
+
+    assert result.errors == [
+        ImportIssue(row=2, column="Màn hình", message="Không tìm thấy màn hình này trong dự án")
+    ]
 
 
 def test_without_create_missing_unknown_screen_still_error() -> None:

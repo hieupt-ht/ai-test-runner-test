@@ -87,6 +87,11 @@ class ModuleWorkService:
                     raise InvalidAssignmentError(
                         f"{email} không phải tester đang hoạt động của dự án"
                     )
+            previous = {
+                w.id: w.deadline.isoformat()
+                for w in self._module_assignments.list_all()
+                if w.module_id == module_id
+            }
             rows = {
                 w.assignee_email: w
                 for w in self._module_assignments.list_all()
@@ -95,13 +100,29 @@ class ModuleWorkService:
             created = self._module_assignments.create_many(
                 [(module_id, email, deadline) for email in wanted if email not in rows]
             )
+            # Giao lại cho người đã nhận với hạn khác thì cập nhật hạn (cả các việc màn hình)
+            changed = [
+                rows[email].model_copy(update={"deadline": deadline})
+                for email in wanted
+                if email in rows and rows[email].deadline != deadline
+            ]
+            self._apply_new_deadlines(module_id, changed)
             rows.update({w.assignee_email: w for w in created})
+            rows.update({w.assignee_email: w for w in changed})
             screen_ids = [s.id for s in self._screens.list_all() if s.module_id == module_id]
             self._create_screen_assignments(
                 screen_ids, [(email, rows[email].deadline) for email in wanted]
             )
 
         self._record_many(actor, "CREATE", created)
+        for old in changed:
+            self._audit_log.record(
+                actor=actor.email,
+                action="UPDATE",
+                entity="module_assignment",
+                entity_id=old.id,
+                diff={"deadline": [previous[old.id], deadline.isoformat()]},
+            )
         if self._notifier is not None:
             for row in created:
                 if row.assignee_email != normalize_email(actor.email):
@@ -111,7 +132,7 @@ class ModuleWorkService:
                         module_id=module_id,
                         module_name=module.name,
                     )
-        return created
+        return [*created, *changed]
 
     def unassign(
         self, actor: User, module_assignment_id: str, *, module_id: str | None = None
@@ -201,6 +222,21 @@ class ModuleWorkService:
             stack.enter_context(self._assignments.lock())
             stack.enter_context(self._module_assignments.lock())
             yield
+
+    def _apply_new_deadlines(self, module_id: str, changed: list[ModuleAssignment]) -> None:
+        """Ghi hạn mới cho các dòng nhận module và mọi việc giao màn hình tương ứng."""
+        if not changed:
+            return
+        self._module_assignments.update_many(changed)
+        new_deadline = {w.assignee_email: w.deadline for w in changed}
+        screen_ids = self._module_screen_ids(module_id)
+        self._assignments.update_many(
+            [
+                a.model_copy(update={"deadline": new_deadline[a.assignee_email]})
+                for a in self._assignments.list_all()
+                if a.assignee_email in new_deadline and a.screen_id in screen_ids
+            ]
+        )
 
     def _find_row(self, module_assignment_id: str, module_id: str | None) -> ModuleAssignment:
         row = next(

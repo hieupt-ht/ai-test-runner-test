@@ -130,11 +130,13 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   async function onImport() {
     if (!file) return
     setMessage(null)
+    const pick = latestPick.current // đổi module/file trong lúc chờ thì bỏ kết quả lượt này
     try {
       const created = await importCases.mutateAsync({ file, moduleId })
       toast.success(t("success", { count: created.created.length }))
       handleOpenChange(false)
     } catch (error) {
+      if (pick !== latestPick.current) return
       const issues = issuesFromError(error)
       if (issues) setResult({
           cases: result?.cases ?? [],
