@@ -25,9 +25,11 @@ type Props = {
   module?: Module
   trigger: ReactElement
   triggerLabel: React.ReactNode
+  /** Gọi sau khi lưu xong, kèm module vừa lưu */
+  onSaved?: (module: Module) => void
 }
 
-export function ModuleFormDialog({ projectId, module, trigger, triggerLabel }: Props) {
+export function ModuleFormDialog({ projectId, module, trigger, triggerLabel, onSaved }: Props) {
   const t = useTranslations("modules")
   const tCommon = useTranslations("common")
   const [open, setOpen] = useState(false)
@@ -51,8 +53,13 @@ export function ModuleFormDialog({ projectId, module, trigger, triggerLabel }: P
     setSubmitted(true)
     if (!name.trim()) return
     try {
-      await save.mutateAsync({ id: module?.id, name: name.trim(), description: description.trim() })
+      const saved = await save.mutateAsync({
+        id: module?.id,
+        name: name.trim(),
+        description: description.trim(),
+      })
       toast.success(tCommon("saved"))
+      onSaved?.(saved)
       setOpen(false)
       if (!module) {
         setName("")

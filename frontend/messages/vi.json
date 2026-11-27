@@ -569,6 +569,7 @@
       "importing": "Đang nhập...",
       "success": "Đã nhập {count} case",
       "close": "Đóng",
+      "createModule": "+ Tạo module mới",
       "moduleLabel": "Module",
       "modulePlaceholder": "Chọn module",
       "moduleNone": "Không theo module (như cũ)",

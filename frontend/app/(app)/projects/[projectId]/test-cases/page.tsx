@@ -23,10 +23,8 @@ import {
 } from "@/components/ui/table"
 import { filterTestCases, paginate, type CaseFilters } from "@/lib/test-cases/filter"
 import { approvableIds, batchItems, toggleAll, toggleId } from "@/lib/test-cases/selection"
-import { selectableScreens } from "@/lib/test-cases/selectable-screens"
-import { useMe } from "@/lib/use-me"
 import { useResults } from "@/lib/use-results"
-import { useAssignments, useScreens } from "@/lib/use-project-data"
+import { useScreens } from "@/lib/use-project-data"
 import { useProjectId } from "@/lib/use-project-id"
 import { useProject } from "@/lib/use-projects"
 import { useSyncIssues, useTestCases } from "@/lib/use-test-cases"
@@ -53,8 +51,6 @@ function TestCaseList() {
   const casesQuery = useTestCases(projectId, includeArchived)
   const syncIssues = useSyncIssues(projectId)
   const screensQuery = useScreens(projectId)
-  const assignmentsQuery = useAssignments(projectId)
-  const { user: me } = useMe()
   const [importOpen, setImportOpen] = useState(false)
   // Kết quả gần nhất của từng case: một request cho cả danh sách (không gọi mỗi dòng)
   const resultsQuery = useResults(projectId)
@@ -93,9 +89,9 @@ function TestCaseList() {
   const columnCount = canReview ? 10 : 9
 
   const canCreate = Boolean(project?.permissions.includes("EDIT_TEST_CASE")) && !project?.archived
-  // Nhập từ Excel cũng là tạo case: tester chỉ nhập được khi có ít nhất một màn hình được giao.
-  const canImport =
-    canCreate && selectableScreens(screens, assignmentsQuery.data ?? [], me).length > 0
+  // Nhập từ Excel cũng là tạo case. Luôn hiện cho người tạo được case: tester chưa có module/màn hình
+  // nào vẫn vào được hộp thoại để tạo module mới ngay tại đó.
+  const canImport = canCreate
 
   if (casesQuery.isLoading) return <Skeleton className="h-48 w-full" />
   if (casesQuery.isError) {

@@ -5,6 +5,7 @@ import { FileSpreadsheet } from "lucide-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
 
+import { ModuleFormDialog } from "@/components/modules/module-form-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/table"
 import { ApiError } from "@/lib/api/client"
 import type { components } from "@/lib/api/schema"
+import type { Module } from "@/lib/api/types"
 import { templateUrl, useImportCases, usePreviewImport } from "@/lib/use-case-import"
 import { useMe } from "@/lib/use-me"
 import { useModules } from "@/lib/use-modules"
@@ -65,6 +67,7 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   const screens = useScreens(projectId).data ?? []
   const assignments = useAssignments(projectId).data ?? []
   const [choice, setChoice] = useState("")
+  const [created, setCreated] = useState<Module[]>([]) // module vừa tạo, phòng danh sách chưa tải lại kịp
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<ParseResult | null>(null)
   const [message, setMessage] = useState<string | null>(null) // câu lỗi chung từ backend
@@ -159,9 +162,10 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
   // QA thấy mọi module; tester chỉ thấy module mình đang làm
   const isTester = user?.role === "TESTER"
   const myEmail = user?.email ?? ""
-  const visibleModules = isTester
+  const shown = isTester
     ? modules.filter((module) => module.workers.some((worker) => worker.email === myEmail))
     : modules
+  const visibleModules = [...shown, ...created.filter((c) => !shown.some((m) => m.id === c.id))]
   const looseScreenIds = new Set(screens.filter((screen) => !screen.module_id).map((screen) => screen.id))
   const showNone =
     !isTester ||
@@ -197,6 +201,15 @@ export function ImportDialog({ projectId, open, onOpenChange }: Props) {
               ))}
             </select>
             {!choice && <p className="text-xs text-muted-foreground">{t("pickModuleFirst")}</p>}
+            <ModuleFormDialog
+              projectId={projectId}
+              trigger={<Button type="button" variant="link" size="sm" className="self-start px-0" />}
+              triggerLabel={t("createModule")}
+              onSaved={(saved) => {
+                setCreated((list) => [...list, saved])
+                onChooseModule(saved.id)
+              }}
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">

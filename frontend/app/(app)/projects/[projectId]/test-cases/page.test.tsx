@@ -121,10 +121,10 @@ describe("Danh sách test case – cách chạy và kết quả gần nhất", (
     expect(screen.getByRole("button", { name: "Nhập từ Excel" })).toBeInTheDocument()
   })
 
-  it("tester chưa được giao màn hình nào thì không thấy nút Nhập từ Excel", () => {
+  it("tester chưa được giao màn hình nào vẫn thấy nút Nhập từ Excel", () => {
     mocks.me = { email: "t@x.vn", role: "TESTER" }
     renderPage()
-    expect(screen.queryByRole("button", { name: "Nhập từ Excel" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Nhập từ Excel" })).toBeInTheDocument()
   })
 
   it("dự án đã lưu trữ thì không thấy nút Nhập từ Excel", () => {
