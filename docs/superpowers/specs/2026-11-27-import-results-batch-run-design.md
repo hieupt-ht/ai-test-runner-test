@@ -44,10 +44,10 @@ Hiện `canImport` (trang Test case) cần **ít nhất một màn hình chọn 
 sai: tester vừa nhận một module trống, hoặc QA ở dự án chưa có màn hình nào, không thấy nút dù
 nhập theo module sẽ tự tạo màn hình.
 
-Luật mới: hiện nút khi có quyền tạo case, dự án không lưu trữ, **và** (có ít nhất một màn hình
-chọn được **hoặc** người dùng chọn được ít nhất một module trong hộp thoại nhập: QA có ít nhất một
-module; tester đang nhận ít nhất một module). Danh sách module trong hộp thoại giữ nguyên luật
-hiện tại.
+Luật mới: hiện nút khi có quyền tạo case và dự án không lưu trữ. Không cần có sẵn màn hình hay
+module, vì trong hộp thoại ai cũng tạo được module mới (3.2) rồi nhập vào đó. (Sửa sau khi duyệt:
+bản đầu còn đòi "có màn hình hoặc module", khiến tester chưa có gì không bao giờ thấy lối tắt tạo
+module.) Danh sách module trong hộp thoại giữ nguyên luật hiện tại.
 
 ### 3.2 Tester tự tạo module
 
