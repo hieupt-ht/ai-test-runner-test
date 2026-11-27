@@ -106,7 +106,7 @@ export function ManualRunPanel({
   const cleanAssignee = normalizeAssignee(assignee)
   const assigneeOk = isValidAssignee(cleanAssignee)
   const isUploading = Object.values(uploading).some(Boolean)
-  // Fail phải có ít nhất một ảnh/video: ở phần bằng chứng chung hoặc ảnh của từng bước
+  // Chỉ để nhắc: Fail có ảnh/video (bằng chứng chung hoặc ảnh từng bước) thì dev dễ tìm lỗi hơn
   const hasMedia = evidence.length > 0 || Object.keys(stepShot).length > 0
   const failOk =
     result !== "FAIL" || (reason.trim() !== "" && failedStep !== null)

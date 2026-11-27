@@ -6,6 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.locks.redis_lock import LockTimeout
 from app.core.models.project import Project
 from app.core.models.user import Role
 from app.core.notifications import NotificationStore
@@ -15,6 +16,7 @@ from app.core.repositories.modules import ModuleAssignmentRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
 from app.core.services.module_work import ModuleWorkService
+from app.core.services.modules import ModuleService
 from app.core.time import today_in_vietnam
 from tests.conftest import SHEET_A, client_for, make_project, make_user
 from tests.fakes import FakeSheetsGateway
@@ -454,3 +456,36 @@ def test_failed_claim_removes_new_module(
 
     monkeypatch.undo()
     assert tester.get(f"{base(project)}/modules").json() == []
+
+
+def test_lock_timeout_on_claim_still_removes_new_module(
+    tester: TestClient, project: Project, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Nhận hết giờ chờ khoá thì lệnh xoá ngay sau đó cũng dễ vướng khoá: phải thử lại."""
+
+    def busy(self, *args, **kwargs):
+        raise LockTimeout
+
+    real_delete = ModuleService.delete_module
+    calls = {"n": 0}
+
+    def flaky_delete(self, actor, module_id):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise LockTimeout
+        return real_delete(self, actor, module_id)
+
+    monkeypatch.setattr(ModuleWorkService, "assign", busy)
+    monkeypatch.setattr(ModuleService, "delete_module", flaky_delete)
+
+    response = tester.post(f"{base(project)}/modules", json={"name": "Thanh toán"})
+
+    monkeypatch.undo()
+    assert response.status_code == 409
+    assert tester.get(f"{base(project)}/modules").json() == []
+
+
+def test_viewer_cannot_create_module(app: FastAPI, users: UserRepository, project: Project) -> None:
+    viewer = client_for(app, users, "viewer-member@x.com", Role.VIEWER)
+
+    assert viewer.post(f"{base(project)}/modules", json={"name": "X"}).status_code == 403

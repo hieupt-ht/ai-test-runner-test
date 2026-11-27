@@ -97,6 +97,21 @@ def create_module(
     return module
 
 
+def _delete_orphan(service: ModuleService, user: User, module: Module) -> None:
+    """Xoá module vừa tạo; vướng khoá thì thử lại vài lần (nhận hết giờ cũng do khoá đó)."""
+    for attempt in range(3):
+        try:
+            service.delete_module(user, module.id)
+            return
+        except LockTimeout:
+            if attempt < 2:
+                continue
+            logger.warning("Không xoá được module %s (khoá bận)", module.id)
+        except Exception:
+            logger.warning("Không xoá được module %s sau khi nhận lỗi", module.id, exc_info=True)
+            return
+
+
 def _claim_new_module(
     services: Services, user: User, project_id: str, service: ModuleService, module: Module
 ) -> None:
@@ -109,10 +124,7 @@ def _claim_new_module(
             deadline=today_in_vietnam() + timedelta(days=7),
         )
     except Exception as error:
-        try:
-            service.delete_module(user, module.id)
-        except Exception:
-            logger.warning("Không xoá được module %s sau khi nhận lỗi", module.id, exc_info=True)
+        _delete_orphan(service, user, module)
         if isinstance(error, LockTimeout):
             raise _busy() from None
         raise
