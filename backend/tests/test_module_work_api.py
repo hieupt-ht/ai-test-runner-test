@@ -14,6 +14,7 @@ from app.core.repositories.members import ProjectMemberRepository
 from app.core.repositories.modules import ModuleAssignmentRepository
 from app.core.repositories.projects import ProjectRepository
 from app.core.repositories.users import UserRepository
+from app.core.services.module_work import ModuleWorkService
 from app.core.time import today_in_vietnam
 from tests.conftest import SHEET_A, client_for, make_project, make_user
 from tests.fakes import FakeSheetsGateway
@@ -403,3 +404,53 @@ def test_assign_again_with_same_deadline_returns_nothing(
 
     assert response.status_code == 201
     assert response.json() == []
+
+
+def test_tester_creates_module_and_claims_it(tester: TestClient, project: Project) -> None:
+    response = tester.post(f"{base(project)}/modules", json={"name": "Thanh toán"})
+
+    assert response.status_code == 201
+    module = tester.get(f"{base(project)}/modules").json()[0]
+    assert [w["email"] for w in module["workers"]] == ["tester@x.com"]
+    assert module["workers"][0]["deadline"] == NEXT_WEEK
+
+
+def test_tester_cannot_create_duplicate_module(
+    lead: TestClient, tester: TestClient, project: Project
+) -> None:
+    lead.post(f"{base(project)}/modules", json={"name": "Thanh toán"})
+
+    response = tester.post(f"{base(project)}/modules", json={"name": "THANH TOÁN"})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Đã có module tên này"
+    assert tester.get(f"{base(project)}/modules").json()[0]["workers"] == []
+
+
+def test_lead_creating_module_does_not_claim_it(lead: TestClient, project: Project) -> None:
+    lead.post(f"{base(project)}/modules", json={"name": "Thanh toán"})
+
+    assert lead.get(f"{base(project)}/modules").json()[0]["workers"] == []
+
+
+def test_tester_still_cannot_rename_or_delete_module(tester: TestClient, project: Project) -> None:
+    module_id = tester.post(f"{base(project)}/modules", json={"name": "Thanh toán"}).json()["id"]
+
+    renamed = tester.patch(f"{base(project)}/modules/{module_id}", json={"name": "X"})
+    assert renamed.status_code == 403
+    assert tester.delete(f"{base(project)}/modules/{module_id}").status_code == 403
+
+
+def test_failed_claim_removes_new_module(
+    tester: TestClient, project: Project, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(self, *args, **kwargs):
+        raise RuntimeError("Google lỗi")
+
+    monkeypatch.setattr(ModuleWorkService, "assign", boom)
+
+    with pytest.raises(RuntimeError):
+        tester.post(f"{base(project)}/modules", json={"name": "Thanh toán"})
+
+    monkeypatch.undo()
+    assert tester.get(f"{base(project)}/modules").json() == []
