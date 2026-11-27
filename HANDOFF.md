@@ -10,6 +10,13 @@ M1–M3 đã nằm ở `develop`. Kế hoạch mới ở `docs/superpowers/plans
 
 Kế hoạch thông báo và bảng kết quả ở `docs/superpowers/plans/2026-11-14-notifications-results-dashboard.md` đã hoàn thành đủ 10 task. Ứng dụng hiện có chuông thông báo, trang Kết quả, hai tab "Đang làm"/"Đã xong", trang Tổng quan theo vai trò và hộp thoại dùng tốt hơn trên màn hình hẹp. Thông báo lưu trong Redis 30 ngày, tối đa 100 cái mỗi người; mất thông báo không làm mất dữ liệu chính. Cách cấu hình Codex và prompt mẫu ở `docs/codex-agent.md`. Tính năng **Chạy lại** đã xong: nút ở trang Kết quả (QA Lead/Admin) gọi `POST /api/projects/{project_id}/test-cases/{case_id}/request-rerun`, app comment + mở lại issue + gắn nhãn `needs-rerun`; khi có kết quả mới app tự bỏ nhãn này. Đã chạy thử trên repo thật `hieupt-ht/ShopHub` (RUN-0005). Codex **không** tự comment lên issue, app làm việc đó bằng GitHub App. Kiểm tra cuối: backend **388 test**, frontend **105 test** qua; `mypy app`, `ruff check`, typecheck, lint và build đều sạch.
 
+## Đã xong (2026-11-27): nhập kết quả từ Excel — Phần 1 (nhánh `feature/import-results`, chưa push)
+
+- Tester tự tạo module (tên không trùng) và tự nhận luôn, hạn hôm nay + 7 ngày; nhận lỗi thì xoá module vừa tạo. Đổi tên/xoá module vẫn chỉ QA.
+- Kết quả Fail chạy tay không còn bắt buộc ảnh/video (DECISIONS số 43); panel chỉ nhắc màu vàng.
+- Nút "Nhập từ Excel" hiện cho mọi người tạo được case; trang Màn hình có "Thêm module" cho tester; hộp thoại nhập có lối tắt "+ Tạo module mới".
+- **Còn chờ:** Phần 2 (cột kết quả trong Excel, lưu kết quả chờ, chạy hàng loạt, nút "Lưu và chạy") — cần kế hoạch riêng, xem `docs/superpowers/specs/2026-11-27-import-results-batch-run-design.md` mục 4.
+
 ## Đã xong (2026-11-26): chia việc theo module
 
 Thiết kế `docs/superpowers/specs/2026-11-26-modules-design.md`, kế hoạch `docs/superpowers/plans/2026-11-26-modules.md` (8 task, làm kiểu tự làm một mạch trên nhánh `feature/modules`, chưa push).
