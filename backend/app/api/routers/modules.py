@@ -1,4 +1,5 @@
-from datetime import date
+import logging
+from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Response, status
@@ -10,7 +11,7 @@ from app.api.project_scope import module_work_for, scope_for
 from app.api.services import Services
 from app.core.locks.redis_lock import LockTimeout
 from app.core.models.module import Module, ModuleAssignment
-from app.core.models.user import User
+from app.core.models.user import Role, User
 from app.core.permissions import Action
 from app.core.repositories.modules import ModuleAssignmentNotFoundError, ModuleNotFoundError
 from app.core.services.assignments import InvalidAssignmentError
@@ -21,7 +22,9 @@ from app.core.services.modules import (
     ModuleService,
     ModuleView,
 )
+from app.core.time import today_in_vietnam
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/projects/{project_id}/modules", tags=["modules"])
 
 ModuleName = Annotated[str, Field(min_length=1, max_length=100)]
@@ -81,13 +84,50 @@ def list_modules(project_id: str, user: CurrentUser, services: ServicesDep) -> l
 def create_module(
     project_id: str, body: CreateModuleRequest, user: CurrentUser, services: ServicesDep
 ) -> Module:
-    service = _service(services, user, project_id, Action.MANAGE_SCREENS)
+    # Tester cũng được tạo module (miễn tên không trùng); đổi tên/xoá vẫn chỉ QA
+    service = _service(services, user, project_id, Action.EDIT_TEST_CASE)
     try:
-        return service.create_module(user, name=body.name, description=body.description)
+        module = service.create_module(user, name=body.name, description=body.description)
     except DuplicateModuleNameError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
     except LockTimeout:
         raise _busy() from None
+    if user.role == Role.TESTER:
+        _claim_new_module(services, user, project_id, service, module)
+    return module
+
+
+def _delete_orphan(service: ModuleService, user: User, module: Module) -> None:
+    """Xoá module vừa tạo; vướng khoá thì thử lại vài lần (nhận hết giờ cũng do khoá đó)."""
+    for attempt in range(3):
+        try:
+            service.delete_module(user, module.id)
+            return
+        except LockTimeout:
+            if attempt < 2:
+                continue
+            logger.warning("Không xoá được module %s (khoá bận)", module.id)
+        except Exception:
+            logger.warning("Không xoá được module %s sau khi nhận lỗi", module.id, exc_info=True)
+            return
+
+
+def _claim_new_module(
+    services: Services, user: User, project_id: str, service: ModuleService, module: Module
+) -> None:
+    """Tester tạo module thì nhận luôn (hạn 7 ngày). Nhận lỗi thì xoá module để khỏi mồ côi."""
+    try:
+        work_service_for(services, user, project_id, Action.EDIT_TEST_CASE).assign(
+            user,
+            module_id=module.id,
+            emails=[user.email],
+            deadline=today_in_vietnam() + timedelta(days=7),
+        )
+    except Exception as error:
+        _delete_orphan(service, user, module)
+        if isinstance(error, LockTimeout):
+            raise _busy() from None
+        raise
 
 
 @router.patch("/{module_id}")

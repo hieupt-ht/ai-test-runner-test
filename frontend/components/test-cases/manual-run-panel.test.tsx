@@ -147,18 +147,18 @@ describe("ManualRunPanel", () => {
     expect(submitButton()).toBeEnabled()
   })
 
-  it("FAIL chưa có bằng chứng thì nút Gửi mờ và hiện nhắc", () => {
+  it("Fail không có ảnh vẫn gửi được, chỉ hiện nhắc", () => {
     renderPanel()
     typeEnvironment()
     fireEvent.click(stepRadio(1, "Đạt"))
     fireEvent.click(stepRadio(2, "Không đạt"))
     fireEvent.change(screen.getByLabelText("Mô tả lỗi"), { target: { value: "Không báo lỗi" } })
-    expect(submitButton()).toBeDisabled()
-    expect(screen.getByText("Kết quả Fail cần ít nhất một ảnh hoặc video bằng chứng.")).toBeInTheDocument()
+    expect(submitButton()).toBeEnabled()
+    expect(screen.getByText("Nên thêm ảnh hoặc video để dev dễ tìm lỗi.")).toBeInTheDocument()
 
     fireEvent.click(screen.getAllByRole("button", { name: "giả-lập-thêm-ảnh" })[0])
     expect(submitButton()).toBeEnabled()
-    expect(screen.queryByText("Kết quả Fail cần ít nhất một ảnh hoặc video bằng chứng.")).not.toBeInTheDocument()
+    expect(screen.queryByText("Nên thêm ảnh hoặc video để dev dễ tìm lỗi.")).not.toBeInTheDocument()
   })
 
   it("Giao cho mặc định là dev phụ trách màn hình", () => {

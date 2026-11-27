@@ -375,16 +375,15 @@ def test_dev_owner_defaults_to_screen_dev(
     assert rows(gateway, project, "Results")[0]["dev_owner"] == "nguyenvana"
 
 
-def test_fail_without_evidence_is_rejected(
+def test_fail_without_evidence_is_accepted(
     an: TestClient, project: Project, gateway: FakeSheetsGateway
 ) -> None:
     case = new_case(an, project)
 
     response = submit(an, project, case["id"], fail_body(project, evidence={}))
 
-    assert response.status_code == 422
-    assert response.json()["detail"] == "Kết quả Fail cần ít nhất một ảnh hoặc video bằng chứng"
-    assert rows(gateway, project, "Runs") == []
+    assert response.status_code == 201
+    assert rows(gateway, project, "Results")[0]["status"] == "FAIL"
 
 
 def test_fail_with_step_screenshot_only_is_accepted(an: TestClient, project: Project) -> None:

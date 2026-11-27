@@ -74,8 +74,9 @@ def test_duplicate_module_name_rejected(client_as_qa_lead: TestClient, project: 
     assert response.json() == {"detail": "Đã có module tên này"}
 
 
-def test_tester_cannot_create_module(client_as_tester: TestClient, project: Project) -> None:
-    assert client_as_tester.post(modules_url(project), json={"name": "X"}).status_code == 403
+def test_tester_can_create_module(client_as_tester: TestClient, project: Project) -> None:
+    # Luật mới (2026-11-27): tester tự tạo module, tạo xong tự nhận
+    assert client_as_tester.post(modules_url(project), json={"name": "X"}).status_code == 201
     assert client_as_tester.get(modules_url(project)).status_code == 200
 
 

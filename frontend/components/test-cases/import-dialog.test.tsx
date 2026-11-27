@@ -12,12 +12,16 @@ const mocks = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   user: { email: "lead@x.com", role: "QA_LEAD" } as { email: string; role: string },
   modules: [] as unknown[],
+  saveModule: vi.fn(),
   screens: [] as unknown[],
   assignments: [] as unknown[],
 }))
 
 vi.mock("@/lib/use-me", () => ({ useMe: () => ({ user: mocks.user, isLoading: false }) }))
-vi.mock("@/lib/use-modules", () => ({ useModules: () => ({ data: mocks.modules }) }))
+vi.mock("@/lib/use-modules", () => ({
+  useModules: () => ({ data: mocks.modules }),
+  useSaveModule: () => ({ mutateAsync: mocks.saveModule, isPending: false }),
+}))
 vi.mock("@/lib/use-project-data", () => ({
   useScreens: () => ({ data: mocks.screens }),
   useAssignments: () => ({ data: mocks.assignments }),
@@ -82,6 +86,18 @@ describe("Hộp thoại nhập test case từ Excel", () => {
     mocks.assignments = []
   })
   afterEach(cleanup)
+
+  it("tạo module mới từ hộp thoại thì chọn luôn module đó", async () => {
+    mocks.user = { email: "t@x.com", role: "TESTER" }
+    mocks.saveModule.mockResolvedValue({ id: "MD-0009", name: "Thanh toán", description: "" })
+    renderDialog()
+    fireEvent.click(screen.getByRole("button", { name: "+ Tạo module mới" }))
+    fireEvent.change(screen.getByLabelText("Tên module"), { target: { value: "Thanh toán" } })
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
+
+    await waitFor(() => expect(screen.getByLabelText("Module")).toHaveValue("MD-0009"))
+    expect(document.querySelector('input[type="file"]')).not.toBeDisabled()
+  })
 
   it("chọn file thì xem trước và hiện tóm tắt cùng bảng", async () => {
     mocks.preview.mockResolvedValue(okResult())

@@ -106,10 +106,10 @@ export function ManualRunPanel({
   const cleanAssignee = normalizeAssignee(assignee)
   const assigneeOk = isValidAssignee(cleanAssignee)
   const isUploading = Object.values(uploading).some(Boolean)
-  // Fail phải có ít nhất một ảnh/video: ở phần bằng chứng chung hoặc ảnh của từng bước
+  // Chỉ để nhắc: Fail có ảnh/video (bằng chứng chung hoặc ảnh từng bước) thì dev dễ tìm lỗi hơn
   const hasMedia = evidence.length > 0 || Object.keys(stepShot).length > 0
   const failOk =
-    result !== "FAIL" || (reason.trim() !== "" && failedStep !== null && hasMedia)
+    result !== "FAIL" || (reason.trim() !== "" && failedStep !== null)
   const canSubmit =
     allAnswered &&
     environment.trim() !== "" &&
@@ -293,7 +293,7 @@ export function ManualRunPanel({
           onBusyChange={(busy) => reportUploading("evidence", busy)}
         />
         {result === "FAIL" && !hasMedia && (
-          <p className="text-xs text-destructive">{t("failNeedsEvidence")}</p>
+          <p className="text-xs text-amber-700 dark:text-amber-400">{t("failEvidenceHint")}</p>
         )}
       </div>
 

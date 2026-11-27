@@ -157,7 +157,7 @@ export default function ScreensPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      {canManage && (
+      {(canManage || canClaim) && (
         <div className="flex justify-end gap-2">
           <ModuleFormDialog
             projectId={projectId}
@@ -168,15 +168,17 @@ export default function ScreensPage() {
               </>
             }
           />
-          <ScreenFormDialog
-            projectId={projectId}
-            trigger={<Button />}
-            triggerLabel={
-              <>
-                <Plus /> {t("screens.add")}
-              </>
-            }
-          />
+          {canManage && (
+            <ScreenFormDialog
+              projectId={projectId}
+              trigger={<Button />}
+              triggerLabel={
+                <>
+                  <Plus /> {t("screens.add")}
+                </>
+              }
+            />
+          )}
         </div>
       )}
 
